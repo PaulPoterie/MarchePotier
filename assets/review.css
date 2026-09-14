@@ -1,0 +1,32 @@
+.mp-review-scroll { overflow:auto; max-height:75vh; margin-top:16px; }
+.mp-review-table { width:max-content; min-width:100%; }
+.mp-review-table th,.mp-review-table td { min-width:145px; max-width:320px; vertical-align:top; overflow-wrap:anywhere; }
+.mp-review-table thead th { position:sticky; top:0; background:#f0f0f1; z-index:2; }
+.mp-review-table tbody th { position:sticky; left:0; background:#fff; min-width:210px; z-index:1; }
+.mp-review-table tbody tr { cursor:pointer; }
+.mp-review-table .mp-review-person { cursor:default; }
+.mp-review-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.mp-review-table tbody tr:hover td { background:#edf6fc; }
+.mp-review-photos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.mp-review-photos img { display:block; width:100%; height:auto; max-height:480px; object-fit:contain; background:#f0f0f1; }
+.mp-review-table .mp-review-photos { width:220px; }
+.mp-review-table .mp-review-photos img { height:100px; }
+.mp-review-layout { display:grid; grid-template-columns:minmax(280px, 1fr) minmax(380px, 1fr); gap:28px; align-items:start; }
+.mp-review-layout > * { min-width:0; }
+.mp-review-layout table { width:100%; overflow-wrap:anywhere; }
+.mp-review-decision { padding:18px; background:#fff; border:1px solid #c3c4c7; margin:18px 0; }
+@media(max-width:1000px) { .mp-review-layout { grid-template-columns:1fr; } }
+
+.mp-review-documents { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.mp-review-documents p { margin:0; }
+.mp-review-documents a { display:flex; flex-direction:column; gap:10px; height:100%; padding:12px; border:1px solid #d5cdc4; border-radius:8px; background:#fff; text-decoration:none; font-weight:600; }
+.mp-review-documents a:hover { border-color:#87503a; background:#fcf8f4; }
+.mp-review-documents a:focus-visible { outline:3px solid #2271b1; outline-offset:3px; }
+.mp-review-documents img { width:100%; height:160px; max-width:100% !important; object-fit:contain; background:#f5f2ee; }
+.mp-review-documents br { display:none; }
+.mp-document-cover { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; height:160px; background:#f5f2ee; color:#87503a; border-radius:4px; }
+.mp-document-cover strong { letter-spacing:.1em; font-size:12px; }
+
+.mp-management-heading { width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+.mp-management-heading h1 { margin:0; padding-bottom:0; }
+.mp-management-heading .mp-export-button { flex-shrink:0; margin:0 0 0 auto; font-size:12px; min-height:26px; line-height:24px; padding:0 8px; }

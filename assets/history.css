@@ -1,0 +1,23 @@
+.mp-history-scroll { --mp-name:110px; --mp-first:110px; --mp-email:190px; --mp-edition:160px; max-width:100%; max-height:72vh; overflow:auto; border:1px solid #c3c4c7; border-radius:8px; background:#fff; isolation:isolate; }
+.mp-history-scroll:focus-visible { outline:3px solid #2271b1; outline-offset:3px; }
+.mp-history-table { border:0; border-collapse:separate; border-spacing:0; table-layout:fixed; min-width:100%; width:calc(var(--mp-name) + var(--mp-first) + var(--mp-email) + var(--mp-editions) * var(--mp-edition)); }
+.mp-history-table th,.mp-history-table td { box-sizing:border-box; padding:14px 12px; width:var(--mp-edition); vertical-align:middle; overflow-wrap:anywhere; border-right:1px solid #fff; border-bottom:1px solid #e4e2df; }
+.mp-history-table th { background:#ece9e4; font-weight:600; position:sticky; top:0; z-index:3; }
+.mp-history-table tr > :nth-child(-n+3) { position:sticky; z-index:2; background:#fff; }
+.mp-history-table tr:nth-child(even) > td:nth-child(-n+3) { background:#f8f7f5; }
+.mp-history-table tr > :nth-child(1) { left:0; width:var(--mp-name); }
+.mp-history-table tr > :nth-child(2) { left:var(--mp-name); width:var(--mp-first); }
+.mp-history-table tr > :nth-child(3) { left:calc(var(--mp-name) + var(--mp-first)); width:var(--mp-email); border-right:2px solid #bfb6ab; box-shadow:5px 0 7px -5px #0005; }
+.mp-history-table thead tr > :nth-child(-n+3) { top:0; z-index:4; background:#ece9e4; }
+.mp-history-table td:nth-child(n+4),.mp-history-table th:nth-child(n+4) { text-align:center; }
+.mp-history-table .mp-history-selected { background:#dceedd; }
+.mp-history-table .mp-history-selected a { color:#225733; }
+.mp-history-table .mp-history-rejected { background:#f5dddd; }
+.mp-history-table .mp-history-rejected a { color:#822c32; }
+.mp-history-table .mp-history-pending { background:#e9e9ec; }
+.mp-history-table .mp-history-pending a { color:#4c4d54; }
+.mp-history-table .mp-history-empty { background:#fff; color:#777; }
+.mp-history-table td a { display:block; padding:6px 0; font-weight:600; text-decoration:none; }
+.mp-history-table td a:hover { text-decoration:underline; }
+.mp-history-table td a:focus-visible { outline:2px solid #2271b1; outline-offset:3px; }
+@media(max-width:782px) { .mp-history-scroll { --mp-name:75px; --mp-first:75px; --mp-email:120px; --mp-edition:135px; } .mp-history-table th,.mp-history-table td { padding:10px 6px; font-size:12px; } }
