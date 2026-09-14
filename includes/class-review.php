@@ -37,7 +37,7 @@ final class Review {
 		add_action( 'admin_post_mp_review_decision', array( self::class, 'save_decision' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( 'mp-historique' === ( $_GET['page'] ?? '' ) ) {
-				wp_enqueue_style( 'mp-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.12.4' );
+				wp_enqueue_style( 'mp-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.17.4' );
 				return;
 			}
 			if ( ! in_array( $_GET['page'] ?? '', array( 'mp-gestion', 'mp-dossier' ), true ) ) { return; }

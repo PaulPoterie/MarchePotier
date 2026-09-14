@@ -21,3 +21,7 @@
 .mp-history-table td a:hover { text-decoration:underline; }
 .mp-history-table td a:focus-visible { outline:2px solid #2271b1; outline-offset:3px; }
 @media(max-width:782px) { .mp-history-scroll { --mp-name:75px; --mp-first:75px; --mp-email:120px; --mp-edition:135px; } .mp-history-table th,.mp-history-table td { padding:10px 6px; font-size:12px; } }
+
+.mp-history-counts { display:block; margin-top:8px; font-size:12px; font-weight:400; line-height:1.5; color:#50575e; }
+.mp-history-counts > span { display:block; }
+.mp-history-counts > span:first-child { font-size:15px; font-weight:600; color:#225733; }

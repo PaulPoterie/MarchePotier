@@ -1,5 +1,25 @@
 document.querySelectorAll('.mp-public form').forEach(form => {
+  const draft = window.mpCandidateDraft(form);
+  const presentation = form.querySelector('[name="mp_record[activity][presentation]"]');
+  const wordCounter = form.querySelector('#mp-presentation-count');
+  if (presentation && wordCounter) {
+    const countWords = () => {
+      const count = presentation.value.split(/[\s\u0085]+/u).filter(Boolean).length;
+      const exceeded = count > 300;
+      wordCounter.hidden = false;
+      wordCounter.textContent = `${count} / 300 mots` + (exceeded ? ` — retirez ${count - 300} mot(s) pour envoyer votre candidature.` : '');
+      presentation.setCustomValidity(exceeded ? 'Présentation : limitez votre texte à 300 mots maximum.' : '');
+      presentation.setAttribute('aria-invalid', String(exceeded));
+    };
+    presentation.addEventListener('input', countWords);
+    countWords();
+  }
+
   const update = () => {
+    const professionalStatus = form.querySelector('[name="mp_record[activity][professional_status]"]')?.value || '';
+    form.querySelectorAll('[data-status-help]').forEach(help => {
+      help.hidden = !help.dataset.statusHelp.split(' ').includes(professionalStatus);
+    });
     form.querySelectorAll('[data-parent]').forEach(row => {
       const name = `mp_record[activity][${row.dataset.parent}]`;
       const selected = Array.from(form.elements).filter(input => input.name === name || input.name === `${name}[]`).some(input => input.value === row.dataset.choice && (input.type !== 'checkbox' || input.checked));
@@ -37,7 +57,7 @@ document.querySelectorAll('.mp-public form').forEach(form => {
   const states = inputs.map(input => {
     const status = document.createElement('small');
     status.id = input.id + '-status'; status.setAttribute('role', 'status');
-    input.setAttribute('aria-describedby', status.id);
+    input.setAttribute('aria-describedby', [input.getAttribute('aria-describedby'), status.id].filter(Boolean).join(' '));
     const progress = document.createElement('progress');
     progress.max = 100; progress.value = 0; progress.hidden = true;
     progress.setAttribute('aria-label', 'Progression : ' + input.closest('.mp-field').querySelector('label').textContent);
@@ -112,6 +132,7 @@ document.querySelectorAll('.mp-public form').forEach(form => {
         if (percent === null) state.progress.removeAttribute('value'); else state.progress.value = percent;
         state.status.textContent = percent === 100 ? 'Transfert terminé — vérification du fichier…' : 'Envoi en cours' + (percent === null ? '…' : ' : ' + percent + ' %');
       });
+      draft.syncExpiry(result.expires);
       revision = result.revision;
       state.phase = 'done'; state.input.required = false; state.input.setCustomValidity('');
       state.status.textContent = 'Reçu : ' + result.files[state.input.name];
@@ -124,7 +145,8 @@ document.querySelectorAll('.mp-public form').forEach(form => {
     restore.hidden = true; refresh();
     try {
       const result = await request(tokens('status'));
-      if (result.redirect) { window.location.assign(result.redirect); return; }
+      if (result.redirect) { draft.clear(); window.location.assign(result.redirect); return; }
+      draft.syncExpiry(result.expires);
       revision = result.revision;
       states.forEach(state => {
         if (result.files[state.input.name]) {
@@ -151,6 +173,8 @@ document.querySelectorAll('.mp-public form').forEach(form => {
     try {
       const result = await request(data);
       submitting = false;
+      if (!result.redirect) throw new Error('Confirmation du serveur incomplète. Réessayez.');
+      draft.clear();
       window.location.assign(result.redirect);
     } catch (error) {
       submitting = false; refresh(); notice.textContent = error.message + ' Vos réponses restent dans ce formulaire.';

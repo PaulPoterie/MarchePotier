@@ -24,17 +24,28 @@ final class Fields {
 	public static function activity(): array {
 		return array(
 			'presentation' => array( 'Présentation', 'textarea', true ),
-			'production' => array( 'Production', 'multiple', true, array( 'utilitaire' => 'Utilitaire', 'jardin' => 'Extérieur / Jardin', 'modelage' => 'Sculpture / Modelage', 'decoratif' => 'Décoratif', 'sculpture' => 'Sculpture', 'bijoux' => 'Bijoux', 'musique' => 'Instrument de musique', 'autre' => 'Autre' ) ),
+			'production' => array( 'Production', 'multiple', true, array( 'bijoux' => 'Bijoux', 'decoratif' => 'Décoratif', 'jardin' => 'Extérieur / Jardin', 'musique' => 'Instrument de musique', 'sculpture' => 'Sculpture', 'utilitaire' => 'Utilitaire', 'autre' => 'Autre' ) ),
 			'production_other' => array( 'Autre production', 'text', false, array(), array( 'production', 'autre' ) ),
-			'technique' => array( 'Technique', 'multiple', true, array( 'cristallisations' => 'Cristallisations', 'faience' => 'Faïence', 'terre-vernissee' => 'Terre Vernissée', 'sigillee' => 'Sigillée', 'gres' => 'Grès', 'plaque' => 'Plaque', 'terres-melees' => 'Terres Mêlées', 'terre-cuite' => 'Terre cuite', 'terre-enfumee' => 'Terre enfumée', 'bois' => 'Cuisson bois', 'porcelaine' => 'Porcelaine', 'raku' => 'Raku', 'recolte' => 'Récolte de matériaux', 'autre' => 'Autre' ) ),
+			'technique' => array( 'Technique', 'multiple', true, array( 'cristallisations' => 'Cristallisations', 'bois' => 'Cuisson bois', 'faience' => 'Faïence', 'gres' => 'Grès', 'porcelaine' => 'Porcelaine', 'raku' => 'Raku', 'sigillee' => 'Sigillée', 'terre-cuite' => 'Terre cuite', 'terre-enfumee' => 'Terre enfumée', 'terre-vernissee' => 'Terre Vernissée', 'terres-melees' => 'Terres Mêlées', 'autre' => 'Autre' ) ),
 			'technique_other' => array( 'Autre technique', 'text', false, array(), array( 'technique', 'autre' ) ),
-			'professional_status' => array( 'Statut professionnel', 'select', true, array( 'artisan' => 'Artisan, chambre des métiers', 'artiste' => 'Artiste maison des artistes', 'liberal' => 'Profession Libérale (hors auto-entrepreneur)', 'auto-entrepreneur' => 'Auto-entrepreneur', 'micro-entreprise' => 'Auto-entrepreneur / Micro-entreprise / entreprise individuelle', 'autre' => 'Autre' ) ),
+			'stand_length' => array( 'Longueur du stand (m)', 'number', false ),
+			'professional_status' => array( 'Statut professionnel', 'select', true, array( 'artisan' => 'Artisan, chambre des métiers', 'micro-entreprise' => 'Auto-entrepreneur, Micro-entreprise, Entreprise individuelle', 'artiste' => 'Artiste, Maison des artistes', 'autre' => 'Autres statuts et candidats installés à l’étranger' ) ),
 			'status_other' => array( 'Autre statut professionnel', 'text', false, array(), array( 'professional_status', 'autre' ) ),
 			'aaf_member' => array( 'Adhérent Ateliers d’Art de France', 'select', true, array( 'yes' => 'Oui', 'no' => 'Non' ) ),
 			'association_member' => array( 'Adhérent association professionnelle', 'select', true, array( 'yes' => 'Oui', 'no' => 'Non' ) ),
-			'association_details' => array( 'Détails de l’association', 'textarea', false, array(), array( 'association_member', 'yes' ) ),
-			'stand_length' => array( 'Longueur du stand (m)', 'number', false ),
+			'association_names' => array( 'Nom de l’association(s)', 'text', false, array(), array( 'association_member', 'yes' ) ),
+			'association_details' => array( 'Avez vous une implication dans la vie associative de la Céramique?', 'textarea', false ),
 		);
+	}
+
+	/** Compatibilité avec les catégories utilisées avant la simplification. */
+	public static function normalize_status( array $data ): array {
+		if ( 'auto-entrepreneur' === ( $data['professional_status'] ?? '' ) ) { $data['professional_status'] = 'micro-entreprise'; }
+		if ( 'liberal' === ( $data['professional_status'] ?? '' ) ) {
+			$data['professional_status'] = 'autre';
+			if ( empty( $data['status_other'] ) ) { $data['status_other'] = 'Profession libérale (hors auto-entrepreneur)'; }
+		}
+		return $data;
 	}
 
 	public static function internal(): array {
@@ -46,6 +57,7 @@ final class Fields {
 
 	/** Valide les types avant nettoyage. Les brouillons internes peuvent être incomplets. */
 	public static function validate( array $raw, array $schema, bool $complete = false ): array|\WP_Error {
+		$raw = self::normalize_status( $raw );
 		$result = array();
 		foreach ( $schema as $key => $field ) {
 			$value = $raw[ $key ] ?? ( 'multiple' === $field[1] ? array() : '' );
@@ -60,6 +72,11 @@ final class Fields {
 				if ( ! is_string( $value ) ) { return $error; }
 				if ( strlen( $value ) > ( 'textarea' === $field[1] ? 40000 : 4000 ) ) { return new \WP_Error( 'mp_length', sprintf( 'Texte trop long : %s.', $field[0] ) ); }
 				$value = trim( $value );
+				if ( 'instagram' === $key && '' !== $value && ! preg_match( '~^https?://~i', $value ) ) {
+					$handle = preg_replace( '/^@/', '', $value );
+					if ( ! preg_match( '/^[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?$/D', $handle ) || str_contains( $handle, '..' ) ) { return new \WP_Error( 'mp_instagram', 'Instagram : indiquez votre nom de compte, par exemple @monatelier, ou le lien complet de votre profil.' ); }
+					$value = 'https://www.instagram.com/' . $handle . '/';
+				}
 				if ( '' !== $value ) {
 					if ( 'email' === $field[1] && ! is_email( $value ) ) { return $error; }
 					if ( 'url' === $field[1] && ( ! preg_match( '~^https?://~i', $value ) || ! filter_var( $value, FILTER_VALIDATE_URL ) ) ) { return $error; }
@@ -71,6 +88,7 @@ final class Fields {
 					if ( 'date' === $field[1] && ! Editions::parse_date( $value . 'T12:00' ) ) { return $error; }
 				}
 				$result[ $key ] = 'textarea' === $field[1] ? sanitize_textarea_field( $value ) : sanitize_text_field( $value );
+				if ( 'presentation' === $key && count( preg_split( '/[\s\x{FEFF}]+/u', $result[ $key ], -1, PREG_SPLIT_NO_EMPTY ) ) > 300 ) { return new \WP_Error( 'mp_presentation_length', 'Présentation : limitez votre texte à 300 mots maximum.' ); }
 			}
 			if ( $complete && $field[2] && ( '' === $result[ $key ] || array() === $result[ $key ] ) ) {
 				return new \WP_Error( 'mp_required', sprintf( 'Champ obligatoire : %s.', $field[0] ) );
@@ -89,12 +107,14 @@ final class Fields {
 	}
 
 	public static function render( array $schema, array $data, string $group ): void {
+		$data = self::normalize_status( $data );
 		echo '<table class="form-table" role="presentation">';
 		foreach ( $schema as $key => $field ) {
 			$value = $data[ $key ] ?? ( 'multiple' === $field[1] ? array() : ( 'stand_length' === $key ? '5' : '' ) );
 			$name = 'mp_record[' . $group . '][' . $key . ']';
 			$id = 'mp-' . $group . '-' . $key;
 			echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $field[0] . ( $field[2] ? ' *' : '' ) ) . '</label></th><td>';
+			if ( 'association_details' === $key ) { echo '<p class="description">(Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</p>'; }
 			if ( 'textarea' === $field[1] ) {
 				echo '<textarea class="large-text" rows="4" id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '">' . esc_textarea( $value ) . '</textarea>';
 			} elseif ( 'multiple' === $field[1] ) {
@@ -121,6 +141,7 @@ final class Fields {
 	}
 
 	public static function summary( array $schema, array $data ): void {
+		$data = self::normalize_status( $data );
 		echo '<table class="widefat striped"><tbody>';
 		foreach ( $schema as $key => $field ) {
 			$value = $data[ $key ] ?? '';

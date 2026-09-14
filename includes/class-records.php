@@ -70,6 +70,7 @@ final class Records {
 
 	public static function data( int $id ): array {
 		$data = get_post_meta( $id, self::META, true );
+		if ( is_array( $data ) && isset( $data['activity'] ) && is_array( $data['activity'] ) ) { $data['activity'] = Fields::normalize_status( $data['activity'] ); }
 		return is_array( $data ) ? $data : array();
 	}
 
@@ -464,12 +465,16 @@ final class Records {
 		$editions = get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$applications = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' ) );
 		$edition_ids = array_fill_keys( wp_list_pluck( $editions, 'ID' ), true );
+		$totals = array_fill_keys( array_keys( $edition_ids ), array( 'selected' => 0, 'applications' => 0 ) );
 		$rows = array();
 		foreach ( $applications as $application ) {
 			$data = self::data( $application->ID );
 			$potier_id = absint( $data['potier_id'] ?? 0 );
 			$edition_id = absint( $data['edition_id'] ?? 0 );
-			if ( ! $potier_id || ! isset( $edition_ids[ $edition_id ] ) ) { continue; }
+			if ( ! isset( $edition_ids[ $edition_id ] ) ) { continue; }
+			++$totals[ $edition_id ]['applications'];
+			if ( 'selected' === ( $data['decision'] ?? 'pending' ) ) { ++$totals[ $edition_id ]['selected']; }
+			if ( ! $potier_id ) { continue; }
 			if ( ! isset( $rows[ $potier_id ] ) ) {
 				$identity = self::data( $potier_id )['identity'] ?? $data['identity'] ?? array();
 				$rows[ $potier_id ] = array( 'identity' => $identity, 'decisions' => array() );
@@ -481,9 +486,13 @@ final class Records {
 			return strcmp( ( $left['identity']['last_name'] ?? '' ) . "\0" . ( $left['identity']['first_name'] ?? '' ), ( $right['identity']['last_name'] ?? '' ) . "\0" . ( $right['identity']['first_name'] ?? '' ) );
 		} );
 		echo '<div class="wrap"><h1>Historique des candidatures</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
-		if ( ! $editions || ! $rows ) { echo '<p>Aucun potier ou aucune édition enregistrée.</p></div>'; return; }
+		if ( ! $editions ) { echo '<p>Aucune édition enregistrée.</p></div>'; return; }
 		echo '<p class="mp-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="mp-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat mp-history-table" style="--mp-editions:' . count( $editions ) . '"><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
-		foreach ( $editions as $edition ) { echo '<th scope="col">' . esc_html( $edition->post_title ) . '</th>'; }
+		foreach ( $editions as $edition ) {
+			$total = $totals[ $edition->ID ];
+			$places = Editions::settings( $edition->ID )['exhibitors'];
+			echo '<th scope="col">' . esc_html( $edition->post_title ) . '<span class="mp-history-counts"><span>' . esc_html( $total['selected'] . ' / ' . ( '' !== $places ? $places : '—' ) ) . '</span><span>' . esc_html( $total['applications'] . ( 1 === $total['applications'] ? ' candidature' : ' candidatures' ) ) . '</span></span></th>';
+		}
 		echo '</tr></thead><tbody>';
 		foreach ( $rows as $row ) {
 			$identity = $row['identity'];

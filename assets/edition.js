@@ -31,3 +31,16 @@ if (editionYear && formShortcode) {
     formShortcode.addEventListener('focus', () => formShortcode.select());
     updateShortcode();
 }
+
+// L’explication est nécessaire uniquement lorsqu’un tarif réduit est proposé.
+const reducedPrice = document.getElementById('mp-reduced_price');
+const reducedDescription = document.getElementById('mp-reduced_description');
+if (reducedPrice && reducedDescription) {
+    const updateReduced = () => {
+        reducedDescription.required = reducedPrice.value !== '';
+        const label = document.querySelector('label[for="mp-reduced_description"]');
+        if (label) label.textContent = 'Conditions du tarif réduit' + (reducedDescription.required ? ' *' : ' (facultatif)');
+    };
+    reducedPrice.addEventListener('input', updateReduced);
+    updateReduced();
+}

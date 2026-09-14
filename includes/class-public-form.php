@@ -11,8 +11,9 @@ final class PublicForm {
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
-				wp_enqueue_style( 'mp-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.12.1' );
-				wp_enqueue_script( 'mp-form', plugins_url( '../assets/form.js', __FILE__ ), array(), '0.12.1', true );
+				wp_enqueue_style( 'mp-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.17.3' );
+				wp_enqueue_script( 'mp-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.17.0', true );
+				wp_enqueue_script( 'mp-form', plugins_url( '../assets/form.js', __FILE__ ), array( 'mp-draft' ), '0.17.2', true );
 			}
 		} );
 	}
@@ -183,7 +184,7 @@ final class PublicForm {
 		echo '<section id="mp-inscription" class="mp-public"><p class="mp-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( (string) $atts['edition'] ) . '</h2>';
 		echo Editions::introduction( $edition );
 		if ( isset( $_GET['mp_sent'] ) && self::session() && (int) get_transient( 'mp_receipt_' . hash( 'sha256', self::session() ) ) === $edition ) {
-			echo '<div class="mp-success" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</div></section>';
+			echo '<div class="mp-success" data-mp-edition="' . esc_attr( $edition ) . '" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</div></section>';
 			return ob_get_clean();
 		}
 		if ( self::$error ) { echo '<div class="mp-error" role="alert">' . esc_html( self::$error->get_error_message() ) . '<p>Vos réponses restent ci-dessous. Sélectionnez à nouveau les fichiers avant de renvoyer.</p></div>'; }
@@ -200,12 +201,15 @@ final class PublicForm {
 		echo '<div class="mp-honey" aria-hidden="true"><label>Ne pas remplir <input name="mp_fax" tabindex="-1" autocomplete="off"></label></div>';
 		self::render_group( Fields::identity(), 'identity', 'Vos coordonnées' );
 		self::render_group( Fields::activity(), 'activity', 'Votre activité', $edition );
-		echo '<fieldset class="mp-section mp-files-section"><legend><span class="mp-section-number" aria-hidden="true">03</span> Photos et justificatifs</legend><p>' . esc_html( PrivateFiles::size_label() ) . ' maximum par fichier. Photos : JPEG, PNG ou WebP. Justificatifs : PDF ou image JPEG, PNG, WebP. Les fichiers restent réservés aux organisateurs.</p><div class="mp-field-grid">';
+		echo '<fieldset class="mp-section mp-files-section"><legend><span class="mp-section-number" aria-hidden="true">03</span> Photos et justificatifs</legend><p>' . esc_html( PrivateFiles::size_label() ) . ' maximum par fichier. Photos : JPEG, PNG ou WebP. Justificatifs : PDF ou image JPEG, PNG, WebP. Vos justificatifs de statut et d’assurance sont destinés à l’équipe organisatrice et ne sont pas affichés dans la présentation publique. Vos photos de créations pourront être utilisées pour présenter votre travail si votre candidature est sélectionnée.</p><div class="mp-field-grid">';
 		foreach ( PrivateFiles::slots() as $slot => $label ) {
 			$pdf = in_array( $slot, array( 'status', 'insurance' ), true );
-			echo '<div class="mp-field mp-upload-card"><label for="mp-file-' . esc_attr( $slot ) . '">' . esc_html( $label ) . ' *</label><input id="mp-file-' . esc_attr( $slot ) . '" type="file" data-max-size="' . esc_attr( (string) PrivateFiles::max_size() ) . '" data-max-label="' . esc_attr( PrivateFiles::size_label() ) . '" name="' . esc_attr( $slot ) . '" accept="' . ( $pdf ? '.pdf,.jpg,.jpeg,.png,.webp' : '.jpg,.jpeg,.png,.webp' ) . '" required></div>';
+			echo '<div class="mp-field mp-upload-card"><label for="mp-file-' . esc_attr( $slot ) . '">' . esc_html( $label ) . ' *</label><input id="mp-file-' . esc_attr( $slot ) . '" type="file"' . ( $pdf ? ' aria-describedby="mp-file-' . esc_attr( $slot ) . '-help"' : '' ) . ' data-max-size="' . esc_attr( (string) PrivateFiles::max_size() ) . '" data-max-label="' . esc_attr( PrivateFiles::size_label() ) . '" name="' . esc_attr( $slot ) . '" accept="' . ( $pdf ? '.pdf,.jpg,.jpeg,.png,.webp' : '.jpg,.jpeg,.png,.webp' ) . '" required>';
+			if ( 'status' === $slot ) { self::status_help( 'mp-file-status-help' ); }
+			if ( 'insurance' === $slot ) { echo '<small id="mp-file-insurance-help">Joignez une attestation d’assurance responsabilité civile professionnelle valide au jour de l’envoi de votre dossier et comportant la mention « Marchés ou foires en extérieur ».</small>'; }
+			echo '</div>';
 		}
-		echo '</div></fieldset><div class="mp-consent"><p><label><input type="checkbox" name="mp_photo_consent" value="1" required ' . checked( isset( $_POST['mp_photo_consent'] ) && '1' === $_POST['mp_photo_consent'], true, false ) . '> J’autorise l’affichage de ma présentation, de mes photos de créations et la localisation publique de l’adresse fournie sur la carte si je suis sélectionné(e). (Obligatoire)</label></p><p>Votre email, votre téléphone et vos justificatifs restent réservés aux organisateurs. Avec votre autorisation, votre nom, votre ville, vos liens et vos photos pourront être présentés, et votre adresse localisée sur la carte. La localisation des adresses françaises utilise le service IGN.</p></div>';
+		echo '</div></fieldset><div class="mp-consent"><p><label><input type="checkbox" name="mp_photo_consent" value="1" required ' . checked( isset( $_POST['mp_photo_consent'] ) && '1' === $_POST['mp_photo_consent'], true, false ) . '> J’autorise l’affichage de ma présentation, de mes photos de créations et la localisation publique de l’adresse fournie sur la carte si je suis sélectionné(e). (Obligatoire)</label></p><p>Votre email et votre téléphone sont destinés à l’équipe organisatrice et ne sont pas affichés dans la présentation publique. Si votre candidature est sélectionnée, votre présentation, votre nom, votre ville, vos liens et vos photos de créations pourront être présentés, et votre adresse localisée sur la carte. La localisation des adresses françaises utilise le service IGN.</p></div>';
 		$privacy = get_privacy_policy_url();
 		if ( $privacy ) { echo '<p><a href="' . esc_url( $privacy ) . '">Politique de confidentialité</a></p>'; }
 		echo '<button type="submit">Envoyer ma candidature</button></form></section>';
@@ -217,20 +221,31 @@ final class PublicForm {
 		foreach ( $schema as $key => $field ) {
 			$value = $data[ $key ] ?? ( 'stand_length' === $key ? '5' : '' );
 			$locked = 'stand_length' === $key && $edition && ! Editions::settings( $edition )['stand_editable'];
+			if ( 'stand_length' === $key ) { $field[0] = $locked ? 'Mètres linéaires' : sprintf( 'Mètres linéaires souhaités (par défaut : %s m)', str_replace( '.', ',', $edition ? Editions::stand_value( $edition ) : '5' ) ); }
 			if ( 'stand_length' === $key && $edition ) { $value = Editions::stand_value( $edition, $data[ $key ] ?? null ); }
 			$value = 'multiple' === $field[1] ? ( is_array( $value ) ? array_filter( $value, 'is_string' ) : array() ) : ( is_string( $value ) ? $value : '' );
+			if ( 'address' === $key ) { $field[1] = 'text'; }
+			if ( 'instagram' === $key ) { $field[0] = 'Instagram — nom de compte'; $field[1] = 'text'; }
 			$id = 'mp-public-' . $key; $name = 'mp_record[' . $group . '][' . $key . ']';
 			$condition = isset( $field[4] ) ? ' data-parent="' . esc_attr( $field[4][0] ) . '" data-choice="' . esc_attr( $field[4][1] ) . '"' : '';
 			$required = $field[2] ? ' required' : '';
-			echo '<div class="mp-field' . ( in_array( $field[1], array( 'textarea', 'multiple' ), true ) || 'company' === $key || isset( $field[4] ) ? ' mp-field-wide' : '' ) . '"' . $condition . '>';
+			echo '<div class="mp-field' . ( 'activity' === $group || in_array( $field[1], array( 'textarea', 'multiple' ), true ) || in_array( $key, array( 'company', 'address' ), true ) || ( isset( $field[4] ) && 'association_names' !== $key ) ? ' mp-field-wide' : '' ) . '"' . $condition . '>';
 			if ( 'multiple' === $field[1] ) {
 				echo '<fieldset data-multiple="' . esc_attr( $key ) . '"><legend>' . esc_html( $field[0] ) . ' *</legend>';
 				foreach ( $field[3] as $option => $label ) { echo '<label class="mp-choice"><input type="checkbox" name="' . esc_attr( $name . '[]' ) . '" value="' . esc_attr( $option ) . '" ' . checked( in_array( $option, $value, true ), true, false ) . '> ' . esc_html( $label ) . '</label>'; }
 				echo '</fieldset>';
 			} else {
-				echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $field[0] . ( $field[2] ? ' *' : '' ) ) . '</label>';
-				if ( 'association_details' === $key ) { echo '<small id="mp-association-help">Avez vous une implication dans la vie associative de la Céramique? (Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</small>'; }
+				echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $field[0] . ( $field[2] || in_array( $key, array( 'status_other', 'association_names' ), true ) ? ' *' : '' ) ) . '</label>';
+				if ( 'address' === $key ) { echo '<small id="mp-address-help">Si votre candidature est sélectionnée, cette adresse sera utilisée pour situer votre atelier sur la carte publique des potiers.</small>'; }
+				if ( 'presentation' === $key ) { echo '<small id="mp-presentation-help">Décrivez votre parcours, votre démarche et votre travail (300 mots maximum).</small>'; }
+				if ( 'association_details' === $key ) { echo '<small id="mp-association-help">(Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</small>'; }
 				$attrs = ' id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"' . $required;
+				if ( 'website' === $key ) { $attrs .= ' placeholder="https://www.monatelier.fr"'; }
+				if ( 'facebook' === $key ) { $attrs .= ' placeholder="https://www.facebook.com/monatelier"'; }
+				if ( 'instagram' === $key ) { $attrs .= ' placeholder="@monatelier" autocapitalize="none" spellcheck="false"'; }
+				if ( 'professional_status' === $key ) { $attrs .= ' aria-describedby="mp-professional-status-help"'; }
+				if ( 'address' === $key ) { $attrs .= ' aria-describedby="mp-address-help"'; }
+				if ( 'presentation' === $key ) { $attrs .= ' aria-describedby="mp-presentation-help mp-presentation-count"'; }
 				if ( 'association_details' === $key ) { $attrs .= ' aria-describedby="mp-association-help"'; }
 				if ( $locked ) { $attrs .= ' readonly aria-describedby="mp-stand-fixed"'; echo '<small id="mp-stand-fixed">Taille fixée par l’organisateur.</small>'; }
 				if ( 'textarea' === $field[1] ) { echo '<textarea rows="4" maxlength="10000"' . $attrs . '>' . esc_textarea( $value ) . '</textarea>'; }
@@ -238,11 +253,21 @@ final class PublicForm {
 					echo '<select' . $attrs . '><option value="">Choisir…</option>';
 					foreach ( $field[3] as $option => $label ) { echo '<option value="' . esc_attr( $option ) . '" ' . selected( $value, $option, false ) . '>' . esc_html( $label ) . '</option>'; }
 					echo '</select>';
+					if ( 'professional_status' === $key ) { self::status_help( 'mp-professional-status-help' ); }
 				} else { echo '<input type="' . esc_attr( $field[1] ) . '"' . $attrs . ' value="' . esc_attr( $value ) . '"' . ( 'number' === $field[1] ? ' min="0.01" max="1000" step="0.01"' : ' maxlength="1000"' ) . '>'; }
 			}
+			if ( 'presentation' === $key ) { echo '<small id="mp-presentation-count" role="status" hidden></small>'; }
 			if ( isset( $field[4] ) ) { echo '<small>À préciser si la réponse correspondante est « ' . esc_html( $schema[ $field[4][0] ][3][ $field[4][1] ] ) . ' ».</small>'; }
 			echo '</div>';
 		}
 		echo '</div></fieldset>';
 	}
+	private static function status_help( string $id ): void {
+		echo '<div id="' . esc_attr( $id ) . '" aria-live="polite">';
+		echo '<p data-status-help="artisan micro-entreprise"><small><strong>Artisan ou micro-entreprise :</strong> joignez un extrait DATA INPI disponible sur <a href="https://data.inpi.fr/" target="_blank" rel="noopener noreferrer">data.inpi.fr</a>.</small></p>';
+		echo '<p data-status-help="artiste"><small><strong>Artiste, Maison des artistes :</strong> joignez votre dernière attestation d’affiliation ou d’assujettissement comportant vos noms, prénoms et numéro d’ordre.</small></p>';
+		echo '<p data-status-help="autre"><small><strong>Autres statuts ou installation à l’étranger :</strong> joignez les justificatifs ou attestations disponibles prouvant que vous exercez une activité professionnelle.</small></p>';
+		echo '</div>';
+	}
+
 }

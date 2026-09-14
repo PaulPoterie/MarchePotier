@@ -70,7 +70,7 @@ final class Editions {
 
 	public static function settings( int $id ): array {
 		$value = get_post_meta( $id, self::META, true );
-		return array_merge( array( 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'organizer_email' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
+		return array_merge( array( 'market_start' => '', 'market_end' => '', 'venue' => '', 'exhibitors' => '', 'price' => '', 'reduced_price' => '', 'reduced_description' => '', 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'organizer_email' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
 	}
 
 	public static function assets(): void {
@@ -83,19 +83,78 @@ final class Editions {
 		wp_localize_script( 'mp-edition-trash', 'mpEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
 		if ( 'post' !== $screen->base ) { return; }
 		wp_enqueue_media();
-		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.10.1', true );
+		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.16.0', true );
 	}
 
 	/** Documents publics distincts des justificatifs privés des candidats. */
 	public static function introduction( int $edition ): string {
 		$data = self::settings( $edition );
 		$html = '<div class="mp-edition-introduction">';
+		$details = array();
+		if ( $data['market_start'] && $data['market_end'] ) {
+			$start = self::parse_date( $data['market_start'] . 'T00:00' ); $end = self::parse_date( $data['market_end'] . 'T00:00' );
+			if ( $start && $end ) { $details['Dates du marché'] = $data['market_start'] === $data['market_end'] ? 'Le ' . wp_date( 'j F Y', $start->getTimestamp() ) : 'Du ' . wp_date( 'j F Y', $start->getTimestamp() ) . ' au ' . wp_date( 'j F Y', $end->getTimestamp() ); }
+		}
+		if ( $data['venue'] ) { $details['Lieu d’exposition'] = $data['venue']; }
+		if ( $data['exhibitors'] ) { $details['Nombre d’exposants'] = $data['exhibitors']; }
+		if ( '' !== $data['price'] ) { $details['Prix de l’emplacement'] = 0.0 === (float) $data['price'] ? 'Gratuit' : number_format_i18n( (float) $data['price'], 2 ) . ' €'; }
+		if ( '' !== $data['reduced_price'] ) { $details['Tarif réduit'] = ( 0.0 === (float) $data['reduced_price'] ? 'Gratuit' : number_format_i18n( (float) $data['reduced_price'], 2 ) . ' €' ) . ' — ' . $data['reduced_description']; }
+		if ( $details ) {
+			$html .= '<dl class="mp-market-details">';
+			foreach ( $details as $label => $value ) { $html .= '<div><dt>' . esc_html( $label ) . '</dt><dd>' . nl2br( esc_html( $value ) ) . '</dd></div>'; }
+			$html .= '</dl>';
+		}
+		$opens = self::parse_date( $data['opens'] );
+		$closes = self::parse_date( $data['closes'] );
+		if ( $opens && $closes ) {
+			$html .= '<p class="mp-application-period"><strong>Période de candidature</strong><span>' . esc_html( 'Du ' . wp_date( 'j F Y', $opens->getTimestamp() ) . ' au ' . wp_date( 'j F Y', $closes->getTimestamp() ) ) . '</span></p>';
+		}
 		if ( '' !== $data['presentation'] ) { $html .= wpautop( wp_kses_post( $data['presentation'] ) ); }
-		foreach ( array( 'rules' => 'Règlement intérieur', 'application_document' => 'Dossier de candidature' ) as $key => $label ) {
+		foreach ( array( 'rules' => 'Règlement intérieur' ) as $key => $label ) {
 			$url = $data[ $key ] ? wp_get_attachment_url( $data[ $key ] ) : false;
 			if ( $url ) { $html .= '<p><a href="' . esc_url( $url ) . '">' . esc_html( $label ) . ' (PDF)</a></p>'; }
 		}
 		return $html . '</div>';
+	}
+
+	public static function market_fields( array $data ): void {
+		echo '<h3>Informations pratiques du marché</h3><p>Affichées au-dessus du formulaire public. Les dates du marché sont distinctes de la période de candidature. Les prix sont en euros, pour un emplacement sur l’ensemble du marché.</p><table class="form-table" role="presentation">';
+		$fields = array( 'market_start' => array( 'Date de début du marché', 'date' ), 'market_end' => array( 'Date de fin du marché', 'date' ), 'venue' => array( 'Lieu d’exposition', 'text' ), 'exhibitors' => array( 'Nombre d’exposants', 'number' ), 'price' => array( 'Prix de l’emplacement (€)', 'number' ), 'reduced_price' => array( 'Prix de l’emplacement — tarif réduit (€)', 'number' ) );
+		foreach ( $fields as $key => [ $label, $type ] ) {
+			$optional = 'reduced_price' === $key;
+			$attrs = 'number' === $type ? ( 'exhibitors' === $key ? ' min="1" max="100000" step="1"' : ' min="0" max="1000000" step="0.01"' ) : '';
+			echo '<tr><th><label for="mp-' . esc_attr( $key ) . '">' . esc_html( $label ) . ( $optional ? ' (facultatif)' : ' *' ) . '</label></th><td><input class="regular-text" id="mp-' . esc_attr( $key ) . '" name="mp_edition[' . esc_attr( $key ) . ']" type="' . esc_attr( $type ) . '" value="' . esc_attr( $data[ $key ] ) . '"' . $attrs . ( $optional ? '' : ' required' ) . '>';
+			if ( 'venue' === $key ) { echo '<p class="description">Nom du lieu, adresse et commune.</p>'; }
+			if ( 'price' === $key ) { echo '<p class="description">Indiquez 0 pour un emplacement gratuit. Précisez les conditions ou suppléments dans la présentation ou le règlement.</p>'; }
+			if ( $optional ) { echo '<p class="description">Laissez vide si aucun tarif réduit n’est proposé. Indiquez 0 pour la gratuité.</p>'; }
+			echo '</td></tr>';
+		}
+		echo '<tr><th><label for="mp-reduced_description">Conditions du tarif réduit</label></th><td><textarea class="large-text" rows="3" maxlength="2000" id="mp-reduced_description" name="mp_edition[reduced_description]">' . esc_textarea( $data['reduced_description'] ) . '</textarea><p class="description">Obligatoire si un tarif réduit est renseigné. Exemple : réservé aux adhérents de l’association XXX.</p></td></tr></table>';
+	}
+
+	public static function validate_market( array $data ): ?array {
+		$result = array();
+		$keys = array( 'market_start', 'market_end', 'venue', 'exhibitors', 'price', 'reduced_price', 'reduced_description' );
+		foreach ( $keys as $key ) {
+			if ( ! is_string( $data[ $key ] ?? '' ) ) { return null; }
+			$result[ $key ] = trim( $data[ $key ] ?? '' );
+		}
+		// Les anciennes éditions restent lisibles ; le nouvel écran demande de compléter les champs.
+		if ( ! array_intersect( $keys, array_keys( $data ) ) ) { return $result; }
+		foreach ( array( 'market_start', 'market_end' ) as $key ) { if ( ! self::parse_date( $result[ $key ] . 'T00:00' ) ) { return null; } }
+		if ( $result['market_end'] < $result['market_start'] || '' === $result['venue'] || strlen( $result['venue'] ) > 1000 || ! preg_match( '/^[1-9][0-9]{0,5}$/D', $result['exhibitors'] ) || (int) $result['exhibitors'] > 100000 ) { return null; }
+		foreach ( array( 'price', 'reduced_price' ) as $key ) {
+			if ( 'reduced_price' === $key && '' === $result[ $key ] ) { continue; }
+			if ( ! preg_match( '/^[0-9]+(?:[.,][0-9]{1,2})?$/D', $result[ $key ] ) ) { return null; }
+			$result[ $key ] = str_replace( ',', '.', $result[ $key ] );
+			if ( (float) $result[ $key ] > 1000000 ) { return null; }
+		}
+		$result['venue'] = sanitize_text_field( $result['venue'] );
+		$result['reduced_description'] = sanitize_textarea_field( $result['reduced_description'] );
+		if ( '' === $result['venue'] || strlen( $result['reduced_description'] ) > 2000 ) { return null; }
+		if ( '' !== $result['reduced_price'] && ( '' === $result['reduced_description'] || (float) $result['reduced_price'] > (float) $result['price'] ) ) { return null; }
+		if ( '' === $result['reduced_price'] ) { $result['reduced_description'] = ''; }
+		return $result;
 	}
 
 	public static function stand_value( int $edition, mixed $submitted = null ): string {
@@ -110,7 +169,9 @@ final class Editions {
 	public static function render_box( \WP_Post $post ): void {
 		$data = self::settings( $post->ID );
 		wp_nonce_field( 'mp_save_edition_' . $post->ID, 'mp_edition_nonce' );
+		self::market_fields( $data );
 		?>
+		<h3>Période de candidature</h3>
 		<p><?php echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
 		<table class="form-table" role="presentation">
 			<tr><th><label for="mp-year"><?php esc_html_e( 'Année', 'marche-potier' ); ?></label></th><td><input id="mp-year" name="mp_edition[year]" type="number" min="2000" max="9999" required value="<?php echo esc_attr( $data['year'] ); ?>"></td></tr>
@@ -123,8 +184,8 @@ final class Editions {
 		<p><label for="mp-form-shortcode">Shortcode à copier dans votre page WordPress</label></p>
 		<input id="mp-form-shortcode" class="large-text code" type="text" readonly value="<?php echo esc_attr( preg_match( '/^[2-9][0-9]{3}$/D', (string) $data['year'] ) ? '[inscription_potier edition="' . $data['year'] . '"]' : '' ); ?>" aria-describedby="mp-shortcode-help">
 		<p class="description" id="mp-shortcode-help">Renseignez l’année et enregistrez l’édition, puis collez ce code dans un bloc « Code court » de la page qui accueillera les candidatures. L’édition doit être publiée ; le formulaire respecte les dates d’ouverture et de fermeture.</p>
-		<h3>Présentation du marché</h3>
-		<p><label for="mppresentation">Texte de présentation</label></p>
+		<h3>Informations complémentaires</h3>
+		<p><label for="mppresentation">Texte de présentation complémentaire</label></p>
 		<?php wp_editor( $data['presentation'], 'mppresentation', array(
 			'textarea_name' => 'mp_edition[presentation]',
 			'textarea_rows' => 10,
@@ -137,8 +198,8 @@ final class Editions {
 				'block_formats' => 'Paragraphe=p;Titre 2=h2;Titre 3=h3',
 			),
 		) ); ?>
-		<p class="description">Cette présentation et les documents sont publics et affichés avant le formulaire, même lorsque les candidatures sont fermées.</p>
-		<?php foreach ( array( 'rules' => 'Règlement intérieur', 'application_document' => 'Dossier de candidature' ) as $key => $label ) : ?>
+		<p class="description">Les informations du marché, cette présentation et le règlement sont publics et affichés avant le formulaire, même lorsque les candidatures sont fermées.</p>
+		<?php foreach ( array( 'rules' => 'Règlement intérieur' ) as $key => $label ) : ?>
 		<div class="mp-media-field">
 			<p><strong><?php echo esc_html( $label ); ?></strong></p>
 			<input type="hidden" name="mp_edition[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $data[ $key ] ); ?>">
@@ -182,6 +243,8 @@ final class Editions {
 		if ( ! preg_match( '/^[2-9][0-9]{3}$/D', $data['year'] ) ) {
 			return null;
 		}
+		$market = self::validate_market( $data );
+		if ( null === $market ) { return null; }
 		$opens = self::parse_date( $data['opens'] );
 		$closes = self::parse_date( $data['closes'] );
 		if ( ! $opens || ! $closes || $closes <= $opens ) {
@@ -194,17 +257,17 @@ final class Editions {
 		$stand = str_replace( ',', '.', $stand );
 		if ( (float) $stand < 0.01 || (float) $stand > 1000 || ! is_string( $data['presentation'] ?? '' ) || strlen( $data['presentation'] ?? '' ) > 80000 || ! in_array( $data['stand_editable'] ?? '1', array( '0', '1' ), true ) ) { return null; }
 		$media = array();
-		foreach ( array( 'image', 'rules', 'application_document' ) as $key ) {
+		foreach ( array( 'image', 'rules' ) as $key ) {
 			$value = $data[ $key ] ?? '0';
 			if ( ! is_scalar( $value ) || ! ctype_digit( (string) $value ) ) { return null; }
 			$media[ $key ] = (int) $value;
 			if ( $media[ $key ] && ( 'attachment' !== get_post_type( $media[ $key ] ) || ! in_array( get_post_mime_type( $media[ $key ] ), 'image' === $key ? array( 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif' ) : array( 'application/pdf' ), true ) ) ) { return null; }
 		}
-		return array(
+		return $market + array(
 			'thank_you' => sanitize_textarea_field( $data['thank_you'] ?? '' ),
 			'organizer_email' => sanitize_email( $data['organizer_email'] ?? '' ),
 			'presentation' => isset( $data['presentation'] ) ? wp_kses_post( $data['presentation'] ) : '',
-			'image' => $media['image'], 'rules' => $media['rules'], 'application_document' => $media['application_document'],
+			'image' => $media['image'], 'rules' => $media['rules'], 'application_document' => 0,
 			'stand_length' => $stand, 'stand_editable' => '1' === ( $data['stand_editable'] ?? '1' ),
 			'year' => $data['year'],
 			'opens' => $data['opens'],
@@ -236,7 +299,7 @@ final class Editions {
 		if ( ! $screen || 'mp_edition' !== $screen->post_type || ! isset( $_GET['mp_edition_error'] ) || ! current_user_can( 'mp_manage_editions' ) ) {
 			return;
 		}
-		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'marche-potier' ) . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'marche-potier' ) . '</p></div>';
 	}
 
 	/** À réutiliser côté serveur lors du dépôt, sans dépendre de WP-Cron. */
