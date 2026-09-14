@@ -357,7 +357,9 @@ final class Records {
 
 	public static function menu(): void {
 		// Page accessible par les liens des dossiers, sans entrée autonome dans le menu.
-		add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_manage_applications', 'mp-dossier', array( self::class, 'view' ) );
+		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_manage_applications', 'mp-dossier', array( self::class, 'view' ) );
+		// Une page sans parent n’est pas retrouvée par get_admin_page_title().
+		add_action( 'load-' . $hook, static function () { $GLOBALS['title'] = 'Consulter une candidature'; } );
 		add_submenu_page( 'marche-potier', 'Historique des candidatures', 'Historique', 'mp_manage_applications', 'mp-historique', array( self::class, 'history' ) );
 	}
 
