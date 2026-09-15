@@ -6,13 +6,13 @@ final class Review {
 	public static function hooks(): void {
 		CsvExport::hooks();
 		add_action( 'admin_menu', static function () {
-			$hook = add_submenu_page( 'marche-potier', 'Gestion des candidatures', 'Gestion des candidatures', 'mp_manage_applications', 'mp-gestion', array( self::class, 'table' ), 2 );
+			$hook = add_submenu_page( 'marche-potier', 'Gestion des candidatures', 'Gestion des candidatures', 'mp_review_applications', 'mp-gestion', array( self::class, 'table' ), 2 );
 			add_action( 'load-' . $hook, static function () {
 				add_screen_option( 'per_page', array( 'label' => 'Nombre d’éléments par page', 'default' => 25, 'option' => 'mp_applications_per_page' ) );
 			} );
 		} );
 		add_filter( 'set_screen_option_mp_applications_per_page', static function ( $status, $option, $value ) {
-			return current_user_can( 'mp_manage_applications' ) ? max( 1, min( 999, (int) $value ) ) : false;
+			return Jury::can_review() ? max( 1, min( 999, (int) $value ) ) : false;
 		}, 10, 3 );
 		add_filter( 'views_edit-mp_candidature', static function ( array $views ): array {
 			if ( current_user_can( 'mp_manage_applications' ) ) {
@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.12.4' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.12.2', true );
 		} );
 	}
@@ -64,7 +64,7 @@ final class Review {
 	}
 
 	public static function decision_form( int $id ): void {
-		if ( ! current_user_can( 'mp_select_applications' ) ) { return; }
+		if ( ! current_user_can( 'mp_manage_applications' ) || ! current_user_can( 'mp_select_applications' ) ) { return; }
 		if ( isset( $_GET['mp_decision_saved'] ) ) { echo '<div class="notice notice-success inline"><p>Sélection enregistrée.</p></div>'; }
 		echo '<form method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '" class="mp-review-decision"><input type="hidden" name="action" value="mp_review_decision"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
 		wp_nonce_field( 'mp_review_decision_' . $id );
@@ -99,7 +99,7 @@ final class Review {
 	}
 
 	public static function table(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$context = Records::list_context(); $context['mp_from'] = 'gestion';
 		$ids = Records::navigation_ids( $context );
 		$per_page = max( 1, min( 999, (int) ( get_user_option( 'mp_applications_per_page' ) ?: 25 ) ) );
@@ -108,16 +108,23 @@ final class Review {
 		$trash_count = (int) ( wp_count_posts( 'mp_candidature', 'readable' )->trash ?? 0 );
 		$trash_url = admin_url( 'edit.php?post_status=trash&post_type=mp_candidature' );
 		$export_url = wp_nonce_url( add_query_arg( array_merge( $context, array( 'action' => 'mp_export_csv' ) ), admin_url( 'admin-post.php' ) ), 'mp_export_csv' );
-		echo '<div class="wrap"><div class="mp-management-heading"><h1>Gestion des candidatures</h1><a class="button button-small mp-export-button" href="' . esc_url( $export_url ) . '" aria-label="Exporter les candidatures filtrées au format CSV, toutes les pages" title="Exporter les candidatures filtrées, toutes les pages">Exporter CSV</a></div><hr class="wp-header-end">';
+		echo '<div class="wrap"><div class="mp-management-heading"><h1>Gestion des candidatures</h1>';
+		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<a class="button button-small mp-export-button" href="' . esc_url( $export_url ) . '">Exporter CSV</a>'; }
+		echo '</div><hr class="wp-header-end">';
 		if ( ! empty( $_GET['mp_trashed'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
 		if ( ! empty( $_GET['mp_deleted'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
-		echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a> <a class="button" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></p><form method="get"><input type="hidden" name="page" value="mp-gestion">';
+		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a> <a class="button" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></p>'; }
+		echo '<form method="get"><input type="hidden" name="page" value="mp-gestion">';
+		if ( isset( $context['orderby'] ) ) { echo '<input type="hidden" name="orderby" value="' . esc_attr( $context['orderby'] ) . '"><input type="hidden" name="order" value="' . esc_attr( $context['order'] ?? 'DESC' ) . '">'; }
 		echo '<label class="screen-reader-text" for="mp-search">Rechercher une candidature</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"> ';
 		Records::render_list_filters( 'mp_candidature' );
-		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier, ou sur Modifier pour éditer ses coordonnées et sa candidature. Faites défiler le tableau horizontalement pour voir tous les champs.</p>';
+		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir tous les champs.</p>';
 		$groups = array( 'identity' => Fields::identity(), 'activity' => Fields::activity(), 'internal' => Fields::internal() );
 		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
-		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><thead><tr><th scope="col">Potier / édition</th><th scope="col">Photos</th><th scope="col">Sélection</th>';
+		$sort_order = 'points' === ( $context['orderby'] ?? '' ) && 'DESC' === strtoupper( $context['order'] ?? 'DESC' ) ? 'ASC' : 'DESC';
+		$sort_url = add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion', 'orderby' => 'points', 'order' => $sort_order, 'paged' => 1 ) ), admin_url( 'admin.php' ) );
+		$votes = Votes::all( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) );
+		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><thead><tr><th scope="col">Potier / édition</th><th scope="col">Photos</th><th scope="col">Sélection</th><th scope="col"><a href="' . esc_url( $sort_url ) . '" aria-label="Trier par points, ordre ' . ( 'ASC' === $sort_order ? 'croissant' : 'décroissant' ) . '">Point ↕</a></th>';
 		foreach ( $groups as $schema ) { foreach ( $schema as $field ) { echo '<th scope="col">' . esc_html( $field[0] ) . '</th>'; } }
 		echo '<th scope="col">Justificatifs</th><th scope="col">Dépôt / autorisation de présentation</th></tr></thead><tbody>';
 		foreach ( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) as $id ) {
@@ -125,9 +132,13 @@ final class Review {
 			$name = trim( ( $data['identity']['last_name'] ?? '' ) . ' ' . ( $data['identity']['first_name'] ?? '' ) );
 			echo '<tr data-mp-dossier="' . esc_url( $url ) . '"><th scope="row" class="mp-review-person"><strong>' . esc_html( $name ?: get_the_title( $id ) ) . '</strong>';
 			if ( ! empty( $data['edition_id'] ) ) { echo '<br><small>' . esc_html( get_the_title( $data['edition_id'] ) ) . '</small>'; }
-			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a> <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a></p></th><td>';
+			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a>';
+			if ( current_user_can( 'mp_manage_applications' ) ) { echo ' <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a>'; }
+			echo '</p></th><td>';
 			self::photos( $id, $url );
 			echo '</td><td>' . esc_html( Records::decisions()[ $data['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</td>';
+			$summary = Votes::summary( $id, $votes[ $id ] ?? array() );
+			echo '<td class="mp-points">' . ( $summary['multiple'] ? '<strong>' . esc_html( $summary['count'] ? $summary['total'] . ' points' : '—' ) . '</strong><br><small>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</small>' : '—' ) . '</td>';
 			foreach ( $groups as $group => $schema ) { foreach ( $schema as $key => $field ) { echo '<td>' . nl2br( esc_html( self::value( $field, $data[ $group ][ $key ] ?? '' ) ) ) . '</td>'; } }
 			echo '<td>';
 			foreach ( array( 'status', 'insurance' ) as $slot ) { if ( ! empty( $data['files'][ $slot ] ) ) { echo '<p><a href="' . esc_url( PrivateFiles::url( $id, $slot ) ) . '" target="_blank" rel="noopener">' . esc_html( PrivateFiles::slots()[ $slot ] ) . '</a></p>'; } }

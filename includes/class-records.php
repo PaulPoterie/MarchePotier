@@ -97,13 +97,14 @@ final class Records {
 	}
 
 	public static function render_list_filters( string $post_type ): void {
-		if ( 'mp_candidature' !== $post_type || ! current_user_can( 'mp_manage_applications' ) ) {
+		if ( 'mp_candidature' !== $post_type || ! Jury::can_review() ) {
 			return;
 		}
 		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
 		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
 		echo '<label class="screen-reader-text" for="mp-edition-filter">Filtrer par édition</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
 		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) ) as $item ) {
+			if ( ! Jury::can_view_edition( $item->ID ) ) { continue; }
 			echo '<option value="' . esc_attr( $item->ID ) . '" ' . selected( $edition, $item->ID, false ) . '>' . esc_html( $item->post_title ) . '</option>';
 		}
 		echo '</select> ';
@@ -357,10 +358,10 @@ final class Records {
 
 	public static function menu(): void {
 		// Page accessible par les liens des dossiers, sans entrée autonome dans le menu.
-		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_manage_applications', 'mp-dossier', array( self::class, 'view' ) );
+		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_review_applications', 'mp-dossier', array( self::class, 'view' ) );
 		// Une page sans parent n’est pas retrouvée par get_admin_page_title().
 		add_action( 'load-' . $hook, static function () { $GLOBALS['title'] = 'Consulter une candidature'; } );
-		add_submenu_page( 'marche-potier', 'Historique des candidatures', 'Historique', 'mp_manage_applications', 'mp-historique', array( self::class, 'history' ) );
+		add_submenu_page( 'marche-potier', 'Historique des candidatures', 'Historique', 'mp_review_applications', 'mp-historique', array( self::class, 'history' ) );
 	}
 
 	public static function view_url( int $id, array $context = array() ): string {
@@ -374,7 +375,7 @@ final class Records {
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
 		}
-		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
+		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && in_array( $_GET[ $key ], $allowed, true ) ) { $context[ $key ] = $_GET[ $key ]; }
 		}
 		if ( isset( $_GET['s'] ) && is_string( $_GET['s'] ) ) { $context['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) ); }
@@ -382,15 +383,26 @@ final class Records {
 	}
 
 	public static function navigation_ids( array $context ): array {
+		if ( ! Jury::can_review() ) { return array(); }
 		$args = array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'fields' => 'ids', 'orderby' => 'date', 'order' => 'DESC' );
 		foreach ( array( 'post_status', 'orderby', 'order', 'm', 'author' ) as $key ) {
 			if ( isset( $context[ $key ] ) ) { $args[ $key ] = $context[ $key ]; }
 		}
+		if ( 'points' === $args['orderby'] ) { $args['orderby'] = 'date'; }
 		// Un second critère garantit un parcours stable lorsque deux dossiers ont la même date.
 		$args['orderby'] = array( $args['orderby'] => strtoupper( $args['order'] ), 'ID' => strtoupper( $args['order'] ) );
-		if ( ! empty( $context['mp_edition'] ) && self::valid_reference( (int) $context['mp_edition'], 'mp_edition' ) ) { $args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $context['mp_edition'], 'type' => 'NUMERIC' ); }
+		if ( ! empty( $context['mp_edition'] ) ) {
+			if ( ! Jury::can_view_edition( (int) $context['mp_edition'] ) ) { return array(); }
+			$args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $context['mp_edition'], 'type' => 'NUMERIC' );
+		}
+		if ( ! current_user_can( 'mp_manage_applications' ) ) {
+			$editions = Jury::edition_ids();
+			if ( ! $editions ) { return array(); }
+			$args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $editions, 'compare' => 'IN', 'type' => 'NUMERIC' );
+		}
 		if ( isset( self::decisions()[ $context['mp_decision'] ?? '' ] ) ) { $args['meta_query'][] = array( 'key' => '_mp_decision', 'value' => $context['mp_decision'] ); }
 		$ids = array_map( 'intval', get_posts( $args ) );
+		$ids = array_values( array_filter( $ids, array( Jury::class, 'can_view_application' ) ) );
 		$search = trim( (string) ( $context['s'] ?? '' ) );
 		if ( '' !== $search ) {
 			$terms = preg_split( '/\s+/u', strtolower( remove_accents( $search ) ), -1, PREG_SPLIT_NO_EMPTY );
@@ -403,7 +415,7 @@ final class Records {
 				return true;
 			} ) );
 		}
-		return $ids;
+		return 'points' === ( $context['orderby'] ?? '' ) ? Votes::sort_ids( $ids, $context['order'] ?? 'DESC' ) : $ids;
 	}
 
 	private static function navigation( int $id ): void {
@@ -428,16 +440,21 @@ final class Records {
 	}
 
 	public static function view(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$id = isset( $_GET['candidature'] ) && is_string( $_GET['candidature'] ) ? absint( $_GET['candidature'] ) : 0;
 		if ( ! self::valid_reference( $id, 'mp_candidature' ) ) { wp_die( 'Candidature introuvable.', '', array( 'response' => 404 ) ); }
+		if ( ! Jury::can_view_application( $id ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$data = self::data( $id );
 		echo '<div class="wrap"><h1>' . esc_html( get_the_title( $id ) ) . '</h1>';
+		echo '<div class="mp-review-heading"><div>';
 		self::navigation( $id );
-		echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>';
-		if ( empty( $data['potier_id'] ) ) { echo '<p>Ce dossier ne possède pas encore de données enregistrées. Utilisez « Modifier ce dossier » pour le compléter.</p></div>'; return; }
+		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>'; }
+		if ( empty( $data['potier_id'] ) ) { echo '<p>Ce dossier ne possède pas encore de données enregistrées.</p></div></div></div>'; return; }
 		echo '<p><strong>Édition :</strong> ' . esc_html( get_the_title( $data['edition_id'] ) ) . ' — <strong>Décision :</strong> ' . esc_html( self::decisions()[ $data['decision'] ] ?? 'À examiner' ) . '</p>';
 		Review::decision_form( $id );
+		echo '</div>';
+		Votes::render( $id );
+		echo '</div>';
 		echo '<div class="mp-review-layout"><div><h2>Photos du potier</h2>';
 		Review::photos( $id );
 		SocialImages::render( $id );
@@ -452,6 +469,7 @@ final class Records {
 		echo '</div></div>';
 		echo '<h2>Autres candidatures de ce potier</h2>';
 		$history = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => 50, 'post__not_in' => array( $id ), 'meta_key' => '_mp_potier_id', 'meta_value' => $data['potier_id'], 'orderby' => 'date', 'order' => 'DESC' ) );
+		$history = array_filter( $history, static fn( $previous ) => Jury::can_view_application( $previous->ID ) );
 		if ( ! $history ) { echo '<p>Aucune autre candidature enregistrée.</p>'; }
 		echo '<ul>';
 		foreach ( $history as $previous ) {
@@ -463,9 +481,11 @@ final class Records {
 	}
 
 	public static function history(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$editions = get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$applications = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' ) );
+		$editions = array_values( array_filter( $editions, static fn( $edition ) => Jury::can_view_edition( $edition->ID ) ) );
+		$applications = array_values( array_filter( $applications, static fn( $application ) => Jury::can_view_application( $application->ID ) ) );
 		$edition_ids = array_fill_keys( wp_list_pluck( $editions, 'ID' ), true );
 		$totals = array_fill_keys( array_keys( $edition_ids ), array( 'selected' => 0, 'applications' => 0 ) );
 		$rows = array();

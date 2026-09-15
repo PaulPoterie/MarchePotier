@@ -14,6 +14,8 @@ final class Plugin {
 		add_action( 'admin_init', array( Editions::class, 'install_permissions' ) );
 		Editions::hooks();
 		Records::hooks();
+		Jury::hooks();
+		Votes::hooks();
 		Review::hooks();
 		Gallery::hooks();
 		GalleryMap::hooks();
@@ -45,14 +47,15 @@ final class Plugin {
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Marché Potier', 'marche-potier' ); ?></h1>
 			<p><?php esc_html_e( 'Retrouvez ici les outils pour organiser votre marché, de l’ouverture des candidatures à la publication des potiers sélectionnés.', 'marche-potier' ); ?></p>
-			<?php foreach ( array( 'mp_edition' => array( 'mp_manage_editions', 'Gérer les éditions' ), 'mp_candidature' => array( 'mp_manage_applications', 'Examiner les candidatures' ) ) as $type => $item ) : ?>
+			<?php foreach ( array( 'mp_edition' => array( 'mp_manage_editions', 'Gérer les éditions' ), 'mp_candidature' => array( 'mp_review_applications', 'Examiner les candidatures' ) ) as $type => $item ) : ?>
 				<?php if ( current_user_can( $item[0] ) ) : ?>
 					<p><a class="button" href="<?php echo esc_url( admin_url( 'mp_candidature' === $type ? 'admin.php?page=mp-gestion' : 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $item[1] ); ?></a></p>
 				<?php endif; ?>
 			<?php endforeach; ?>
-			<?php if ( current_user_can( 'mp_manage_applications' ) ) : ?>
+			<?php if ( Jury::can_review() ) : ?>
 				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=mp-historique' ) ); ?>"><?php esc_html_e( 'Historique des candidatures', 'marche-potier' ); ?></a></p>
 			<?php endif; ?>
+			<?php if ( current_user_can( 'mp_manage_editions' ) ) : ?>
 			<h2><?php esc_html_e( 'Comment organiser une édition ?', 'marche-potier' ); ?></h2>
 			<ol>
 				<li>
@@ -75,6 +78,11 @@ final class Plugin {
 				</li>
 			</ol>
 			<p class="description"><?php esc_html_e( 'Dans les deux codes, remplacez 2027 par l’année de votre édition.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Pour noter les dossiers à plusieurs, ouvrez « Organisateurs et votes » dans l’édition, choisissez « Votes multiples » et ajoutez les noms et emails des votants. Chaque personne vote dans « Examiner ». La colonne « Point » affiche le total et le nombre de votes.', 'marche-potier' ); ?></p>
+			<?php else : ?>
+			<h2><?php esc_html_e( 'Examiner et voter', 'marche-potier' ); ?></h2>
+			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans le tableau des organisateurs, choisissez votre note de 0 à 5 et cliquez sur « Valider ». Vous pouvez consulter les autres notes et modifier la vôtre jusqu’à la clôture des votes.', 'marche-potier' ); ?></p>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

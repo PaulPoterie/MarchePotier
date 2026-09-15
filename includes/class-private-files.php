@@ -152,7 +152,7 @@ final class PrivateFiles {
 		return wp_nonce_url( add_query_arg( array( 'action' => 'mp_private_file', 'application' => $id, 'slot' => $slot ), admin_url( 'admin-post.php' ) ), 'mp_file_' . $id . '_' . $slot );
 	}
 	public static function render( int $id, bool $documents_only = false ): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { return; }
+		if ( ! Jury::can_view_application( $id ) ) { return; }
 		echo $documents_only ? '<h3>Justificatifs</h3>' : '<h3>Photos et justificatifs</h3>';
 		$files = Records::data( $id )['files'] ?? array();
 		if ( ! $files ) { echo '<p>Aucun fichier joint à ce dossier.</p>'; return; }
@@ -180,8 +180,8 @@ final class PrivateFiles {
 		}
 	}
 	public static function download(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$id = isset( $_GET['application'] ) && is_string( $_GET['application'] ) ? absint( $_GET['application'] ) : 0;
+		if ( ! Jury::can_view_application( $id ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$slot = isset( $_GET['slot'] ) && is_string( $_GET['slot'] ) ? $_GET['slot'] : '';
 		if ( ! isset( self::slots()[ $slot ] ) || get_post_type( $id ) !== 'mp_candidature' || 'trash' === get_post_status( $id ) ) { wp_die( 'Fichier introuvable.', '', array( 'response' => 404 ) ); }
 		check_admin_referer( 'mp_file_' . $id . '_' . $slot );

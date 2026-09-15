@@ -1,8 +1,10 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.18.0 — 14 septembre 2026.
+Version 0.19.0-beta.1 — 15 septembre 2026 — branche `feature/votes-organisateurs`.
 
-[Télécharger le plugin 0.18.0 prêt à installer](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
+Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
+
+[Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
 
 ## 1. Installer le plugin
 
@@ -18,7 +20,7 @@ Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essa
 
 Un administrateur WordPress accède au menu **Marché Potier**. Pour les autres membres de l’équipe, attribuez le rôle **Organisateur de marché** disponible dans la gestion des comptes WordPress.
 
-Les organisateurs gèrent l’ensemble des éditions du site. L’affectation à une seule édition et le vote individuel de 0 à 5 ne font pas encore partie de cette version. Chaque personne doit utiliser son propre compte.
+Le rôle « Organisateur de marché » reste un rôle de responsable : il gère l’ensemble des éditions du site. Pour inviter une personne à consulter et noter seulement certaines éditions, ajoutez son nom et son email dans « Organisateurs et votes » de chaque édition concernée. Un nouveau compte reçoit le rôle limité « Organisateur votant » ; les rôles d’un compte existant sont conservés. Chaque personne utilise son propre compte.
 
 ## 3. Créer une édition
 
