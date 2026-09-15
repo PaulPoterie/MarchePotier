@@ -44,13 +44,37 @@ final class Plugin {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Marché Potier', 'marche-potier' ); ?></h1>
-			<p><?php esc_html_e( 'Créez vos éditions et définissez leurs périodes de candidature.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Retrouvez ici les outils pour organiser votre marché, de l’ouverture des candidatures à la publication des potiers sélectionnés.', 'marche-potier' ); ?></p>
 			<?php foreach ( array( 'mp_edition' => array( 'mp_manage_editions', 'Gérer les éditions' ), 'mp_candidature' => array( 'mp_manage_applications', 'Examiner les candidatures' ) ) as $type => $item ) : ?>
 				<?php if ( current_user_can( $item[0] ) ) : ?>
 					<p><a class="button" href="<?php echo esc_url( admin_url( 'mp_candidature' === $type ? 'admin.php?page=mp-gestion' : 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $item[1] ); ?></a></p>
 				<?php endif; ?>
 			<?php endforeach; ?>
-			<p><?php esc_html_e( 'Pour recevoir les candidatures, ajoutez le shortcode [inscription_potier edition="2027"] dans une page WordPress. Pour présenter la sélection, utilisez [afficher_selection edition="2027"].', 'marche-potier' ); ?></p>
+			<?php if ( current_user_can( 'mp_manage_applications' ) ) : ?>
+				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=mp-historique' ) ); ?>"><?php esc_html_e( 'Historique des candidatures', 'marche-potier' ); ?></a></p>
+			<?php endif; ?>
+			<h2><?php esc_html_e( 'Comment organiser une édition ?', 'marche-potier' ); ?></h2>
+			<ol>
+				<li>
+					<p><strong><?php esc_html_e( 'Créer une édition', 'marche-potier' ); ?></strong><br>
+					<?php esc_html_e( 'Dans « Gérer les éditions », ajoutez une édition, renseignez son année, les informations du marché et les dates d’ouverture et de fermeture des candidatures, puis publiez-la.', 'marche-potier' ); ?></p>
+				</li>
+				<li>
+					<p><strong><?php esc_html_e( 'Faire apparaître le formulaire', 'marche-potier' ); ?></strong><br>
+					<?php esc_html_e( 'Ajoutez le code suivant dans un bloc « Code court » d’une page WordPress, puis publiez cette page. Le formulaire accepte les candidatures pendant la période définie dans l’édition.', 'marche-potier' ); ?><br>
+					<code>[inscription_potier edition="2027"]</code></p>
+				</li>
+				<li>
+					<p><strong><?php esc_html_e( 'Examiner les candidatures', 'marche-potier' ); ?></strong><br>
+					<?php esc_html_e( 'Dans « Examiner les candidatures », choisissez l’édition, consultez les dossiers et leurs pièces, puis enregistrez vos décisions : « À examiner », « Sélectionné » ou « Non sélectionné ». L’historique permet de retrouver les candidatures des différentes éditions.', 'marche-potier' ); ?></p>
+				</li>
+				<li>
+					<p><strong><?php esc_html_e( 'Faire apparaître la sélection', 'marche-potier' ); ?></strong><br>
+					<?php esc_html_e( 'Ajoutez le code suivant dans un bloc « Code court » d’une page WordPress et publiez la page. Lorsque votre sélection est prête, autorisez sa publication dans les réglages de l’édition pour afficher les potiers sélectionnés.', 'marche-potier' ); ?><br>
+					<code>[afficher_selection edition="2027"]</code></p>
+				</li>
+			</ol>
+			<p class="description"><?php esc_html_e( 'Dans les deux codes, remplacez 2027 par l’année de votre édition.', 'marche-potier' ); ?></p>
 		</div>
 		<?php
 	}
