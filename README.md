@@ -1,8 +1,10 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.1 — 15 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.2 — 15 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
+
+La bêta 2 clarifie les invitations : nom de l’édition, bouton pour choisir son mot de passe et connexion avec l’adresse email. Les comptes existants conservent leur mot de passe et reçoivent un lien vers les candidatures.
 
 [Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
 

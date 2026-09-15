@@ -1,11 +1,11 @@
-# Votes des organisateurs — 0.19.0-beta.1
+# Votes des organisateurs — 0.19.0-beta.2
 
 ## Utilisation
 
 1. Dans **Marché Potier → Éditions**, ouvrir l’édition et descendre jusqu’à **Organisateurs et votes**.
 2. Choisir **Votes multiples — notes de 0 à 5**. Le mode **Simple — sélection directe**, utilisé par défaut pour les anciennes éditions, conserve le fonctionnement précédent.
 3. Cliquer sur **Ajouter un organisateur** et renseigner nom et email. Ajouter aussi son propre email si le responsable souhaite voter.
-4. Enregistrer l’édition. Un email déjà connu rattache le compte existant sans changer son rôle. Un email nouveau crée un compte « Organisateur votant » et déclenche l’invitation WordPress pour définir un mot de passe. Pour réinviter un compte existant, cocher **Envoyer une invitation** avant d’enregistrer.
+4. Enregistrer l’édition. Un email déjà connu rattache le compte existant sans changer son rôle. Un email nouveau crée un compte « Organisateur votant » et envoie une invitation personnalisée au nom de l’édition, avec le bouton **Choisir mon mot de passe**. Le votant se connecte avec **son adresse email et le mot de passe choisi** ; aucun identifiant technique n’est à mémoriser. Pour réinviter un compte existant, cocher **Envoyer une invitation** avant d’enregistrer : il reçoit un accès aux candidatures et un lien de récupération, sans modification de son mot de passe. Les liens de définition et de récupération du mot de passe utilisent le mécanisme natif de WordPress.
 5. À chaque dépôt public terminé, le candidat reçoit sa confirmation et chaque organisateur actif reçoit un récapitulatif avec le lien du dossier. L’adresse de contact principale de l’édition reçoit également une notification ; si elle correspond à un votant, elle n’en reçoit qu’une. Les simples téléversements de pièces ne déclenchent pas cette notification.
 6. Dans **Gestion des candidatures → Examiner**, chaque personne choisit sa note entière entre **0 et 5** sur sa propre ligne puis clique sur **Valider**. Les autres notes sont visibles en lecture seule. Les notes des autres personnes sont actualisées au chargement de la page.
 7. La colonne **Point** affiche la somme des notes et la participation, par exemple **9 points · 2 votes sur 3**. Cliquer sur son titre trie toutes les candidatures filtrées, avant pagination. Les dossiers sans vote sont placés après les dossiers notés. **0 est une note**, l’absence de vote est indiquée par un tiret.
@@ -31,7 +31,7 @@
 - Mise à jour du schéma et des droits à la visite de l’administration par un administrateur, sans réactivation du plugin.
 - Script d’intégration `tests/votes-local.php` limité au site nommé `marche-potier-test.local`. Il charge directement cette branche, intercepte les emails, crée des fixtures marquées et les retire en fin de test. Deux processus PHP distincts vérifient les votes simultanés. `--keep` conserve temporairement les fixtures pour la vérification visuelle ; `--cleanup` les retire.
 - Parcours navigateur contrôlé avec deux comptes fictifs : accès votant, notation et confirmation, affichage des autres notes, configuration du responsable, ajout/retrait de ligne et sauvegarde de la clôture.
-- Résultat du 15 septembre 2026 : **57 vérifications d’intégration réussies**. Sur l’édition, contrôle visuel à 390 pixels de large : le tableau défile dans sa propre zone, sans débordement de page. Les comptes et dossiers fictifs ont été retirés après vérification.
+- Résultat du 15 septembre 2026 : **66 vérifications d’intégration réussies**, dont les invitations personnalisées, la validité et l’usage unique du lien de mot de passe, la connexion par email et les réinvitations sans changement de mot de passe. Lors de la bêta 1, contrôle visuel de l’édition à 390 pixels de large : le tableau défile dans sa propre zone, sans débordement de page. Les comptes et dossiers fictifs ont été retirés après vérification.
 - Environnement essayé : WordPress 7.1 et PHP CLI 8.3 sur le site Local Windows. Les emails sont vérifiés par interception, pas par livraison réelle à des boîtes externes.
 
 ## Branche et retour à la version précédente
@@ -43,6 +43,6 @@ Le dépôt Git préexistant est dans `C:\Users\paul\Projects\MarchePotier\.tools
 - La branche `main` n’est pas modifiée. Les branches sont locales ; cette version bêta n’est pas publiée sur GitHub.
 - Le dossier source initial `C:\Users\paul\Projects\MarchePotier\marche-potier` conserve la version antérieure. Le code de la branche est installé sur le site Local demandé.
 - Sauvegarde installable du plugin avant les votes : `C:\Users\paul\Projects\MarchePotier\dist\marche-potier-avant-votes.zip`.
-- Bêta installable : `C:\Users\paul\Projects\MarchePotier\dist\marche-potier-0.19.0-beta.1.zip`.
+- Bêta installable : `C:\Users\paul\Projects\MarchePotier\dist\marche-potier-0.19.0-beta.2.zip`.
 
 Changer de branche Git ne change pas automatiquement le plugin du site Local. Pour revenir au fonctionnement précédent, réinstaller le ZIP **avant-votes** via **Extensions → Ajouter → Téléverser**, en choisissant le remplacement de la version installée. Les candidatures, fichiers et décisions restent en place. Les réglages et notes de jury déjà enregistrés restent en base et seront retrouvés si la bêta est réinstallée ; les comptes créés subsistent aussi. Il n’y a pas de suppression de données lors de ce retour.

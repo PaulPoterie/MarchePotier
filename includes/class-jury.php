@@ -65,7 +65,7 @@ final class Jury {
 		foreach ( $data['members'] as $uid => $member ) { self::member_row( (string) $uid, $member, $uid ); }
 		echo '</tbody></table></div><p><button type="button" class="button" id="mp-jury-add">Ajouter un organisateur</button></p><template id="mp-jury-template">';
 		self::member_row( '__INDEX__', array( 'name' => '', 'active' => true ), 0 );
-		echo '</template><p class="description">Enregistrez l’édition pour appliquer les changements. Les nouveaux comptes reçoivent un lien pour définir leur mot de passe. Pour un compte existant, cochez « Envoyer une invitation » si nécessaire. Les invitations ne sont pas répétées à chaque enregistrement.</p>';
+		echo '</template><p class="description">Enregistrez l’édition pour appliquer les changements. Les nouveaux comptes reçoivent une invitation au nom de l’édition pour choisir leur mot de passe. Chaque votant se connecte avec son adresse email et son mot de passe. Pour un compte existant, cochez « Envoyer une invitation » si nécessaire ; son mot de passe est conservé. Les invitations ne sont pas répétées à chaque enregistrement.</p>';
 		echo '<p class="description">Désactiver un organisateur conserve ses anciennes notes, visibles dans les dossiers mais exclues du total. Le réactiver réintègre ses notes. Le mode simple conserve les votes et masque leur affichage.</p>';
 	}
 	private static function member_row( string $index, array $member, int $uid ): void {
@@ -122,18 +122,13 @@ final class Jury {
 		update_post_meta( $edition, self::META, wp_slash( $data ) );
 		if ( self::settings( $edition ) !== $data ) { return new \WP_Error( 'storage', 'Organisateurs non enregistrés. Réessayez.' ); }
 		foreach ( $invitations as $uid => $created ) {
-			// Le mécanisme WordPress envoie le lien de définition du mot de passe des nouveaux comptes.
 			$status = 'Invitation confiée au service d’envoi';
 			$failed = static function () use ( &$status ) { $status = 'Échec de l’invitation — cochez pour réessayer'; };
 			$intercepted = static function ( $pre ) use ( $failed ) { if ( false === $pre ) { $failed(); } return $pre; };
 			add_action( 'wp_mail_failed', $failed );
 			add_filter( 'pre_wp_mail', $intercepted, PHP_INT_MAX );
 			try {
-				if ( $created ) { wp_new_user_notification( $uid, null, 'user' ); }
-				else {
-					$url = wp_login_url( add_query_arg( array( 'page' => 'mp-gestion', 'mp_edition' => $edition ), admin_url( 'admin.php' ) ) );
-					if ( ! wp_mail( get_userdata( $uid )->user_email, 'Invitation — ' . sanitize_text_field( get_the_title( $edition ) ), "Vous êtes organisateur pour cette édition. Connectez-vous pour consulter les candidatures et voter :\n" . $url . "\n\nPour définir ou retrouver votre mot de passe :\n" . wp_lostpassword_url(), array( 'Content-Type: text/plain; charset=UTF-8' ) ) ) { $failed(); }
-				}
+				if ( ! self::send_invitation( $edition, $uid, $created ) ) { $failed(); }
 			} catch ( \Throwable $error ) { $failed(); }
 			remove_action( 'wp_mail_failed', $failed );
 			remove_filter( 'pre_wp_mail', $intercepted, PHP_INT_MAX );
@@ -141,6 +136,37 @@ final class Jury {
 		}
 		if ( $invitations ) { update_post_meta( $edition, self::META, wp_slash( $data ) ); }
 		return true;
+	}
+	/** Invitation propre au jury ; les liens de mot de passe restent gérés par WordPress. */
+	private static function send_invitation( int $edition, int $uid, bool $created ): bool {
+		$user = get_userdata( $uid );
+		if ( ! $user ) { return false; }
+		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $edition ), ENT_QUOTES ) );
+		if ( '' === $title ) { $title = 'Marché Potier'; }
+		$name = self::settings( $edition )['members'][ $uid ]['name'] ?? $user->display_name;
+		$destination = add_query_arg( array( 'page' => 'mp-gestion', 'mp_edition' => $edition ), admin_url( 'admin.php' ) );
+		$login_url = wp_login_url( $destination );
+		$action_url = $login_url;
+		$action_label = 'Accéder aux candidatures';
+		$instructions = 'Vous avez déjà un compte sur ce site. Connectez-vous avec votre adresse email et votre mot de passe habituel. Votre mot de passe est conservé.';
+		if ( $created ) {
+			$key = get_password_reset_key( $user );
+			if ( is_wp_error( $key ) ) { return false; }
+			$action_url = network_site_url( 'wp-login.php?action=rp&key=' . rawurlencode( $key ) . '&login=' . rawurlencode( $user->user_login ), 'login' );
+			$action_label = 'Choisir mon mot de passe';
+			$instructions = 'Votre compte de votant est prêt. Choisissez votre mot de passe avec le bouton ci-dessous, puis connectez-vous avec votre adresse email et ce mot de passe.';
+		}
+		$message = '<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f6f3ef;color:#292524;font-family:Arial,sans-serif;font-size:16px;line-height:1.6">';
+		$message .= '<table role="presentation" style="width:100%;border-collapse:collapse"><tr><td style="padding:24px 12px"><table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e0d8;border-collapse:collapse"><tr><td style="padding:28px">';
+		$message .= '<p style="margin:0;color:#76533c;font-size:13px;font-weight:bold">MARCHÉ POTIER · INVITATION AU JURY</p><h1 style="margin:8px 0 24px;font-size:24px;line-height:1.3">' . esc_html( $title ) . '</h1>';
+		$message .= '<p>Bonjour ' . esc_html( $name ) . ',</p><p>Vous êtes invité à rejoindre les organisateurs de cette édition pour examiner les candidatures et participer aux votes.</p>';
+		$message .= '<p>' . esc_html( $instructions ) . '</p><p style="padding:16px;background:#f6f3ef">Votre identifiant de connexion est votre adresse email :<br><strong style="overflow-wrap:anywhere">' . esc_html( $user->user_email ) . '</strong></p>';
+		$message .= '<p style="margin:28px 0"><a href="' . esc_url( $action_url ) . '" style="display:inline-block;background:#76533c;color:#ffffff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:bold">' . esc_html( $action_label ) . '</a></p>';
+		if ( $created ) { $message .= '<p>Une fois votre mot de passe choisi : <a href="' . esc_url( $login_url ) . '">accéder aux candidatures de l’édition</a>.</p>'; }
+		$message .= '<p>Dans <strong>Gestion des candidatures → Examiner</strong>, vous pouvez consulter les dossiers et, lorsque les votes sont ouverts, attribuer votre note de 0 à 5. Vous voyez les notes des autres organisateurs et pouvez modifier uniquement la vôtre.</p>';
+		$message .= '<p style="margin-top:24px;font-size:14px">Mot de passe oublié ou lien expiré ? <a href="' . esc_url( wp_lostpassword_url( $destination ) ) . '">Demander un nouveau lien</a> en indiquant votre adresse email.</p>';
+		$message .= '</td></tr></table></td></tr></table></body></html>';
+		return wp_mail( $user->user_email, 'Invitation au jury — ' . $title, $message, array( 'Content-Type: text/html; charset=UTF-8' ) );
 	}
 	public static function save( int $edition ): void {
 		if ( wp_is_post_revision( $edition ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'mp_manage_jury' ) ) { return; }
