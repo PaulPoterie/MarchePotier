@@ -41,6 +41,11 @@ final class Jury {
 		update_option( 'mp_jury_permissions_version', '2', false );
 		wp_get_current_user()->get_role_caps();
 	}
+	/**
+	 * Affectations indexées par ID de compte, pas par email : une note conserve son auteur.
+	 * members contient aussi les inactifs ; utiliser members() pour les droits et les totaux.
+	 * kind décrit la fonction dans cette édition, distincte du rôle WordPress global.
+	 */
 	public static function settings( int $edition ): array {
 		$data = get_post_meta( $edition, self::META, true );
 		$data = array_merge( array( 'mode' => 'simple', 'members' => array(), 'revision' => '' ), is_array( $data ) ? $data : array() );
@@ -63,6 +68,7 @@ final class Jury {
 		$user = get_userdata( self::administrator( $edition ) );
 		return $user ? $user->user_email : '';
 	}
+	/** Les gestionnaires ont une portée site ; les votants doivent être affectés à l’édition. */
 	public static function can_view_edition( int $edition ): bool {
 		if ( 'mp_edition' !== get_post_type( $edition ) || ! in_array( get_post_status( $edition ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
 		return current_user_can( 'mp_manage_applications' ) || ( self::can_review() && isset( self::members( $edition )[ get_current_user_id() ] ) );
@@ -115,7 +121,11 @@ final class Jury {
 		if ( ! $uid ) { echo ' <button type="button" class="button-link mp-jury-remove">Retirer</button>'; }
 		echo '</td></tr>';
 	}
-	/** Tous les champs sont validés avant la création de comptes. Appel sous verrou. */
+	/**
+	 * Valide l’équipe, rattache/crée les comptes, puis enregistre les affectations et invitations.
+	 * L’appelant doit détenir SubmissionLock et avoir validé le nonce (save() côté HTTP).
+	 * La revision refuse un ancien formulaire ; le verrou seul ne détecte pas un onglet périmé.
+	 */
 	public static function configure( int $edition, array $raw ): true|\WP_Error {
 		if ( ! current_user_can( 'mp_manage_jury' ) || ! current_user_can( 'mp_manage_editions' ) || 'mp_edition' !== get_post_type( $edition ) ) { return new \WP_Error( 'access', 'Accès refusé.' ); }
 		$old = self::settings( $edition );
@@ -143,6 +153,7 @@ final class Jury {
 				$rows[] = array( 'user_id' => $uid, 'email' => $email, 'name' => $name, 'kind' => $kind, 'active' => 'administrator' === $kind || '1' === ( $row['active'] ?? '0' ), 'invite' => '1' === ( $row['invite'] ?? '0' ) );
 			}
 		}
+		// Conserver les membres retirés pour l’historique, puis réactiver uniquement l’équipe reçue.
 		$data = array( 'mode' => $raw['mode'], 'members' => $old['members'], 'revision' => wp_generate_uuid4() );
 		foreach ( $data['members'] as &$member ) { $member['active'] = false; $member['kind'] = 'voter'; } unset( $member );
 		$invitations = array();
@@ -158,6 +169,7 @@ final class Jury {
 			if ( $row['active'] ) {
 				$user = get_userdata( $uid );
 				if ( 'administrator' === $row['kind'] && ! user_can( $user, 'manage_options' ) ) {
+					// Promotion explicite. Le remplacement ultérieur ne révoque pas ces droits globaux.
 					$user->add_role( 'mp_organizer' );
 					$user->remove_role( 'mp_juror' );
 				}

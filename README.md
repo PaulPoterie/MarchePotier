@@ -2,9 +2,12 @@
 
 Version 0.19.0-beta.9 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
-Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
+Ce dépôt contient le code actif du plugin : administration du marché, candidatures, notes de 0 à 5, invitations, suivi des votes et blocs publics.
 
-Les blocs **Formulaire de candidature** et **Présentation de la sélection** sont liés directement à l’édition choisie. La bêta 5 supprime les anciens shortcodes et impose **un seul administrateur par édition**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
+- Pour utiliser le plugin : suivre le guide ci-dessous et le [guide des votes](docs/VOTES.md).
+- Pour reprendre le développement : commencer par [l’architecture, les règles métier et les vérifications](docs/DEVELOPPEMENT.md).
+
+Les blocs **Formulaire de candidature** et **Présentation de la sélection** utilisent l’ID de l’édition choisie. Il n’y a plus de shortcodes. Chaque édition demande **un seul administrateur**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
 
 [Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
 
@@ -12,7 +15,7 @@ Les blocs **Formulaire de candidature** et **Présentation de la sélection** so
 
 Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.9.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
-Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
+Un ZIP de livraison contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
 Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis téléversez le nouveau ZIP et choisissez le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour.
 
@@ -28,9 +31,9 @@ Pour remplacer l’administrateur, modifiez son nom et son email dans l’éditi
 
 Les comptes existants gardent leurs identifiants et leurs mots de passe. Les anciens rôles sont renommés automatiquement sans recréer les comptes ; les notes restent associées aux mêmes personnes.
 
-À partir de la bêta 6, une connexion générale avec le profil **[MP] Votant sélection** ouvre directement **Gestion des candidatures**, limitée aux éditions affectées. Si le lien de connexion demande une destination précise (dossier, édition, profil…), celle-ci est conservée.
+Une connexion générale avec le profil **[MP] Votant sélection** ouvre directement **Gestion des candidatures**, limitée aux éditions affectées. Si le lien de connexion demande une destination précise (dossier, édition, profil…), celle-ci est conservée.
 
-Dans cette liste, le filtre **Tous / Déjà noté par moi / À noter par moi** permet de retrouver ses dossiers. Sous **Examiner**, **Ma note (nom) : X/5** affiche la note du membre connecté, ou **À noter** si elle est absente. La note **0** compte comme un vote. Les filtres personnels concernent les éditions où ce membre participe aux votes multiples ; ils sont conservés lors du tri, de la pagination et du retour depuis un dossier.
+Dans cette liste, le filtre **Tous (avec ou sans notes) / Déjà noté par moi / À noter par moi** permet de retrouver ses dossiers. Sous **Examiner**, **Ma note (nom) : X/5** affiche la note du membre connecté, ou **À noter** si elle est absente. La note **0** compte comme un vote. Les filtres personnels concernent les éditions où ce membre participe aux votes multiples ; ils sont conservés lors du tri, de la pagination et du retour depuis un dossier.
 
 ## 3. Créer une édition
 

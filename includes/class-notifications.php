@@ -33,7 +33,10 @@ final class Notifications {
 		}
 		return implode( "\n", $lines );
 	}
-	/** Une tentative par destinataire : un nouvel appel ne duplique pas les emails. */
+	/**
+	 * Une tentative par destinataire, réservée avant wp_mail pour éviter les doubles envois.
+	 * Un échec n’est pas relancé automatiquement ; « accepted » ne confirme pas la livraison.
+	 */
 	public static function send( int $app ): void {
 		$data = Records::data( $app );
 		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $data['edition_id'] ), ENT_QUOTES ) );

@@ -30,7 +30,7 @@ final class Gallery {
 		$data = Records::data( $id );
 		return 'mp_candidature' === get_post_type( $id ) && in_array( get_post_status( $id ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) && 'selected' === ( $data['decision'] ?? '' ) && ! empty( $data['publication_consent'] ) && Editions::selection_is_public( (int) ( $data['edition_id'] ?? 0 ) );
 	}
-	/** Compatibilité avec les photos antérieures stockées hors médiathèque. Jamais de PDF. */
+	/** Diffusion publique des photos de créations après contrôle de sélection et consentement. Jamais de PDF. */
 	public static function photo(): void {
 		$id = is_string( $_GET['application'] ?? null ) ? absint( $_GET['application'] ) : 0;
 		$slot = $_GET['slot'] ?? '';

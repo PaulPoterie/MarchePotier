@@ -371,7 +371,11 @@ final class Records {
 		return add_query_arg( array_merge( $context, array( 'page' => 'mp-dossier', 'candidature' => $id ) ), admin_url( 'admin.php' ) );
 	}
 
-	/** Seuls les paramètres connus de la liste sont conservés, jamais une URL de retour libre. */
+	/**
+	 * Liste blanche GET partagée par gestion, examen, votes et export.
+	 * mp_sort est normalisé en orderby/order ; ces deux clés circulent ensuite dans les liens.
+	 * mp_from indique l’écran de retour, jamais une URL libre fournie par le navigateur.
+	 */
 	public static function list_context(): array {
 		$context = array();
 		if ( in_array( $_GET['mp_from'] ?? '', array( 'gestion', 'votes' ), true ) ) { $context['mp_from'] = $_GET['mp_from']; }
@@ -424,6 +428,11 @@ final class Records {
 		return $ids;
 	}
 
+	/**
+	 * Tous les IDs consultables par la session, filtrés puis triés ; aucune pagination ici.
+	 * La gestion découpe cette liste, l’export la prend entière, Examiner y trouve ses voisins.
+	 * Les tris title/date restent reconnus pour les liens issus des écrans WordPress natifs.
+	 */
 	public static function navigation_ids( array $context ): array {
 		if ( ! Jury::can_review() ) { return array(); }
 		$args = array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'fields' => 'ids', 'orderby' => 'date', 'order' => 'DESC' );

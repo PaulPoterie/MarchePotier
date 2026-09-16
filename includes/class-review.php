@@ -142,6 +142,7 @@ final class Review {
 		echo '</dl>';
 	}
 
+	/** Écran de gestion : préparer une seule liste autorisée, puis rendre ses différentes zones. */
 	public static function table(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$context = Records::list_context(); $context['mp_from'] = 'gestion';
@@ -151,6 +152,23 @@ final class Review {
 		$per_page = max( 1, min( 999, (int) ( get_user_option( 'mp_applications_per_page' ) ?: 25 ) ) );
 		$pages = max( 1, (int) ceil( count( $ids ) / $per_page ) );
 		$page = min( $pages, max( 1, $context['paged'] ?? 1 ) ); $context['paged'] = $page;
+		// Filtrer et trier avant de paginer : l’export et les liens Examiner partagent cet ordre.
+		$page_ids = array_slice( $ids, ( $page - 1 ) * $per_page, $per_page );
+
+		self::management_header( $context );
+		self::management_filters( $context );
+		echo '<div class="mp-management-results">';
+		self::management_toolbar( $sort, count( $ids ), $page, $per_page, $pages );
+		if ( ! $ids ) {
+			echo '<p class="mp-management-empty">Aucune candidature pour ces filtres.</p></div></div>';
+			return;
+		}
+		self::management_rows( $page_ids, $context );
+		self::management_pagination( $context, $page, $pages );
+		echo '</div></div>';
+	}
+
+	private static function management_header( array $context ): void {
 		$trash_count = (int) ( wp_count_posts( 'mp_candidature', 'readable' )->trash ?? 0 );
 		$trash_url = admin_url( 'edit.php?post_status=trash&post_type=mp_candidature' );
 		$export_url = wp_nonce_url( add_query_arg( array_merge( $context, array( 'action' => 'mp_export_csv' ) ), admin_url( 'admin-post.php' ) ), 'mp_export_csv' );
@@ -161,6 +179,9 @@ final class Review {
 		echo '</div><hr class="wp-header-end">';
 		if ( ! empty( $_GET['mp_trashed'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
 		if ( ! empty( $_GET['mp_deleted'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
+	}
+
+	private static function management_filters( array $context ): void {
 		echo '<form method="get" id="mp-application-filters" class="mp-management-filters" aria-label="Rechercher et filtrer les candidatures"><input type="hidden" name="page" value="mp-gestion">';
 		foreach ( array( 'post_status', 'm', 'author' ) as $key ) {
 			if ( isset( $context[ $key ] ) ) { echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $context[ $key ] ) . '">'; }
@@ -173,22 +194,29 @@ final class Review {
 		}
 		echo '</select></div><button class="button button-primary">Rechercher / Filtrer</button>';
 		echo '<p class="mp-filter-help" id="mp-personal-filter-help">Le filtre « Ma note » concerne les éditions où vous participez aux votes multiples.</p></form>';
-		echo '<div class="mp-management-results"><div class="mp-review-toolbar"><div class="mp-results-count"><p>' . esc_html( count( $ids ) ) . ' candidature(s)</p>';
-		if ( $ids ) { echo '<span>' . esc_html( 'Affichage ' . ( ( $page - 1 ) * $per_page + 1 ) . '–' . min( $page * $per_page, count( $ids ) ) . ' · Page ' . $page . ' sur ' . $pages ) . '</span>'; }
+	}
+
+	private static function management_toolbar( string $sort, int $total, int $page, int $per_page, int $pages ): void {
+		echo '<div class="mp-review-toolbar"><div class="mp-results-count"><p>' . esc_html( $total ) . ' candidature(s)</p>';
+		if ( $total ) { echo '<span>' . esc_html( 'Affichage ' . ( ( $page - 1 ) * $per_page + 1 ) . '–' . min( $page * $per_page, $total ) . ' · Page ' . $page . ' sur ' . $pages ) . '</span>'; }
+		// Le select est hors du <form>, mais son attribut form garde filtres et tri dans le même GET.
 		echo '</div><div class="mp-review-sort"><label for="mp-sort">Trier par</label><select id="mp-sort" name="mp_sort" form="mp-application-filters" aria-describedby="mp-sort-help">';
 		foreach ( Records::sort_options() as $value => $label ) { echo '<option value="' . esc_attr( $value ) . '" ' . selected( $sort, $value, false ) . '>' . esc_html( $label ) . '</option>'; }
 		echo '</select><span id="mp-sort-help" class="screen-reader-text">Le tri recharge automatiquement la liste depuis la première page. Les candidatures sans note restent en dernier pour le tri par points.</span><noscript><button class="button" form="mp-application-filters">Appliquer le tri</button></noscript></div></div>';
-		if ( ! $ids ) { echo '<p class="mp-management-empty">Aucune candidature pour ces filtres.</p></div></div>'; return; }
+	}
+
+	/** Les votes de la page sont chargés ensemble ; aucune requête de vote par cellule. */
+	private static function management_rows( array $ids, array $context ): void {
 		$columns = array( 'person' => 'Potier / édition', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'identity' => 'Identité', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
 		$identity_schema = Fields::identity(); $activity_schema = Fields::activity();
-		$votes = Votes::all( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) );
+		$votes = Votes::all( $ids );
 		echo '<p class="mp-table-help" id="mp-table-help">Ouvrez un dossier avec <strong>Examiner</strong>. Faites défiler le tableau horizontalement pour voir toutes les informations <span aria-hidden="true">↔</span></p>';
 		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures" aria-describedby="mp-table-help"><table class="widefat striped mp-review-table"><colgroup>';
 		foreach ( $columns as $key => $label ) { echo '<col class="mp-column-' . esc_attr( $key ) . '">'; }
 		echo '</colgroup><thead><tr>';
 		foreach ( $columns as $label ) { echo '<th scope="col">' . esc_html( $label ) . '</th>'; }
 		echo '</tr></thead><tbody>';
-		foreach ( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) as $id ) {
+		foreach ( $ids as $id ) {
 			$data = Records::data( $id ); $url = Records::view_url( $id, $context );
 			$identity = $data['identity'] ?? array(); $activity = Fields::normalize_status( $data['activity'] ?? array() );
 			echo '<tr data-mp-dossier="' . esc_url( $url ) . '"><th scope="row" class="mp-review-person">';
@@ -223,8 +251,12 @@ final class Review {
 			self::grouped_fields( $activity_schema, $activity, array( 'professional_status', 'status_other', 'aaf_member', 'association_member', 'association_names', 'association_details' ), array( 'aaf_member' => 'Ateliers d’Art de France', 'association_member' => 'Association professionnelle', 'association_names' => 'Association(s)', 'association_details' => 'Implication associative' ) );
 			echo '</td></tr>';
 		}
-		echo '</tbody></table></div><nav class="mp-review-pagination" aria-label="Pages de candidatures"><span>Page ' . esc_html( $page . ' / ' . $pages ) . '</span><div>';
+		echo '</tbody></table></div>';
+	}
+
+	private static function management_pagination( array $context, int $page, int $pages ): void {
+		echo '<nav class="mp-review-pagination" aria-label="Pages de candidatures"><span>Page ' . esc_html( $page . ' / ' . $pages ) . '</span><div>';
 		foreach ( array( $page - 1 => '← Précédente', $page + 1 => 'Suivante →' ) as $number => $label ) { if ( $number >= 1 && $number <= $pages ) { echo '<a class="button" href="' . esc_url( add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion', 'paged' => $number ) ), admin_url( 'admin.php' ) ) ) . '">' . esc_html( $label ) . '</a> '; } }
-		echo '</div></nav></div></div>';
+		echo '</div></nav>';
 	}
 }

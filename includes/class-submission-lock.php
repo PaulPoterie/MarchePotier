@@ -2,7 +2,11 @@
 namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
-/** Verrou MySQL de connexion : commun aux dépôts et sauvegardes internes. */
+/**
+ * Verrou MySQL par site pour dépôts, fichiers, affectations, notes et réservations d’emails.
+ * Il n’est pas réentrant : ne pas acquérir un second verrou dans une fonction appelée sous verrou.
+ * Toujours libérer dans finally. Ce verrou ne remplace ni une transaction ni un numéro de révision.
+ */
 final class SubmissionLock {
 	private static bool $held = false;
 	private static function name(): string { global $wpdb; return 'mp_' . hash( 'sha256', DB_NAME . $wpdb->prefix ); }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Point d'entrée de l'administration du plugin.
+ * Enregistrement des hooks publics et d’administration, puis accueil du plugin.
  */
 
 namespace MarchePotier;
@@ -79,10 +79,10 @@ final class Plugin {
 				</li>
 			</ol>
 			<p class="description"><?php esc_html_e( 'Chaque bloc conserve l’édition choisie, même si son titre ou son année change. Plusieurs éditions peuvent partager la même année.', 'marche-potier' ); ?></p>
-			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez l’administrateur unique du marché (nom et email obligatoires). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». L’administrateur participe aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Point » affiche le total et la participation.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez l’administrateur unique du marché (nom et email obligatoires). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». L’administrateur participe aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Sélection et points » affiche le total et la participation.', 'marche-potier' ); ?></p>
 			<?php else : ?>
 			<h2><?php esc_html_e( 'Examiner et voter', 'marche-potier' ); ?></h2>
-			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Votes pour la sélection », choisissez votre note de 0 à 5 et cliquez sur « Valider ». En mode votes multiples, vous pouvez consulter les autres notes et modifier la vôtre à tout moment, indépendamment des dates d’inscription.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Ma note », choisissez votre note de 0 à 5 et cliquez sur « Valider ma note ». En mode votes multiples, vous pouvez consulter les autres notes et modifier la vôtre à tout moment, indépendamment des dates d’inscription.', 'marche-potier' ); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php

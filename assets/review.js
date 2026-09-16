@@ -1,4 +1,5 @@
 document.addEventListener('click', (event) => {
+    // Le raccourci de ligne laisse les liens, champs et sélections de texte fonctionner normalement.
     const row = event.target.closest('tr[data-mp-dossier]');
     if (!row || event.target.closest('a,button,input,select,textarea,.mp-review-person') || window.getSelection().toString() || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     window.location.assign(row.dataset.mpDossier);
@@ -6,6 +7,7 @@ document.addEventListener('click', (event) => {
 
 const applicationSort = document.querySelector('#mp-sort');
 if (applicationSort) {
+    // Le formulaire ne contient pas paged : changer le tri revient à la première page.
     applicationSort.addEventListener('change', () => applicationSort.form.requestSubmit());
 }
 

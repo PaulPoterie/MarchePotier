@@ -30,7 +30,10 @@ final class Votes {
 		) $collation;" );
 		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) { update_option( 'mp_votes_schema_version', '1', false ); }
 	}
-	/** Lecture groupée pour éviter une requête SQL par cellule du classement. */
+	/**
+	 * Lecture groupée : [ID candidature => [ID compte => ligne SQL]].
+	 * Fonction de stockage sans contrôle d’accès : l’appelant fournit des IDs déjà autorisés.
+	 */
 	public static function all( array $ids ): array {
 		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
 		if ( ! $ids || '1' !== get_option( 'mp_votes_schema_version' ) ) { return array(); }
@@ -40,7 +43,10 @@ final class Votes {
 		foreach ( $rows as $row ) { $result[ (int) $row['application_id'] ][ (int) $row['user_id'] ] = $row; }
 		return $result;
 	}
-	/** Null hors du jury actif en mode multiple ; une note absente reste distincte de zéro. */
+	/**
+	 * null hors du jury actif en mode multiple ; sinon ['name' => string, 'score' => ?int].
+	 * score=null signifie « pas encore voté », score=0 est un vote enregistré.
+	 */
 	public static function mine( int $id, ?array $votes = null ): ?array {
 		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
 		$uid = get_current_user_id(); $members = Jury::members( $edition );
@@ -49,6 +55,7 @@ final class Votes {
 		$vote = $votes[ $uid ] ?? null;
 		return array( 'name' => $members[ $uid ]['name'], 'score' => $vote && (int) $vote['edition_id'] === $edition ? (int) $vote['score'] : null );
 	}
+	/** Les totaux retiennent seulement les comptes actifs et les notes de cette édition. */
 	public static function summary( int $id, ?array $votes = null ): array {
 		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
 		$members = Jury::members( $edition );
@@ -79,6 +86,7 @@ final class Votes {
 		try {
 			$data = Records::data( $id ); $edition = (int) ( $data['edition_id'] ?? 0 ); $uid = get_current_user_id();
 			if ( ! Jury::can_view_application( $id ) || ! Jury::can_view_edition( $edition ) || empty( $data['potier_id'] ) || ! isset( Jury::members( $edition )[ $uid ] ) ) { return new \WP_Error( 'access', 'Vous ne pouvez pas voter pour cette candidature.', array( 'status' => 403 ) ); }
+			// La période d’inscription limite le dépôt public, jamais la notation du jury.
 			$settings = Jury::settings( $edition );
 			if ( 'multiple' !== $settings['mode'] ) { return new \WP_Error( 'mode', 'La notation nécessite le mode votes multiples.', array( 'status' => 403 ) ); }
 			if ( '1' !== get_option( 'mp_votes_schema_version' ) ) { return new \WP_Error( 'storage', 'Les votes ne sont pas encore disponibles. Contactez le responsable.', array( 'status' => 503 ) ); }

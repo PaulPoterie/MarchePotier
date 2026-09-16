@@ -1,9 +1,14 @@
 <?php
-/** Schéma partagé par les fiches internes et le futur formulaire public. */
+/** Schémas et validation partagés par le formulaire public, les dossiers et l’export. */
 namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 final class Fields {
+	/**
+	 * Chaque champ suit le format [libellé, type, obligatoire, choix?, condition?].
+	 * Une condition [champ_parent, valeur] active la précision correspondante.
+	 * validate(..., true) impose les champs obligatoires pour un dépôt public complet.
+	 */
 	public static function identity(): array {
 		return array(
 			'last_name' => array( 'Nom', 'text', true ),
