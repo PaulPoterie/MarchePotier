@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.5' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.6' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.2', true );
 		} );
 	}
@@ -154,33 +154,36 @@ final class Review {
 		$trash_count = (int) ( wp_count_posts( 'mp_candidature', 'readable' )->trash ?? 0 );
 		$trash_url = admin_url( 'edit.php?post_status=trash&post_type=mp_candidature' );
 		$export_url = wp_nonce_url( add_query_arg( array_merge( $context, array( 'action' => 'mp_export_csv' ) ), admin_url( 'admin-post.php' ) ), 'mp_export_csv' );
-		echo '<div class="wrap"><div class="mp-management-heading"><h1>Gestion des candidatures</h1>';
-		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<a class="button button-small mp-export-button" href="' . esc_url( $export_url ) . '">Exporter CSV</a>'; }
+		echo '<div class="wrap mp-management"><div class="mp-management-heading"><div><h1>Gestion des candidatures</h1><p>Retrouvez les dossiers et accédez à leur examen.</p></div>';
+		if ( current_user_can( 'mp_manage_applications' ) ) {
+			echo '<div class="mp-management-actions"><a class="button" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a><a class="button mp-export-button" href="' . esc_url( $export_url ) . '">Exporter CSV</a><a class="mp-trash-link" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></div>';
+		}
 		echo '</div><hr class="wp-header-end">';
 		if ( ! empty( $_GET['mp_trashed'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
 		if ( ! empty( $_GET['mp_deleted'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
-		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a> <a class="button" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></p>'; }
-		echo '<form method="get" id="mp-application-filters"><input type="hidden" name="page" value="mp-gestion">';
+		echo '<form method="get" id="mp-application-filters" class="mp-management-filters" aria-label="Rechercher et filtrer les candidatures"><input type="hidden" name="page" value="mp-gestion">';
 		foreach ( array( 'post_status', 'm', 'author' ) as $key ) {
 			if ( isset( $context[ $key ] ) ) { echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $context[ $key ] ) . '">'; }
 		}
-		echo '<label class="screen-reader-text" for="mp-search">Rechercher une candidature</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"> ';
-		Records::render_list_filters( 'mp_candidature' );
-		echo ' <label class="screen-reader-text" for="mp-my-vote-filter">Filtrer par mon vote</label><select id="mp-my-vote-filter" name="mp_my_vote">';
+		echo '<div class="mp-filter-field"><label for="mp-search">Recherche</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"></div>';
+		Records::render_list_filters( 'mp_candidature', true );
+		echo '<div class="mp-filter-field"><label for="mp-my-vote-filter">Ma note</label><select id="mp-my-vote-filter" name="mp_my_vote" aria-describedby="mp-personal-filter-help">';
 		foreach ( array( '' => 'Tous (avec ou sans notes)', 'rated' => 'Déjà noté par moi', 'unrated' => 'À noter par moi' ) as $value => $label ) {
 			echo '<option value="' . esc_attr( $value ) . '" ' . selected( $context['mp_my_vote'] ?? '', $value, false ) . '>' . esc_html( $label ) . '</option>';
 		}
-		echo '</select>';
-		echo ' <button class="button">Rechercher / Filtrer</button></form><p>Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir toutes les colonnes.</p>';
-		echo '<p class="description">Les filtres de note concernent les éditions dans lesquelles vous participez aux votes multiples.</p>';
-		echo '<div class="mp-review-toolbar"><p>' . esc_html( count( $ids ) ) . ' candidature(s)</p><div class="mp-review-sort"><label for="mp-sort">Trier par</label><select id="mp-sort" name="mp_sort" form="mp-application-filters" aria-describedby="mp-sort-help">';
+		echo '</select></div><button class="button button-primary">Rechercher / Filtrer</button>';
+		echo '<p class="mp-filter-help" id="mp-personal-filter-help">Le filtre « Ma note » concerne les éditions où vous participez aux votes multiples.</p></form>';
+		echo '<div class="mp-management-results"><div class="mp-review-toolbar"><div class="mp-results-count"><p>' . esc_html( count( $ids ) ) . ' candidature(s)</p>';
+		if ( $ids ) { echo '<span>' . esc_html( 'Affichage ' . ( ( $page - 1 ) * $per_page + 1 ) . '–' . min( $page * $per_page, count( $ids ) ) . ' · Page ' . $page . ' sur ' . $pages ) . '</span>'; }
+		echo '</div><div class="mp-review-sort"><label for="mp-sort">Trier par</label><select id="mp-sort" name="mp_sort" form="mp-application-filters" aria-describedby="mp-sort-help">';
 		foreach ( Records::sort_options() as $value => $label ) { echo '<option value="' . esc_attr( $value ) . '" ' . selected( $sort, $value, false ) . '>' . esc_html( $label ) . '</option>'; }
 		echo '</select><span id="mp-sort-help" class="screen-reader-text">Le tri recharge automatiquement la liste depuis la première page. Les candidatures sans note restent en dernier pour le tri par points.</span><noscript><button class="button" form="mp-application-filters">Appliquer le tri</button></noscript></div></div>';
-		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
+		if ( ! $ids ) { echo '<p class="mp-management-empty">Aucune candidature pour ces filtres.</p></div></div>'; return; }
 		$columns = array( 'person' => 'Potier / édition', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'identity' => 'Identité', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
 		$identity_schema = Fields::identity(); $activity_schema = Fields::activity();
 		$votes = Votes::all( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) );
-		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><colgroup>';
+		echo '<p class="mp-table-help" id="mp-table-help">Ouvrez un dossier avec <strong>Examiner</strong>. Faites défiler le tableau horizontalement pour voir toutes les informations <span aria-hidden="true">↔</span></p>';
+		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures" aria-describedby="mp-table-help"><table class="widefat striped mp-review-table"><colgroup>';
 		foreach ( $columns as $key => $label ) { echo '<col class="mp-column-' . esc_attr( $key ) . '">'; }
 		echo '</colgroup><thead><tr>';
 		foreach ( $columns as $label ) { echo '<th scope="col">' . esc_html( $label ) . '</th>'; }
@@ -200,7 +203,7 @@ final class Review {
 			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p>';
 			$mine = Votes::mine( $id, $votes[ $id ] ?? array() );
 			if ( null !== $mine ) {
-				echo '<p class="mp-my-vote">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
+				echo '<p class="mp-my-vote ' . ( null === $mine['score'] ? 'mp-my-vote-pending' : 'mp-my-vote-rated' ) . '">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
 			}
 			echo '</th><td>';
 			self::photos( $id, $url );
@@ -220,8 +223,8 @@ final class Review {
 			self::grouped_fields( $activity_schema, $activity, array( 'professional_status', 'status_other', 'aaf_member', 'association_member', 'association_names', 'association_details' ), array( 'aaf_member' => 'Ateliers d’Art de France', 'association_member' => 'Association professionnelle', 'association_names' => 'Association(s)', 'association_details' => 'Implication associative' ) );
 			echo '</td></tr>';
 		}
-		echo '</tbody></table></div><p>Page ' . esc_html( $page . ' / ' . $pages ) . ' ';
+		echo '</tbody></table></div><nav class="mp-review-pagination" aria-label="Pages de candidatures"><span>Page ' . esc_html( $page . ' / ' . $pages ) . '</span><div>';
 		foreach ( array( $page - 1 => '← Précédente', $page + 1 => 'Suivante →' ) as $number => $label ) { if ( $number >= 1 && $number <= $pages ) { echo '<a class="button" href="' . esc_url( add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion', 'paged' => $number ) ), admin_url( 'admin.php' ) ) ) . '">' . esc_html( $label ) . '</a> '; } }
-		echo '</p></div>';
+		echo '</div></nav></div></div>';
 	}
 }

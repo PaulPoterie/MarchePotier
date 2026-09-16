@@ -96,23 +96,26 @@ final class Records {
 		return array( 'pending' => 'À examiner', 'selected' => 'Sélectionné', 'rejected' => 'Non sélectionné' );
 	}
 
-	public static function render_list_filters( string $post_type ): void {
+	public static function render_list_filters( string $post_type, bool $grouped = false ): void {
 		if ( 'mp_candidature' !== $post_type || ! Jury::can_review() ) {
 			return;
 		}
 		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
 		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
-		echo '<label class="screen-reader-text" for="mp-edition-filter">Filtrer par édition</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
+		if ( $grouped ) { echo '<div class="mp-filter-field">'; }
+		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="mp-edition-filter">' . ( $grouped ? 'Édition' : 'Filtrer par édition' ) . '</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
 		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) ) as $item ) {
 			if ( ! Jury::can_view_edition( $item->ID ) ) { continue; }
 			echo '<option value="' . esc_attr( $item->ID ) . '" ' . selected( $edition, $item->ID, false ) . '>' . esc_html( $item->post_title ) . '</option>';
 		}
 		echo '</select> ';
-		echo '<label class="screen-reader-text" for="mp-decision-filter">Filtrer par décision</label><select id="mp-decision-filter" name="mp_decision"><option value="">Toutes les décisions</option>';
+		if ( $grouped ) { echo '</div><div class="mp-filter-field">'; }
+		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="mp-decision-filter">' . ( $grouped ? 'Sélection' : 'Filtrer par décision' ) . '</label><select id="mp-decision-filter" name="mp_decision"><option value="">Toutes les décisions</option>';
 		foreach ( self::decisions() as $key => $label ) {
 			echo '<option value="' . esc_attr( $key ) . '" ' . selected( $decision, $key, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select>';
+		if ( $grouped ) { echo '</div>'; }
 	}
 
 	public static function apply_list_filters( \WP_Query $query ): void {
