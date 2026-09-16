@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.2' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.1', true );
 		} );
 	}
@@ -121,6 +121,27 @@ final class Review {
 		return (string) ( $field[3][ $value ] ?? ( '' === (string) $value ? '—' : $value ) );
 	}
 
+	/** Une information par ligne ; les précisions facultatives vides restent masquées. */
+	private static function grouped_fields( array $schema, array $data, array $keys, array $labels = array() ): void {
+		echo '<dl class="mp-review-lines">';
+		foreach ( $keys as $key ) {
+			$field = $schema[ $key ]; $raw = $data[ $key ] ?? '';
+			if ( ( '' === $raw || array() === $raw ) && ! $field[2] ) { continue; }
+			$value = self::value( $field, $raw );
+			$html = nl2br( esc_html( '' !== $value ? $value : '—' ) );
+			if ( 'url' === $field[1] && '' !== $raw ) {
+				$url = esc_url( $value, array( 'http', 'https' ) );
+				if ( $url ) { $html = '<a href="' . $url . '" target="_blank" rel="noopener noreferrer">' . esc_html( $value ) . '</a>'; }
+			} elseif ( 'email' === $field[1] && is_email( $value ) ) {
+				$html = '<a href="' . esc_url( 'mailto:' . $value ) . '">' . esc_html( $value ) . '</a>';
+			} elseif ( 'tel' === $field[1] && preg_match( '/[0-9]/', $value ) ) {
+				$html = '<a href="' . esc_url( 'tel:' . preg_replace( '/[^0-9+]/', '', $value ) ) . '">' . esc_html( $value ) . '</a>';
+			}
+			echo '<div><dt>' . esc_html( $labels[ $key ] ?? $field[0] ) . '</dt><dd>' . $html . '</dd></div>';
+		}
+		echo '</dl>';
+	}
+
 	public static function table(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$context = Records::list_context(); $context['mp_from'] = 'gestion';
@@ -142,25 +163,28 @@ final class Review {
 		echo '<label class="screen-reader-text" for="mp-search">Rechercher une candidature</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"> ';
 		Records::render_list_filters( 'mp_candidature' );
 		echo ' <label class="screen-reader-text" for="mp-my-vote-filter">Filtrer par mon vote</label><select id="mp-my-vote-filter" name="mp_my_vote">';
-		foreach ( array( '' => 'Tous', 'rated' => 'Déjà noté par moi', 'unrated' => 'À noter par moi' ) as $value => $label ) {
+		foreach ( array( '' => 'Tous (avec ou sans notes)', 'rated' => 'Déjà noté par moi', 'unrated' => 'À noter par moi' ) as $value => $label ) {
 			echo '<option value="' . esc_attr( $value ) . '" ' . selected( $context['mp_my_vote'] ?? '', $value, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select>';
-		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir tous les champs.</p>';
+		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir toutes les colonnes.</p>';
 		echo '<p class="description">Les filtres de note concernent les éditions dans lesquelles vous participez aux votes multiples.</p>';
-		$groups = array( 'identity' => Fields::identity(), 'activity' => Fields::activity(), 'internal' => Fields::internal() );
 		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
-		$sort_order = 'points' === ( $context['orderby'] ?? '' ) && 'DESC' === strtoupper( $context['order'] ?? 'DESC' ) ? 'ASC' : 'DESC';
-		$sort_url = add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion', 'orderby' => 'points', 'order' => $sort_order, 'paged' => 1 ) ), admin_url( 'admin.php' ) );
+		$columns = array( 'identity' => 'Identité', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
+		$identity_schema = Fields::identity(); $activity_schema = Fields::activity();
 		$votes = Votes::all( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) );
-		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><thead><tr><th scope="col">Potier / édition</th><th scope="col">Photos</th><th scope="col">Sélection</th><th scope="col"><a href="' . esc_url( $sort_url ) . '" aria-label="Trier par points, ordre ' . ( 'ASC' === $sort_order ? 'croissant' : 'décroissant' ) . '">Point ↕</a></th>';
-		foreach ( $groups as $schema ) { foreach ( $schema as $field ) { echo '<th scope="col">' . esc_html( $field[0] ) . '</th>'; } }
-		echo '<th scope="col">Justificatifs</th><th scope="col">Dépôt / autorisation de présentation</th></tr></thead><tbody>';
+		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><colgroup>';
+		foreach ( $columns as $key => $label ) { echo '<col class="mp-column-' . esc_attr( $key ) . '">'; }
+		echo '</colgroup><thead><tr>';
+		foreach ( $columns as $label ) { echo '<th scope="col">' . esc_html( $label ) . '</th>'; }
+		echo '</tr></thead><tbody>';
 		foreach ( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) as $id ) {
 			$data = Records::data( $id ); $url = Records::view_url( $id, $context );
-			$name = trim( ( $data['identity']['last_name'] ?? '' ) . ' ' . ( $data['identity']['first_name'] ?? '' ) );
-			echo '<tr data-mp-dossier="' . esc_url( $url ) . '"><th scope="row" class="mp-review-person"><strong>' . esc_html( $name ?: get_the_title( $id ) ) . '</strong>';
-			if ( ! empty( $data['edition_id'] ) ) { echo '<br><small>' . esc_html( get_the_title( $data['edition_id'] ) ) . '</small>'; }
+			$identity = $data['identity'] ?? array(); $activity = Fields::normalize_status( $data['activity'] ?? array() );
+			echo '<tr data-mp-dossier="' . esc_url( $url ) . '"><th scope="row" class="mp-review-person">';
+			if ( empty( $identity['last_name'] ) && empty( $identity['first_name'] ) ) { echo '<strong>' . esc_html( get_the_title( $id ) ) . '</strong>'; }
+			else { self::grouped_fields( $identity_schema, $identity, array( 'last_name', 'first_name' ) ); }
+			if ( ! empty( $data['edition_id'] ) ) { echo '<p class="mp-review-edition">' . esc_html( get_the_title( $data['edition_id'] ) ) . '</p>'; }
 			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a>';
 			if ( current_user_can( 'mp_manage_applications' ) ) { echo ' <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a>'; }
 			echo '</p>';
@@ -168,15 +192,22 @@ final class Review {
 			if ( null !== $mine ) {
 				echo '<p class="mp-my-vote">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
 			}
+			self::grouped_fields( $identity_schema, $identity, array( 'company', 'address', 'postcode', 'city', 'country' ) );
+			$submitted = ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false;
+			$submitted_label = false !== $submitted ? wp_date( get_option( 'date_format' ) . ' à ' . get_option( 'time_format' ), $submitted ) : ( 'public' === ( $data['source'] ?? '' ) ? 'Non renseignée' : 'Saisie interne' );
+			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p>';
 			echo '</th><td>';
 			self::photos( $id, $url );
-			echo '</td><td>' . esc_html( Records::decisions()[ $data['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</td>';
+			$decision = in_array( $data['decision'] ?? '', array( 'selected', 'rejected' ), true ) ? $data['decision'] : 'pending';
+			echo '</td><td class="mp-review-selection"><p class="mp-selection-badge mp-selection-' . esc_attr( $decision ) . '">' . esc_html( Records::decisions()[ $decision ] ) . '</p>';
 			$summary = Votes::summary( $id, $votes[ $id ] ?? array() );
-			echo '<td class="mp-points">' . ( $summary['multiple'] ? '<strong>' . esc_html( $summary['count'] ? $summary['total'] . ' points' : '—' ) . '</strong><br><small>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</small>' : '—' ) . '</td>';
-			foreach ( $groups as $group => $schema ) { foreach ( $schema as $key => $field ) { echo '<td>' . nl2br( esc_html( self::value( $field, $data[ $group ][ $key ] ?? '' ) ) ) . '</td>'; } }
-			echo '<td>';
-			foreach ( array( 'status', 'insurance' ) as $slot ) { if ( ! empty( $data['files'][ $slot ] ) ) { echo '<p><a href="' . esc_url( PrivateFiles::url( $id, $slot ) ) . '" target="_blank" rel="noopener">' . esc_html( PrivateFiles::slots()[ $slot ] ) . '</a></p>'; } }
-			echo '</td><td>' . esc_html( $data['submitted_at'] ?? 'Saisie interne' ) . '<br>Présentation publique : ' . ( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' ) . '</td></tr>';
+			echo '<p class="mp-points">' . ( $summary['multiple'] ? '<strong>' . esc_html( $summary['count'] ? $summary['total'] . ' points' : '—' ) . '</strong><br><small>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</small>' : 'Sans notation' ) . '</p></td><td>';
+			self::grouped_fields( $identity_schema, $identity, array( 'phone', 'email', 'website', 'facebook', 'instagram' ) );
+			echo '</td><td class="mp-review-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : '—' ) ) . '</td><td>';
+			self::grouped_fields( $activity_schema, $activity, array( 'production', 'production_other', 'technique', 'technique_other' ) );
+			echo '</td><td>';
+			self::grouped_fields( $activity_schema, $activity, array( 'professional_status', 'status_other', 'aaf_member', 'association_member', 'association_names', 'association_details' ), array( 'aaf_member' => 'Ateliers d’Art de France', 'association_member' => 'Association professionnelle', 'association_names' => 'Association(s)', 'association_details' => 'Implication associative' ) );
+			echo '</td></tr>';
 		}
 		echo '</tbody></table></div><p>Page ' . esc_html( $page . ' / ' . $pages ) . ' ';
 		foreach ( array( $page - 1 => '← Précédente', $page + 1 => 'Suivante →' ) as $number => $label ) { if ( $number >= 1 && $number <= $pages ) { echo '<a class="button" href="' . esc_url( add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion', 'paged' => $number ) ), admin_url( 'admin.php' ) ) ) . '">' . esc_html( $label ) . '</a> '; } }
