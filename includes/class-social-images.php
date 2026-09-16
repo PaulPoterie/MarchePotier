@@ -47,19 +47,4 @@ final class SocialImages {
 			if ( $canvas ) { imagedestroy( $canvas ); }
 		}
 	}
-
-	public static function render( int $id ): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { return; }
-		$files = Records::data( $id )['files'] ?? array();
-		$links = array();
-		foreach ( array( 'product1', 'product2', 'product3' ) as $slot ) {
-			if ( ! empty( $files[ $slot ]['social'] ) ) {
-				$url = wp_nonce_url( add_query_arg( array( 'action' => 'mp_private_file', 'application' => $id, 'slot' => $slot, 'mp_social' => '1' ), admin_url( 'admin-post.php' ) ), 'mp_file_' . $id . '_' . $slot );
-				$links[] = '<a class="button" href="' . esc_url( $url ) . '">Télécharger — ' . esc_html( PrivateFiles::slots()[ $slot ] ) . '</a>';
-			} elseif ( ! empty( $files[ $slot ]['social_error'] ) ) {
-				$links[] = '<span>' . esc_html( PrivateFiles::slots()[ $slot ] ) . ' : copie sociale indisponible. Remplacez la photo pour réessayer.</span>';
-			}
-		}
-		if ( $links ) { echo '<h3>Images pour Instagram et Facebook</h3><p>JPEG 1 080 × 1 350 px · photo entière sur fond blanc.</p><p>' . implode( ' ', $links ) . '</p>'; }
-	}
 }

@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.7 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.8 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
@@ -10,7 +10,7 @@ Les blocs **Formulaire de candidature** et **Présentation de la sélection** so
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.7.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.8.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -131,7 +131,7 @@ La galerie affiche tous les sélectionnés : trois colonnes sur grand écran, un
 
 La carte utilise OpenStreetMap, sans clé API configurée dans le plugin. Le géocodage automatique actuel concerne les adresses françaises via l’IGN et dépend des tâches planifiées WordPress. Une adresse étrangère ou non reconnue peut rester absente de la carte, sans empêcher la fiche d’apparaître dans la galerie.
 
-Des copies JPEG de 1080 × 1350 pixels sont générées pour les trois photos de créations. Cette version ne publie pas automatiquement sur Instagram ou Facebook.
+Lors de l’envoi des trois photos de créations, le plugin prépare automatiquement des copies JPEG de 1080 × 1350 pixels pour de futures publications Instagram et Facebook. La photo entière est conservée sur fond blanc, sans remplacer l’image du dossier. Aucun champ supplémentaire ni rubrique dédiée n’apparaît dans **Examiner**. Cette version ne publie pas automatiquement sur ces réseaux.
 
 ## 10. Sauvegarde et entretien
 

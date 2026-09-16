@@ -466,7 +466,6 @@ final class Records {
 		echo '</div>';
 		echo '<div class="mp-review-layout"><div><h2>Photos du potier</h2>';
 		Review::photos( $id );
-		SocialImages::render( $id );
 		PrivateFiles::render( $id, true );
 		echo '</div><div><h2>Coordonnées transmises pour cette édition</h2>';
 		Fields::summary( Fields::identity(), $data['identity'] );
