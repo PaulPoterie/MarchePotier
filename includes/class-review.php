@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.2' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.3' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.1', true );
 		} );
 	}
@@ -170,7 +170,7 @@ final class Review {
 		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir toutes les colonnes.</p>';
 		echo '<p class="description">Les filtres de note concernent les éditions dans lesquelles vous participez aux votes multiples.</p>';
 		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
-		$columns = array( 'identity' => 'Identité', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
+		$columns = array( 'person' => 'Potier / édition', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'identity' => 'Identité', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
 		$identity_schema = Fields::identity(); $activity_schema = Fields::activity();
 		$votes = Votes::all( array_slice( $ids, ( $page - 1 ) * $per_page, $per_page ) );
 		echo '<div class="mp-review-scroll" tabindex="0" role="region" aria-label="Tableau des candidatures"><table class="widefat striped mp-review-table"><colgroup>';
@@ -182,8 +182,8 @@ final class Review {
 			$data = Records::data( $id ); $url = Records::view_url( $id, $context );
 			$identity = $data['identity'] ?? array(); $activity = Fields::normalize_status( $data['activity'] ?? array() );
 			echo '<tr data-mp-dossier="' . esc_url( $url ) . '"><th scope="row" class="mp-review-person">';
-			if ( empty( $identity['last_name'] ) && empty( $identity['first_name'] ) ) { echo '<strong>' . esc_html( get_the_title( $id ) ) . '</strong>'; }
-			else { self::grouped_fields( $identity_schema, $identity, array( 'last_name', 'first_name' ) ); }
+			$name = trim( ( $identity['last_name'] ?? '' ) . ' ' . ( $identity['first_name'] ?? '' ) );
+			echo '<strong>' . esc_html( $name ?: get_the_title( $id ) ) . '</strong>';
 			if ( ! empty( $data['edition_id'] ) ) { echo '<p class="mp-review-edition">' . esc_html( get_the_title( $data['edition_id'] ) ) . '</p>'; }
 			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a>';
 			if ( current_user_can( 'mp_manage_applications' ) ) { echo ' <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a>'; }
@@ -192,16 +192,16 @@ final class Review {
 			if ( null !== $mine ) {
 				echo '<p class="mp-my-vote">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
 			}
-			self::grouped_fields( $identity_schema, $identity, array( 'company', 'address', 'postcode', 'city', 'country' ) );
-			$submitted = ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false;
-			$submitted_label = false !== $submitted ? wp_date( get_option( 'date_format' ) . ' à ' . get_option( 'time_format' ), $submitted ) : ( 'public' === ( $data['source'] ?? '' ) ? 'Non renseignée' : 'Saisie interne' );
-			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p>';
 			echo '</th><td>';
 			self::photos( $id, $url );
 			$decision = in_array( $data['decision'] ?? '', array( 'selected', 'rejected' ), true ) ? $data['decision'] : 'pending';
 			echo '</td><td class="mp-review-selection"><p class="mp-selection-badge mp-selection-' . esc_attr( $decision ) . '">' . esc_html( Records::decisions()[ $decision ] ) . '</p>';
 			$summary = Votes::summary( $id, $votes[ $id ] ?? array() );
 			echo '<p class="mp-points">' . ( $summary['multiple'] ? '<strong>' . esc_html( $summary['count'] ? $summary['total'] . ' points' : '—' ) . '</strong><br><small>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</small>' : 'Sans notation' ) . '</p></td><td>';
+			self::grouped_fields( $identity_schema, $identity, array( 'last_name', 'first_name', 'company', 'address', 'postcode', 'city', 'country' ) );
+			$submitted = ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false;
+			$submitted_label = false !== $submitted ? wp_date( get_option( 'date_format' ) . ' à ' . get_option( 'time_format' ), $submitted ) : ( 'public' === ( $data['source'] ?? '' ) ? 'Non renseignée' : 'Saisie interne' );
+			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p></td><td>';
 			self::grouped_fields( $identity_schema, $identity, array( 'phone', 'email', 'website', 'facebook', 'instagram' ) );
 			echo '</td><td class="mp-review-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : '—' ) ) . '</td><td>';
 			self::grouped_fields( $activity_schema, $activity, array( 'production', 'production_other', 'technique', 'technique_other' ) );

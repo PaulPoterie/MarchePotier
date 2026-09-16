@@ -1,5 +1,6 @@
 .mp-review-scroll { overflow:auto; max-height:75vh; margin-top:16px; }
-.mp-review-table { width:100%; min-width:1660px; table-layout:fixed; }
+.mp-review-table { width:100%; min-width:1890px; table-layout:fixed; }
+.mp-review-table .mp-column-person { width:230px; }
 .mp-review-table .mp-column-identity { width:260px; }
 .mp-review-table .mp-column-photos { width:200px; }
 .mp-review-table .mp-column-selection { width:155px; }
@@ -26,7 +27,6 @@
 .mp-review-lines dt,.mp-review-lines dd { display:inline; margin:0; }
 .mp-review-lines dt { font-weight:600; }
 .mp-review-lines dt::after { content:" : "; }
-.mp-review-person > .mp-review-lines:first-child dd { font-weight:600; }
 .mp-review-table .mp-review-edition { margin:8px 0; color:#646970; font-size:12px; }
 .mp-review-table .mp-review-actions { margin:10px 0; }
 .mp-review-table .mp-my-vote { margin-bottom:12px; }
