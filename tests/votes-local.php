@@ -214,6 +214,7 @@ try {
 	wp_set_current_user( 1 ); wp_untrash_post( $second );
 	require __DIR__ . '/market-administrators.php';
 	require __DIR__ . '/blocks-local.php';
+	require __DIR__ . '/application-sorting.php';
 	$passed = true; echo "SUCCÈS : $checks vérifications. Emails interceptés.\n";
 } finally {
 	if ( ! $keep || ! $passed ) { mp_cleanup( $state ); if ( is_file( $manifest ) ) { unlink( $manifest ); } }

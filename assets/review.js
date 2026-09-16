@@ -4,6 +4,11 @@ document.addEventListener('click', (event) => {
     window.location.assign(row.dataset.mpDossier);
 });
 
+const applicationSort = document.querySelector('#mp-sort');
+if (applicationSort) {
+    applicationSort.addEventListener('change', () => applicationSort.form.requestSubmit());
+}
+
 const myScore = document.querySelector('.mp-examiner #mp-my-score');
 const voteState = document.querySelector('.mp-examiner #mp-vote-state');
 if (myScore && voteState) {

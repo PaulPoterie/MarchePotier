@@ -12,6 +12,12 @@
 8. Le responsable enregistre séparément la décision finale **À examiner / Sélectionné / Non sélectionné**. Le score ne provoque pas de sélection automatique. L’autorisation de publication de la galerie reste indépendante.
 9. Les notes restent modifiables à tout moment en mode multiple, avant, pendant et après les inscriptions. Les dates limitent uniquement le dépôt des candidatures. L’option de clôture des votes est supprimée.
 
+## Tri des candidatures
+
+Le menu **Trier par**, au-dessus du tableau à côté du compteur, propose six classements : points croissants ou décroissants, soumissions récentes ou anciennes, noms de famille de A à Z ou de Z à A. Les soumissions les plus récentes apparaissent par défaut. Le changement de tri recharge la liste depuis la première page, en conservant la recherche et les filtres ; les liens Examiner, précédent/suivant et retour à la liste conservent ce classement.
+
+Le tri par points utilise le total des notes actives ; les dossiers sans note restent en dernier dans les deux sens, tandis que **0** est bien une note. Le tri par soumission utilise la date affichée dans le dossier, avec les dates absentes en dernier. Le tri alphabétique utilise le nom de famille puis le prénom, sans tenir compte de la casse ni des accents. Le classement s’applique à tous les résultats avant leur répartition en pages.
+
 ## Affichage public
 
 Dans une page WordPress, ajouter le bloc **Formulaire de candidature** ou **Présentation de la sélection** avec le bouton **+**, puis choisir **Titre de l’édition (Année)**. Les blocs enregistrent l’identifiant WordPress de l’édition : deux marchés de la même année restent distincts, et changer leur titre ou leur année ne change pas l’affectation du bloc.

@@ -375,11 +375,50 @@ final class Records {
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
 		}
-		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'mp_my_vote' => array( 'rated', 'unrated' ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
+		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'mp_my_vote' => array( 'rated', 'unrated' ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points', 'submitted', 'name' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && in_array( $_GET[ $key ], $allowed, true ) ) { $context[ $key ] = $_GET[ $key ]; }
 		}
 		if ( isset( $_GET['s'] ) && is_string( $_GET['s'] ) ) { $context['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) ); }
+		if ( is_string( $_GET['mp_sort'] ?? null ) && isset( self::sort_options()[ $_GET['mp_sort'] ] ) ) {
+			[ $context['orderby'], $direction ] = explode( '_', $_GET['mp_sort'] );
+			$context['order'] = strtoupper( $direction );
+		}
 		return $context;
+	}
+
+	public static function sort_options(): array {
+		return array(
+			'points_desc' => 'Points — du plus élevé au plus faible',
+			'points_asc' => 'Points — du plus faible au plus élevé',
+			'submitted_desc' => 'Soumission — plus récentes d’abord',
+			'submitted_asc' => 'Soumission — plus anciennes d’abord',
+			'name_asc' => 'Nom — A à Z',
+			'name_desc' => 'Nom — Z à A',
+		);
+	}
+
+	/** Tri des données du dossier, distinctes du titre et de la date de création WordPress. */
+	private static function sort_ids( array $ids, string $by, string $order ): array {
+		if ( 'points' === $by ) { return Votes::sort_ids( $ids, $order ); }
+		if ( ! in_array( $by, array( 'submitted', 'name' ), true ) ) { return $ids; }
+		$values = array();
+		foreach ( $ids as $id ) {
+			$data = self::data( $id );
+			$values[ $id ] = 'submitted' === $by
+				? ( ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false )
+				: array_map( static fn( $value ) => strtolower( remove_accents( trim( $value ) ) ), array( $data['identity']['last_name'] ?? '', $data['identity']['first_name'] ?? '' ) );
+		}
+		$direction = 'ASC' === strtoupper( $order ) ? 1 : -1;
+		usort( $ids, static function ( int $a, int $b ) use ( $values, $by, $direction ): int {
+			$left = $values[ $a ]; $right = $values[ $b ];
+			$missing_left = 'submitted' === $by ? false === $left : '' === $left[0];
+			$missing_right = 'submitted' === $by ? false === $right : '' === $right[0];
+			// Une valeur absente reste à la fin, quel que soit le sens du tri.
+			if ( $missing_left !== $missing_right ) { return $missing_left ? 1 : -1; }
+			$comparison = 'submitted' === $by ? $left <=> $right : ( strcmp( $left[0], $right[0] ) ?: strcmp( $left[1], $right[1] ) );
+			return $direction * ( $comparison ?: ( $a <=> $b ) );
+		} );
+		return $ids;
 	}
 
 	public static function navigation_ids( array $context ): array {
@@ -388,7 +427,7 @@ final class Records {
 		foreach ( array( 'post_status', 'orderby', 'order', 'm', 'author' ) as $key ) {
 			if ( isset( $context[ $key ] ) ) { $args[ $key ] = $context[ $key ]; }
 		}
-		if ( 'points' === $args['orderby'] ) { $args['orderby'] = 'date'; }
+		if ( in_array( $args['orderby'], array( 'points', 'submitted', 'name' ), true ) ) { $args['orderby'] = 'date'; }
 		// Un second critère garantit un parcours stable lorsque deux dossiers ont la même date.
 		$args['orderby'] = array( $args['orderby'] => strtoupper( $args['order'] ), 'ID' => strtoupper( $args['order'] ) );
 		if ( ! empty( $context['mp_edition'] ) ) {
@@ -422,7 +461,7 @@ final class Records {
 				return null !== $mine && $rated === ( null !== $mine['score'] );
 			} ) );
 		}
-		return 'points' === ( $context['orderby'] ?? '' ) ? Votes::sort_ids( $ids, $context['order'] ?? 'DESC' ) : $ids;
+		return self::sort_ids( $ids, $context['orderby'] ?? 'submitted', $context['order'] ?? 'DESC' );
 	}
 
 	private static function navigation( int $id ): void {

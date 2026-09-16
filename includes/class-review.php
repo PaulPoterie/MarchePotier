@@ -45,8 +45,8 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.4' );
-			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.1', true );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.5' );
+			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.2', true );
 		} );
 	}
 
@@ -145,6 +145,8 @@ final class Review {
 	public static function table(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$context = Records::list_context(); $context['mp_from'] = 'gestion';
+		$sort = ( $context['orderby'] ?? 'submitted' ) . '_' . strtolower( $context['order'] ?? 'DESC' );
+		if ( ! isset( Records::sort_options()[ $sort ] ) ) { $sort = 'submitted_desc'; unset( $context['orderby'], $context['order'] ); }
 		$ids = Records::navigation_ids( $context );
 		$per_page = max( 1, min( 999, (int) ( get_user_option( 'mp_applications_per_page' ) ?: 25 ) ) );
 		$pages = max( 1, (int) ceil( count( $ids ) / $per_page ) );
@@ -158,8 +160,10 @@ final class Review {
 		if ( ! empty( $_GET['mp_trashed'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
 		if ( ! empty( $_GET['mp_deleted'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
 		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button button-primary" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a> <a class="button" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></p>'; }
-		echo '<form method="get"><input type="hidden" name="page" value="mp-gestion">';
-		if ( isset( $context['orderby'] ) ) { echo '<input type="hidden" name="orderby" value="' . esc_attr( $context['orderby'] ) . '"><input type="hidden" name="order" value="' . esc_attr( $context['order'] ?? 'DESC' ) . '">'; }
+		echo '<form method="get" id="mp-application-filters"><input type="hidden" name="page" value="mp-gestion">';
+		foreach ( array( 'post_status', 'm', 'author' ) as $key ) {
+			if ( isset( $context[ $key ] ) ) { echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $context[ $key ] ) . '">'; }
+		}
 		echo '<label class="screen-reader-text" for="mp-search">Rechercher une candidature</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"> ';
 		Records::render_list_filters( 'mp_candidature' );
 		echo ' <label class="screen-reader-text" for="mp-my-vote-filter">Filtrer par mon vote</label><select id="mp-my-vote-filter" name="mp_my_vote">';
@@ -167,8 +171,11 @@ final class Review {
 			echo '<option value="' . esc_attr( $value ) . '" ' . selected( $context['mp_my_vote'] ?? '', $value, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select>';
-		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir toutes les colonnes.</p>';
+		echo ' <button class="button">Rechercher / Filtrer</button></form><p>Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir toutes les colonnes.</p>';
 		echo '<p class="description">Les filtres de note concernent les éditions dans lesquelles vous participez aux votes multiples.</p>';
+		echo '<div class="mp-review-toolbar"><p>' . esc_html( count( $ids ) ) . ' candidature(s)</p><div class="mp-review-sort"><label for="mp-sort">Trier par</label><select id="mp-sort" name="mp_sort" form="mp-application-filters" aria-describedby="mp-sort-help">';
+		foreach ( Records::sort_options() as $value => $label ) { echo '<option value="' . esc_attr( $value ) . '" ' . selected( $sort, $value, false ) . '>' . esc_html( $label ) . '</option>'; }
+		echo '</select><span id="mp-sort-help" class="screen-reader-text">Le tri recharge automatiquement la liste depuis la première page. Les candidatures sans note restent en dernier pour le tri par points.</span><noscript><button class="button" form="mp-application-filters">Appliquer le tri</button></noscript></div></div>';
 		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
 		$columns = array( 'person' => 'Potier / édition', 'photos' => 'Photos', 'selection' => 'Sélection et points', 'identity' => 'Identité', 'contact' => 'Contact', 'presentation' => 'Présentation', 'production' => 'Production et techniques', 'status' => 'Statuts et vie associative' );
 		$identity_schema = Fields::identity(); $activity_schema = Fields::activity();
