@@ -6,6 +6,7 @@ defined( 'ABSPATH' ) || exit;
 final class Jury {
 	public const META = '_mp_jury_settings';
 	public static function hooks(): void {
+		add_filter( 'login_redirect', array( self::class, 'login_redirect' ), 10, 3 );
 		add_action( 'admin_init', array( self::class, 'install' ) );
 		add_action( 'add_meta_boxes_mp_edition', static function () {
 			add_meta_box( 'mp-jury', 'Organisateur et votes', array( self::class, 'box' ), 'mp_edition', 'normal', 'high' );
@@ -18,6 +19,14 @@ final class Jury {
 				wp_enqueue_style( 'mp-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.0-beta.5' );
 			}
 		} );
+	}
+	/** Utiliser le compte authentifié : la session courante peut encore être anonyme. */
+	public static function login_redirect( string $redirect_to, string $requested_redirect_to, $user ): string {
+		if ( ! $user instanceof \WP_User || ! in_array( 'mp_juror', $user->roles, true ) || ! user_can( $user, 'mp_access_market' ) || ! user_can( $user, 'mp_review_applications' ) ) { return $redirect_to; }
+		// Le formulaire WordPress transmet aussi son URL d’administration par défaut.
+		$defaults = array( '', 'wp-admin/', admin_url() );
+		if ( ! in_array( $requested_redirect_to, $defaults, true ) || ! in_array( $redirect_to, $defaults, true ) ) { return $redirect_to; }
+		return admin_url( 'admin.php?page=mp-gestion' );
 	}
 	public static function install(): void {
 		if ( ! current_user_can( 'manage_options' ) || '2' === get_option( 'mp_jury_permissions_version' ) ) { return; }

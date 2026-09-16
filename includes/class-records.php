@@ -375,7 +375,7 @@ final class Records {
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
 		}
-		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
+		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'mp_my_vote' => array( 'rated', 'unrated' ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && in_array( $_GET[ $key ], $allowed, true ) ) { $context[ $key ] = $_GET[ $key ]; }
 		}
 		if ( isset( $_GET['s'] ) && is_string( $_GET['s'] ) ) { $context['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) ); }
@@ -413,6 +413,13 @@ final class Records {
 				$text = strtolower( remove_accents( implode( ' ', $values ) ) );
 				foreach ( $terms as $term ) { if ( ! str_contains( $text, $term ) ) { return false; } }
 				return true;
+			} ) );
+		}
+		if ( in_array( $context['mp_my_vote'] ?? '', array( 'rated', 'unrated' ), true ) ) {
+			$votes = Votes::all( $ids ); $rated = 'rated' === $context['mp_my_vote'];
+			$ids = array_values( array_filter( $ids, static function ( $id ) use ( $votes, $rated ) {
+				$mine = Votes::mine( $id, $votes[ $id ] ?? array() );
+				return null !== $mine && $rated === ( null !== $mine['score'] );
 			} ) );
 		}
 		return 'points' === ( $context['orderby'] ?? '' ) ? Votes::sort_ids( $ids, $context['order'] ?? 'DESC' ) : $ids;

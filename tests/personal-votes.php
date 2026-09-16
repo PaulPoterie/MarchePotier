@@ -1,0 +1,33 @@
+<?php
+/** Parcours de deux membres : Alice a noté zéro, Bruno n’a pas encore voté. */
+use MarchePotier\{Records,Review,Votes};
+$personal_context = array( 'mp_edition' => $edition, 'mp_my_vote' => 'rated' );
+mp_check( Records::navigation_ids( $personal_context ) === array( $app ), 'Déjà noté par moi inclut une note zéro' );
+$personal_context['mp_my_vote'] = 'unrated';
+mp_check( Records::navigation_ids( $personal_context ) === array( $second ), 'À noter par moi exclut le zéro et les dossiers non accessibles' );
+$_GET = array( 'mp_edition' => (string) $edition, 'mp_my_vote' => 'rated' );
+ob_start(); Review::table(); $personal_html = ob_get_clean();
+mp_check( str_contains( $personal_html, 'Ma note (Alice) : <strong>0/5</strong>' ) && str_contains( $personal_html, '1 candidature(s)' ), 'La liste affiche le nom et le zéro du compte connecté' );
+$_GET['mp_my_vote'] = 'unrated';
+ob_start(); Review::table(); $personal_html = ob_get_clean();
+mp_check( str_contains( $personal_html, 'Ma note (Alice) : <strong>À noter</strong>' ) && str_contains( $personal_html, 'mp_my_vote=unrated' ), 'Dossier sans note et liens de tri/examen conservent le filtre personnel' );
+$_GET += array( 'mp_from' => 'gestion', 'paged' => '2', 'orderby' => 'points', 'order' => 'DESC' );
+$personal_saved = Records::list_context();
+mp_check( $personal_saved['mp_my_vote'] === 'unrated' && $personal_saved['paged'] === 2 && $personal_saved['orderby'] === 'points', 'Le contexte de navigation garde filtre, page et tri' );
+$_GET['mp_my_vote'] = array( 'rated' );
+mp_check( ! isset( Records::list_context()['mp_my_vote'] ), 'Un filtre personnel non scalaire est ignoré' );
+$_GET = array();
+wp_set_current_user( $b );
+mp_check( Records::navigation_ids( array( 'mp_edition' => $edition, 'mp_my_vote' => 'rated' ) ) === array() && count( Records::navigation_ids( $personal_context ) ) === 2, 'Bruno ne récupère pas le vote d’Alice dans ses filtres' );
+wp_set_current_user( $manager );
+mp_check( count( Records::navigation_ids( $personal_context ) ) === 2 && Records::navigation_ids( array( 'mp_edition' => $other, 'mp_my_vote' => 'unrated' ) ) === array(), 'L’administrateur affecté peut retrouver ses dossiers à noter, pas ceux du mode simple' );
+wp_set_current_user( 1 );
+mp_check( Records::navigation_ids( $personal_context ) === array(), 'Un administrateur hors du jury n’a pas de dossier à noter pour cette édition' );
+wp_set_current_user( 0 );
+$personal_login = admin_url( 'admin.php?page=mp-gestion' );
+mp_check( apply_filters( 'login_redirect', admin_url(), '', get_userdata( $b ) ) === $personal_login && apply_filters( 'login_redirect', admin_url(), admin_url(), get_userdata( $b ) ) === $personal_login, 'Connexion générale : le compte authentifié du votant remplace la session encore anonyme' );
+$personal_target = Records::view_url( $app );
+mp_check( apply_filters( 'login_redirect', $personal_target, $personal_target, get_userdata( $b ) ) === $personal_target, 'Connexion avec destination explicite : dossier conservé' );
+mp_check( apply_filters( 'login_redirect', $personal_target, '', get_userdata( $b ) ) === $personal_target, 'Une destination choisie par un autre filtre reste prioritaire' );
+mp_check( apply_filters( 'login_redirect', admin_url(), '', get_userdata( $manager ) ) === admin_url() && apply_filters( 'login_redirect', admin_url(), '', new WP_Error( 'login_failed' ) ) === admin_url(), 'Autres profils et échecs de connexion inchangés' );
+wp_set_current_user( $a );

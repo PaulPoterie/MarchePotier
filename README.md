@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.5 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.6 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
@@ -10,7 +10,7 @@ Les blocs **Formulaire de candidature** et **Présentation de la sélection** so
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.5.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.6.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -27,6 +27,10 @@ Dans **Organisateur et votes** d’une édition, renseignez le nom et l’email 
 Pour remplacer l’administrateur, modifiez son nom et son email dans l’édition. Si le remplaçant figure déjà parmi les votants, décochez sa case **Actif** avant d’enregistrer : sa note reste liée au même compte. L’ancien administrateur devient votant inactif et sa note sort du total. Les droits WordPress préexistants de son compte sont conservés ; seul un administrateur du site peut les retirer.
 
 Les comptes existants gardent leurs identifiants et leurs mots de passe. Les anciens rôles sont renommés automatiquement sans recréer les comptes ; les notes restent associées aux mêmes personnes.
+
+À partir de la bêta 6, une connexion générale avec le profil **[MP] Votant sélection** ouvre directement **Gestion des candidatures**, limitée aux éditions affectées. Si le lien de connexion demande une destination précise (dossier, édition, profil…), celle-ci est conservée.
+
+Dans cette liste, le filtre **Tous / Déjà noté par moi / À noter par moi** permet de retrouver ses dossiers. Sous **Examiner**, **Ma note (nom) : X/5** affiche la note du membre connecté, ou **À noter** si elle est absente. La note **0** compte comme un vote. Les filtres personnels concernent les éditions où ce membre participe aux votes multiples ; ils sont conservés lors du tri, de la pagination et du retour depuis un dossier.
 
 ## 3. Créer une édition
 

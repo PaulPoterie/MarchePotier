@@ -6,6 +6,7 @@
 .mp-review-table tbody tr { cursor:pointer; }
 .mp-review-table .mp-review-person { cursor:default; }
 .mp-review-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.mp-my-vote { margin:0 0 8px; font-weight:normal; }
 .mp-review-table tbody tr:hover td { background:#edf6fc; }
 .mp-review-photos { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .mp-review-photos img { display:block; width:100%; height:auto; max-height:480px; object-fit:contain; background:#f0f0f1; }

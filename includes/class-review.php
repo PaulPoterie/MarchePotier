@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.6' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.12.2', true );
 		} );
 	}
@@ -118,7 +118,13 @@ final class Review {
 		if ( isset( $context['orderby'] ) ) { echo '<input type="hidden" name="orderby" value="' . esc_attr( $context['orderby'] ) . '"><input type="hidden" name="order" value="' . esc_attr( $context['order'] ?? 'DESC' ) . '">'; }
 		echo '<label class="screen-reader-text" for="mp-search">Rechercher une candidature</label><input type="search" id="mp-search" name="s" value="' . esc_attr( $context['s'] ?? '' ) . '" placeholder="Nom, atelier, email, ville…"> ';
 		Records::render_list_filters( 'mp_candidature' );
+		echo ' <label class="screen-reader-text" for="mp-my-vote-filter">Filtrer par mon vote</label><select id="mp-my-vote-filter" name="mp_my_vote">';
+		foreach ( array( '' => 'Tous', 'rated' => 'Déjà noté par moi', 'unrated' => 'À noter par moi' ) as $value => $label ) {
+			echo '<option value="' . esc_attr( $value ) . '" ' . selected( $context['mp_my_vote'] ?? '', $value, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select>';
 		echo ' <button class="button">Rechercher / Filtrer</button></form><p>' . esc_html( count( $ids ) ) . ' candidature(s). Cliquez sur Examiner pour étudier le dossier et voter si l’édition utilise les votes multiples. Faites défiler le tableau horizontalement pour voir tous les champs.</p>';
+		echo '<p class="description">Les filtres de note concernent les éditions dans lesquelles vous participez aux votes multiples.</p>';
 		$groups = array( 'identity' => Fields::identity(), 'activity' => Fields::activity(), 'internal' => Fields::internal() );
 		if ( ! $ids ) { echo '<p>Aucune candidature pour ces filtres.</p></div>'; return; }
 		$sort_order = 'points' === ( $context['orderby'] ?? '' ) && 'DESC' === strtoupper( $context['order'] ?? 'DESC' ) ? 'ASC' : 'DESC';
@@ -134,7 +140,12 @@ final class Review {
 			if ( ! empty( $data['edition_id'] ) ) { echo '<br><small>' . esc_html( get_the_title( $data['edition_id'] ) ) . '</small>'; }
 			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a>';
 			if ( current_user_can( 'mp_manage_applications' ) ) { echo ' <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a>'; }
-			echo '</p></th><td>';
+			echo '</p>';
+			$mine = Votes::mine( $id, $votes[ $id ] ?? array() );
+			if ( null !== $mine ) {
+				echo '<p class="mp-my-vote">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
+			}
+			echo '</th><td>';
 			self::photos( $id, $url );
 			echo '</td><td>' . esc_html( Records::decisions()[ $data['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</td>';
 			$summary = Votes::summary( $id, $votes[ $id ] ?? array() );

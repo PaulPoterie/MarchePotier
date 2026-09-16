@@ -40,6 +40,15 @@ final class Votes {
 		foreach ( $rows as $row ) { $result[ (int) $row['application_id'] ][ (int) $row['user_id'] ] = $row; }
 		return $result;
 	}
+	/** Null hors du jury actif en mode multiple ; une note absente reste distincte de zéro. */
+	public static function mine( int $id, ?array $votes = null ): ?array {
+		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
+		$uid = get_current_user_id(); $members = Jury::members( $edition );
+		if ( ! $uid || ! Jury::multiple( $edition ) || ! isset( $members[ $uid ] ) ) { return null; }
+		$votes = $votes ?? ( self::all( array( $id ) )[ $id ] ?? array() );
+		$vote = $votes[ $uid ] ?? null;
+		return array( 'name' => $members[ $uid ]['name'], 'score' => $vote && (int) $vote['edition_id'] === $edition ? (int) $vote['score'] : null );
+	}
 	public static function summary( int $id, ?array $votes = null ): array {
 		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
 		$members = Jury::members( $edition );
