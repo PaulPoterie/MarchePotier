@@ -146,6 +146,7 @@ try {
 	mp_check( Votes::summary( $app )['count'] === 0, 'Absence de vote distincte de zéro' );
 	mp_check( true === Votes::record( $app, '0' ) && Votes::summary( $app )['count'] === 1 && Votes::summary( $app )['total'] === 0, 'La note zéro est comptabilisée' );
 	require __DIR__ . '/personal-votes.php';
+	require __DIR__ . '/vote-tracking.php';
 	foreach ( array( '-1', '6', '2.5', '05', '', array( '5' ), 5 ) as $invalid ) { mp_check( is_wp_error( Votes::record( $app, $invalid ) ), 'Note invalide refusée : ' . json_encode( $invalid ) ); }
 	mp_check( true === Votes::record( $app, '5' ) && Votes::summary( $app )['count'] === 1, 'Correction remplace la note sans double vote' );
 	wp_set_current_user( $b ); mp_check( true === Votes::record( $app, '3' ) && Votes::summary( $app )['total'] === 8, 'Deux comptes gardent des notes indépendantes' );

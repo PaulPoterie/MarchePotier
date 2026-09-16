@@ -361,7 +361,7 @@ final class Records {
 		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_review_applications', 'mp-dossier', array( self::class, 'view' ) );
 		// Une page sans parent n’est pas retrouvée par get_admin_page_title().
 		add_action( 'load-' . $hook, static function () { $GLOBALS['title'] = 'Consulter une candidature'; } );
-		add_submenu_page( 'marche-potier', 'Historique des candidatures', 'Historique', 'mp_review_applications', 'mp-historique', array( self::class, 'history' ) );
+		add_submenu_page( 'marche-potier', 'Historique des sélections', 'Historique des sélections', 'mp_review_applications', 'mp-historique', array( self::class, 'history' ) );
 	}
 
 	public static function view_url( int $id, array $context = array() ): string {
@@ -371,7 +371,7 @@ final class Records {
 	/** Seuls les paramètres connus de la liste sont conservés, jamais une URL de retour libre. */
 	public static function list_context(): array {
 		$context = array();
-		if ( 'gestion' === ( $_GET['mp_from'] ?? '' ) ) { $context['mp_from'] = 'gestion'; }
+		if ( in_array( $_GET['mp_from'] ?? '', array( 'gestion', 'votes' ), true ) ) { $context['mp_from'] = $_GET['mp_from']; }
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
 			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
 		}
@@ -430,13 +430,15 @@ final class Records {
 		$ids = self::navigation_ids( $context );
 		$position = array_search( $id, $ids, true );
 		$list_url = add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion' ) ), admin_url( 'admin.php' ) );
+		if ( 'votes' === ( $context['mp_from'] ?? '' ) ) { $list_url = VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ); }
 		echo '<nav aria-label="Navigation des candidatures"><p><a class="button" href="' . esc_url( $list_url ) . '">Retour à la liste</a> ';
 		if ( false !== $position ) {
 			if ( $position > 0 ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position - 1 ], $context ) ) . '">← Dossier précédent</a> '; }
 			echo '<span> Dossier ' . esc_html( ( $position + 1 ) . ' sur ' . count( $ids ) ) . ' </span> ';
 			if ( isset( $ids[ $position + 1 ] ) ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position + 1 ], $context ) ) . '">Dossier suivant →</a> '; }
 		} else { echo '<span>Ce dossier ne correspond plus aux filtres de la liste.</span> '; }
-		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique</a></p></nav>';
+		echo '<a class="button" href="' . esc_url( VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ) ) . '">Suivi des votes</a> ';
+		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique des sélections</a></p></nav>';
 	}
 
 	public static function row_actions( array $actions, \WP_Post $post ): array {
@@ -514,7 +516,7 @@ final class Records {
 		usort( $rows, static function ( array $left, array $right ): int {
 			return strcmp( ( $left['identity']['last_name'] ?? '' ) . "\0" . ( $left['identity']['first_name'] ?? '' ), ( $right['identity']['last_name'] ?? '' ) . "\0" . ( $right['identity']['first_name'] ?? '' ) );
 		} );
-		echo '<div class="wrap"><h1>Historique des candidatures</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
+		echo '<div class="wrap"><h1>Historique des sélections</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
 		if ( ! $editions ) { echo '<p>Aucune édition enregistrée.</p></div>'; return; }
 		echo '<p class="mp-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="mp-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat mp-history-table" style="--mp-editions:' . count( $editions ) . '"><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
 		foreach ( $editions as $edition ) {

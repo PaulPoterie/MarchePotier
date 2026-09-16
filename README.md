@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.6 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.7 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
@@ -10,7 +10,7 @@ Les blocs **Formulaire de candidature** et **Présentation de la sélection** so
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.6.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.7.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -99,15 +99,23 @@ Dans **Gestion des candidatures**, utilisez la recherche et les filtres d’édi
 - **Examiner** ouvre les photos, les justificatifs et les informations du candidat. Cliquez sur une vignette pour ouvrir la visionneuse ; utilisez les flèches pour avancer et Échap pour fermer. Si le navigateur ne sait pas afficher un PDF, utilisez son lien d’ouverture ou de téléchargement.
 - Choisissez **À examiner**, **Sélectionné** ou **Non sélectionné**, puis **Enregistrer la sélection**.
 - **Modifier** permet de corriger ensemble les coordonnées et la candidature, et de remplacer les photos ou justificatifs.
-- **Retour à la liste** ramène à la gestion des candidatures.
+- **Retour à la liste** ramène à la gestion des candidatures, ou au suivi des votes si le dossier a été ouvert depuis ce tableau.
 
 En **Votes multiples**, chaque administrateur ou votant affecté peut noter et corriger sa propre note à tout moment, même avant l’ouverture ou après la fermeture des inscriptions. Il n’y a pas d’option de clôture des votes. Le mode simple conserve les notes mais masque la notation.
 
 La mise à la corbeille permet de retirer un spam ou un doublon. Le bouton **Corbeille** ouvre la liste native WordPress : restaurez-y un dossier supprimé par erreur. La suppression définitive retire aussi les fichiers gérés pour ce dossier ; elle nécessite donc une sauvegarde préalable si vous souhaitez pouvoir revenir en arrière.
 
+### Suivi des votes
+
+Ouvrez **Suivi des votes** depuis le menu Marché Potier, l’accueil du plugin ou le bouton placé avant **Historique des sélections** dans **Examiner**. Depuis un dossier, son édition est déjà choisie.
+
+Chaque ligne représente une candidature et chaque colonne un membre actif du jury, **administrateur compris**. Sous son nom, **10 votes / 30 candidatures** indique l’avancement de ce membre pour l’ensemble de l’édition. Une case **0/5** est un vote ; **—** signifie qu’aucune note n’est enregistrée. Les candidatures à la corbeille et les membres inactifs sont exclus du suivi.
+
+Les administrateurs et les votants peuvent consulter ce tableau. Les votants ne voient que leurs éditions affectées. Cliquez sur un candidat pour examiner son dossier et voter dans votre propre ligne ; le tableau de suivi lui-même est en consultation uniquement. Une édition en mode simple affiche un message indiquant qu’aucune notation n’est attendue.
+
 ## 8. Consulter l’historique et exporter
 
-L’**Historique** garde nom, prénom et email fixes à gauche ; les éditions défilent vers la droite. Vert : sélectionné ; rouge : non sélectionné ; gris : à examiner ; tiret : aucune candidature.
+L’**Historique des sélections** garde nom, prénom et email fixes à gauche ; les éditions défilent vers la droite. Vert : sélectionné ; rouge : non sélectionné ; gris : à examiner ; tiret : aucune candidature.
 
 Sous chaque édition, `12 / 30` signifie 12 candidatures sélectionnées pour 30 places prévues. La ligne suivante donne le total des candidatures. La corbeille est exclue. Un tiret au dénominateur signifie que la capacité de l’édition n’a pas été renseignée.
 

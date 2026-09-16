@@ -17,6 +17,7 @@ final class Plugin {
 		Records::hooks();
 		Jury::hooks();
 		Votes::hooks();
+		VoteTracking::hooks();
 		Review::hooks();
 		Gallery::hooks();
 		GalleryMap::hooks();
@@ -54,7 +55,8 @@ final class Plugin {
 				<?php endif; ?>
 			<?php endforeach; ?>
 			<?php if ( Jury::can_review() ) : ?>
-				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=mp-historique' ) ); ?>"><?php esc_html_e( 'Historique des candidatures', 'marche-potier' ); ?></a></p>
+				<p><a class="button" href="<?php echo esc_url( VoteTracking::url() ); ?>"><?php esc_html_e( 'Suivi des votes', 'marche-potier' ); ?></a></p>
+				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=mp-historique' ) ); ?>"><?php esc_html_e( 'Historique des sélections', 'marche-potier' ); ?></a></p>
 			<?php endif; ?>
 			<?php if ( current_user_can( 'mp_manage_editions' ) ) : ?>
 			<h2><?php esc_html_e( 'Comment organiser une édition ?', 'marche-potier' ); ?></h2>
