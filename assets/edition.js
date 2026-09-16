@@ -19,19 +19,6 @@ document.addEventListener('click', (event) => {
     picker.open();
 });
 
-// Le code suit l’année saisie, y compris avant le premier enregistrement.
-const editionYear = document.getElementById('mp-year');
-const formShortcode = document.getElementById('mp-form-shortcode');
-if (editionYear && formShortcode) {
-    const updateShortcode = () => {
-        formShortcode.value = /^[2-9][0-9]{3}$/.test(editionYear.value)
-            ? '[inscription_potier edition="' + editionYear.value + '"]' : '';
-    };
-    editionYear.addEventListener('input', updateShortcode);
-    formShortcode.addEventListener('focus', () => formShortcode.select());
-    updateShortcode();
-}
-
 // L’explication est nécessaire uniquement lorsqu’un tarif réduit est proposé.
 const reducedPrice = document.getElementById('mp-reduced_price');
 const reducedDescription = document.getElementById('mp-reduced_description');

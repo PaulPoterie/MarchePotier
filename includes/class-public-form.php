@@ -19,7 +19,7 @@ final class PublicForm {
 	}
 	private static function is_form_page(): bool {
 		$post = get_queried_object();
-		return is_singular() && $post instanceof \WP_Post && has_shortcode( $post->post_content, 'inscription_potier' );
+		return is_singular() && $post instanceof \WP_Post && ( Blocks::contains( $post->post_content, Blocks::FORM ) || has_shortcode( $post->post_content, 'inscription_potier' ) );
 	}
 	public static function resolve( string $year ): int {
 		if ( ! preg_match( '/^[2-9][0-9]{3}$/D', $year ) ) { return 0; }
@@ -54,6 +54,10 @@ final class PublicForm {
 			if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) { self::fail( new \WP_Error( 'session', 'L’envoi a expiré ou dépasse la limite du serveur. Rechargez la page pour retrouver les pièces déjà reçues.' ) ); return; }
 		}
 		$edition = ctype_digit( $input['mp_edition'] ) ? (int) $input['mp_edition'] : 0;
+		$post = get_queried_object();
+		if ( $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::FORM ) && ! in_array( $edition, Blocks::edition_ids( $post->post_content, Blocks::FORM ), true ) ) {
+			self::fail( new \WP_Error( 'edition', 'L’édition affichée sur cette page a changé. Rechargez la page avant de renvoyer votre candidature.' ) ); return;
+		}
 		$issued = $input['mp_issued'];
 		if ( ! self::session() || ! ctype_digit( $issued ) || (int) $issued > time() || time() - (int) $issued > DAY_IN_SECONDS || ! preg_match( '/^[a-f0-9]{32}$/D', $input['mp_random'] ) || ! hash_equals( self::signature( $edition, $issued, $input['mp_random'] ), $input['mp_signature'] ) || ! wp_verify_nonce( $input['mp_nonce'], 'mp_public_' . $edition ) ) {
 			self::fail( new \WP_Error( 'session', 'La session a expiré. Rechargez la page ; les cookies doivent être autorisés pour envoyer une candidature.' ) ); return;
@@ -178,10 +182,13 @@ final class PublicForm {
 	}
 	public static function shortcode( $attributes ): string {
 		$atts = shortcode_atts( array( 'edition' => '' ), $attributes );
-		$edition = self::resolve( (string) $atts['edition'] );
-		if ( ! $edition ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
+		return self::render( self::resolve( (string) $atts['edition'] ) );
+	}
+	/** Rendu commun ; les blocs désignent directement l’édition, jamais son année. */
+	public static function render( int $edition ): string {
+		if ( 'mp_edition' !== get_post_type( $edition ) || 'publish' !== get_post_status( $edition ) ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
 		ob_start();
-		echo '<section id="mp-inscription" class="mp-public"><p class="mp-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( (string) $atts['edition'] ) . '</h2>';
+		echo '<section id="mp-inscription" class="mp-public"><p class="mp-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( Blocks::edition_label( $edition ) ) . '</h2>';
 		echo Editions::introduction( $edition );
 		if ( isset( $_GET['mp_sent'] ) && self::session() && (int) get_transient( 'mp_receipt_' . hash( 'sha256', self::session() ) ) === $edition ) {
 			echo '<div class="mp-success" data-mp-edition="' . esc_attr( $edition ) . '" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</div></section>';

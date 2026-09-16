@@ -7,7 +7,7 @@ final class Gallery {
 		add_shortcode( 'afficher_selection', array( self::class, 'render' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			$post = get_queried_object();
-			if ( $post instanceof \WP_Post && has_shortcode( $post->post_content, 'afficher_selection' ) ) {
+			if ( $post instanceof \WP_Post && ( Blocks::contains( $post->post_content, Blocks::SELECTION ) || has_shortcode( $post->post_content, 'afficher_selection' ) ) ) {
 				wp_enqueue_style( 'mp-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.css', __FILE__ ), array(), '1.9.4' );
 				wp_enqueue_script( 'mp-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.js', __FILE__ ), array(), '1.9.4', true );
 				wp_enqueue_style( 'mp-gallery', plugins_url( '../assets/gallery.css', __FILE__ ), array( 'mp-leaflet' ), '0.8.0' );
@@ -46,14 +46,16 @@ final class Gallery {
 		// Accepte aussi la syntaxe historique [afficher_selection="2027"].
 		$year = (string) $atts['edition'];
 		if ( ! $year && isset( $attributes[0] ) && is_string( $attributes[0] ) ) { $year = trim( $attributes[0], "=\"' " ); }
-		$edition = PublicForm::resolve( $year );
+		return self::render_edition( PublicForm::resolve( $year ) );
+	}
+	public static function render_edition( int $edition ): string {
 		if ( ! $edition || ! Editions::selection_is_public( $edition ) ) { return '<p>La sélection de cette édition n’est pas encore publiée.</p>'; }
 		$ids = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'fields' => 'ids', 'posts_per_page' => -1, 'meta_key' => '_mp_edition_id', 'meta_value' => $edition, 'orderby' => array( 'title' => 'ASC', 'ID' => 'ASC' ) ) );
 		$ids = array_values( array_filter( $ids, array( self::class, 'eligible' ) ) );
 		if ( ! $ids ) { return '<p>Aucun potier à présenter pour cette édition.</p>'; }
 		$prefix = wp_unique_id( 'mp-card-' );
 		ob_start();
-		echo '<section class="mp-gallery" aria-label="Potiers sélectionnés ' . esc_attr( $year ) . '"><div class="mp-gallery-grid">';
+		echo '<section class="mp-gallery" aria-label="Potiers sélectionnés — ' . esc_attr( Blocks::edition_label( $edition ) ) . '"><div class="mp-gallery-grid">';
 		foreach ( $ids as $id ) {
 			$data = Records::data( $id ); $identity = $data['identity'];
 			$name = trim( ( $identity['last_name'] ?? '' ) . ' ' . ( $identity['first_name'] ?? '' ) );

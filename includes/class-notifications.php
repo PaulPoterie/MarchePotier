@@ -6,7 +6,7 @@ final class Notifications {
 	public static function render_status( int $app ): void {
 		if ( ! current_user_can( 'mp_manage_applications' ) ) { return; }
 		$labels = array( 'accepted' => 'confié au service d’envoi', 'failed' => 'échec de l’envoi', 'missing_recipient' => 'adresse destinataire manquante ou invalide' );
-		$titles = array( 'candidate' => 'Confirmation au candidat', 'organizer' => 'Notification à l’organisateur' );
+		$titles = array( 'candidate' => 'Confirmation au candidat' );
 		foreach ( Jury::settings( (int) ( Records::data( $app )['edition_id'] ?? 0 ) )['members'] as $uid => $member ) { $titles[ 'jury_' . $uid ] = 'Notification à ' . $member['name']; }
 		foreach ( $titles as $kind => $title ) {
 			$status = get_post_meta( $app, '_mp_mail_' . $kind, true );
@@ -41,9 +41,7 @@ final class Notifications {
 		$summary = self::summary( $data );
 		$administrators = Jury::administrators( (int) $data['edition_id'] );
 		$recipients = array( 'candidate' => $data['identity']['email'] );
-		// Les anciennes éditions continuent à recevoir leurs notifications avant leur mise à jour.
-		if ( ! $administrators ) { $recipients['organizer'] = $organizer; }
-		$seen = $administrators ? array() : array( strtolower( $organizer ) => true );
+		$seen = array();
 		$members = Jury::multiple( (int) $data['edition_id'] ) ? Jury::members( (int) $data['edition_id'] ) : $administrators;
 		foreach ( $members as $uid => $member ) {
 			$email = get_userdata( $uid )->user_email;

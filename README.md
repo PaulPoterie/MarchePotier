@@ -1,16 +1,16 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.3 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.4 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
-La bêta 3 distingue les administrateurs du marché et les votants dans deux tableaux. Les administrateurs peuvent aussi gérer les pages et articles WordPress. Les invitations indiquent la fonction et permettent aux nouveaux comptes de choisir leur mot de passe.
+La bêta 4 ajoute les blocs **Formulaire de candidature** et **Présentation de la sélection**, liés directement à l’édition choisie. Les votes restent possibles à toute date en mode multiple. Les destinataires des candidatures sont uniquement les administrateurs et votants affectés.
 
 [Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.18.0.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.4.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -32,7 +32,7 @@ Ouvrez **Marché Potier → Éditions → Ajouter**. Donnez un titre explicite, 
 
 Renseignez :
 
-- L’année : une seule édition publiée par année doit correspondre au shortcode du formulaire.
+- **Édition de l’année**, le premier champ des paramètres. Plusieurs éditions peuvent avoir la même année : chaque bloc conserve l’édition choisie, même si son titre ou son année change.
 - L’ouverture et la fermeture des candidatures. Les heures déterminent la disponibilité réelle du formulaire, dans le fuseau horaire WordPress. La page publique affiche uniquement les dates.
 - Les dates du marché, son lieu, le nombre d’exposants et le prix de l’emplacement pour l’ensemble du marché.
 - Le tarif réduit, si nécessaire, avec l’explication des personnes concernées.
@@ -46,13 +46,11 @@ Publiez l’édition. L’ouverture des candidatures respecte automatiquement le
 
 ## 4. Afficher le formulaire
 
-Créez une page WordPress et ajoutez un bloc **Code court** contenant :
+Créez ou ouvrez une page WordPress. Cliquez sur **+**, recherchez **Formulaire de candidature** et ajoutez ce bloc. Dans **Édition à afficher**, choisissez **Titre de l’édition (Année)**, puis publiez ou mettez à jour la page. Ajoutez son lien au menu de votre site si nécessaire.
 
-```text
-[inscription_potier edition="2027"]
-```
+Le menu est aussi disponible dans les réglages du bloc. **Actualiser les éditions** recharge la liste après la création d’un marché dans un autre onglet. Une édition non publiée ou supprimée est signalée. Le bloc ne choisit jamais une autre édition à sa place. Ajoutez un seul formulaire de candidature par page.
 
-Remplacez 2027 par l’année choisie. Le shortcode à copier est également indiqué dans l’édition. Publiez la page et ajoutez son lien à votre menu.
+La rubrique **Affichage sur le site**, tout en bas de l’édition après les rôles, rappelle ces étapes.
 
 Les informations du marché précèdent le formulaire. La période de candidature apparaît sous les blocs d’informations. Lorsque les dates ne permettent pas de candidater, un message remplace le formulaire.
 
@@ -80,7 +78,7 @@ Une même adresse email ne peut déposer deux candidatures pour la même éditio
 
 ## 6. Recevoir les confirmations
 
-L’écran final confirme l’enregistrement. Le candidat et les administrateurs affectés reçoivent chacun un récapitulatif comportant les noms des pièces reçues. En votes multiples, les votants actifs le reçoivent aussi. Les pièces ne sont pas jointes aux emails. L’équipe reçoit un lien vers le dossier, accessible après connexion. Pour une ancienne édition sans administrateur affecté, l’ancien contact reste utilisé temporairement, ou à défaut l’email d’administration WordPress.
+L’écran final confirme l’enregistrement. Le candidat et les administrateurs affectés reçoivent chacun un récapitulatif comportant les noms des pièces reçues. En votes multiples, les votants actifs le reçoivent aussi. Les pièces ne sont pas jointes aux emails. L’équipe reçoit un lien vers le dossier, accessible après connexion. Le premier administrateur actif est l’adresse de réponse du candidat.
 
 La confirmation de dépôt ne vaut pas sélection. Changer une décision ne déclenche pas d’email automatique de sélection ou de refus dans cette version.
 
@@ -95,6 +93,8 @@ Dans **Gestion des candidatures**, utilisez la recherche et les filtres d’édi
 - **Modifier** permet de corriger ensemble les coordonnées et la candidature, et de remplacer les photos ou justificatifs.
 - **Retour à la liste** ramène à la gestion des candidatures.
 
+En **Votes multiples**, chaque administrateur ou votant affecté peut noter et corriger sa propre note à tout moment, même avant l’ouverture ou après la fermeture des inscriptions. Il n’y a pas d’option de clôture des votes. Le mode simple conserve les notes mais masque la notation.
+
 La mise à la corbeille permet de retirer un spam ou un doublon. Le bouton **Corbeille** ouvre la liste native WordPress : restaurez-y un dossier supprimé par erreur. La suppression définitive retire aussi les fichiers gérés pour ce dossier ; elle nécessite donc une sauvegarde préalable si vous souhaitez pouvoir revenir en arrière.
 
 ## 8. Consulter l’historique et exporter
@@ -107,13 +107,9 @@ Le petit bouton **Exporter CSV**, en haut à droite de la gestion, exporte toute
 
 ## 9. Publier les potiers sélectionnés
 
-Créez une page contenant :
+Créez ou ouvrez une page, ajoutez le bloc **Présentation de la sélection** avec le bouton **+**, puis choisissez **Titre de l’édition (Année)** dans le menu du bloc et publiez la page.
 
-```text
-[afficher_selection edition="2027"]
-```
-
-Dans l’édition, autorisez la publication de la sélection. Un dossier apparaît seulement s’il est sélectionné, dispose de l’autorisation de présentation et n’est pas à la corbeille. Retirer l’autorisation de publication de l’édition masque sa galerie.
+Dans la rubrique **Affichage sur le site**, en bas de l’édition après les rôles, cochez **Autoriser l’affichage public de la sélection**, puis enregistrez l’édition. Un dossier apparaît seulement s’il est sélectionné, dispose de l’autorisation de présentation et n’est pas à la corbeille. Retirer cette autorisation masque la galerie. L’édition doit elle-même être publiée.
 
 La galerie affiche tous les sélectionnés : trois colonnes sur grand écran, une sur téléphone, avec un diaporama carré des trois photos de créations. Elle présente nom, prénom, ville, code postal, techniques et liens web/réseaux. Les justificatifs et la photo du stand n’apparaissent pas dans cette galerie.
 

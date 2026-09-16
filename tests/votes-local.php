@@ -10,8 +10,8 @@ $_SERVER['HTTP_HOST'] = 'marche-potier-test.local'; $_SERVER['REQUEST_METHOD'] =
 require $root . '/wp-load.php';
 if ( wp_parse_url( home_url(), PHP_URL_HOST ) !== 'marche-potier-test.local' ) { exit( "Site inattendu.\n" ); }
 require dirname( __DIR__ ) . '/marche-potier.php';
-use MarchePotier\{Plugin,Jury,Votes,Records,Editions,Review,Notifications,PrivateFiles,CsvExport,SubmissionLock};
-Plugin::boot(); Editions::register(); Records::register();
+use MarchePotier\{Plugin,Jury,Votes,Records,Editions,Review,Notifications,PrivateFiles,CsvExport,SubmissionLock,Blocks};
+Plugin::boot(); Editions::register(); Records::register(); Blocks::register();
 require_once ABSPATH . 'wp-admin/includes/user.php';
 $manifest = dirname( __DIR__, 2 ) . '/votes-fixtures.json';
 $mails = array();
@@ -69,7 +69,7 @@ function mp_raw( int $edition ): array {
 		$row = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => get_userdata( $uid )->user_email, 'active' => $member['active'] ? '1' : '0' );
 		if ( 'administrator' === $member['kind'] ) { $administrators[] = $row; } else { $rows[] = $row; }
 	}
-	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'closed' => $data['closed'] ? '1' : '0', 'members' => $rows, 'administrators' => $administrators );
+	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'members' => $rows, 'administrators' => $administrators );
 }
 class MPTestDenied extends RuntimeException {}
 class MPTestRedirect extends RuntimeException {}
@@ -83,7 +83,7 @@ try {
 	$a = mp_user( 'Alice', 'subscriber' ); $b = mp_user( 'Bruno', 'mp_juror' ); $outsider = mp_user( 'Externe', 'subscriber' );
 	$manager = mp_user( 'Responsable', 'mp_organizer' );
 	$edition = mp_post( 'mp_edition', 'Jury 2098' ); $other = mp_post( 'mp_edition', 'Édition confidentielle 2099' );
-	$settings = array( 'year' => '2098', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00', 'exhibitors' => '30', 'organizer_email' => get_userdata( $a )->user_email );
+	$settings = array( 'year' => '2098', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00', 'exhibitors' => '30' );
 	update_post_meta( $edition, '_mp_edition_settings', $settings );
 	update_post_meta( $other, '_mp_edition_settings', array_merge( $settings, array( 'year' => '2099' ) ) );
 	mp_check( Jury::settings( $edition )['mode'] === 'simple', 'Anciennes éditions en mode simple' );
@@ -172,10 +172,14 @@ try {
 	wp_set_current_user( $outsider ); mp_check( is_wp_error( Votes::record( $app, '5' ) ), 'Compte non affecté refusé' );
 	wp_set_current_user( 0 ); mp_denied( array( Review::class, 'table' ), 'Visiteur anonyme refusé' );
 	wp_set_current_user( 1 ); mp_check( is_wp_error( Votes::record( $app, '5' ) ), 'Administrateur non inscrit au jury ne vote pas' );
-	$raw = mp_raw( $edition ); $raw['closed'] = '1'; mp_check( true === mp_config( $edition, $raw ), 'Clôture du vote' );
-	wp_set_current_user( $a ); mp_check( is_wp_error( Votes::record( $app, '1' ) ), 'Clôture contrôlée côté serveur' );
-	ob_start(); Votes::render( $app ); $html = ob_get_clean(); mp_check( str_contains( $html, 'Votes clôturés' ) && ! str_contains( $html, 'name="score"' ), 'Votes clôturés visibles sans sélecteur' );
-	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['closed'] = '0'; $raw['members'][0]['active'] = '0'; mp_config( $edition, $raw );
+	$before_dates = Editions::settings( $edition );
+	update_post_meta( $edition, '_mp_edition_settings', array_merge( $before_dates, array( 'opens' => '2020-01-01T00:00', 'closes' => '2020-02-01T00:00' ) ) );
+	wp_set_current_user( $a ); mp_check( ! Editions::is_open( $edition ) && true === Votes::record( $app, '1' ), 'Vote possible après la fermeture des inscriptions' );
+	update_post_meta( $edition, '_mp_edition_settings', array_merge( $before_dates, array( 'opens' => '2098-01-01T00:00', 'closes' => '2098-02-01T00:00' ) ) );
+	mp_check( ! Editions::is_open( $edition ) && true === Votes::record( $app, '5' ), 'Vote possible avant l’ouverture des inscriptions' );
+	ob_start(); Votes::render( $app ); $html = ob_get_clean(); mp_check( str_contains( $html, 'name="score"' ) && ! str_contains( $html, 'Votes clôturés' ), 'Sélecteur de note disponible indépendamment des dates' );
+	update_post_meta( $edition, '_mp_edition_settings', $before_dates );
+	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['members'][0]['active'] = '0'; mp_config( $edition, $raw );
 	mp_check( Votes::summary( $app )['total'] === 4 && Votes::summary( $app )['expected'] === 3, 'Retrait : ancienne note conservée mais exclue du total' );
 	wp_set_current_user( $a ); mp_check( ! Jury::can_view_application( $app ) && is_wp_error( Votes::record( $app, '5' ) ), 'Retrait coupe accès et vote immédiatement' );
 	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['members'][0]['active'] = '1'; $raw['mode'] = 'simple'; mp_config( $edition, $raw );
@@ -193,7 +197,7 @@ try {
 	mp_check( str_contains( Jury::settings( $edition )['members'][ $b ]['invitation'], 'Échec' ), 'Échec d’invitation visible dans l’édition' );
 	remove_filter( 'pre_wp_mail', $failure, 200 );
 	$before_mails = count( $mails ); Notifications::send( $hidden );
-	mp_check( count( $mails ) === $before_mails + 2, 'Édition simple sans jury : deux emails comme auparavant' );
+	mp_check( count( $mails ) === $before_mails + 1 && '' === Jury::contact_email( $other ), 'Aucun destinataire de secours ni ancien contact sans administrateur affecté' );
 	ob_start(); Review::decision_form( $hidden ); $html = ob_get_clean();
 	mp_check( str_contains( $html, 'Enregistrer la sélection' ), 'Sélection directe disponible au responsable en mode simple' );
 	$jobs = array();
@@ -207,6 +211,7 @@ try {
 	wp_trash_post( $second ); wp_set_current_user( $b ); mp_check( is_wp_error( Votes::record( $second, '2' ) ), 'Vote refusé sur dossier à la corbeille' );
 	wp_set_current_user( 1 ); wp_untrash_post( $second );
 	require __DIR__ . '/market-administrators.php';
+	require __DIR__ . '/blocks-local.php';
 	$passed = true; echo "SUCCÈS : $checks vérifications. Emails interceptés.\n";
 } finally {
 	if ( ! $keep || ! $passed ) { mp_cleanup( $state ); if ( is_file( $manifest ) ) { unlink( $manifest ); } }

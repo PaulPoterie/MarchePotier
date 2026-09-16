@@ -13,6 +13,7 @@ final class Plugin {
 		add_action( 'init', array( Editions::class, 'register' ) );
 		add_action( 'admin_init', array( Editions::class, 'install_permissions' ) );
 		Editions::hooks();
+		Blocks::hooks();
 		Records::hooks();
 		Jury::hooks();
 		Votes::hooks();
@@ -60,12 +61,11 @@ final class Plugin {
 			<ol>
 				<li>
 					<p><strong><?php esc_html_e( 'Créer une édition', 'marche-potier' ); ?></strong><br>
-					<?php esc_html_e( 'Dans « Gérer les éditions », ajoutez une édition, renseignez son année, les informations du marché et les dates d’ouverture et de fermeture des candidatures, puis publiez-la.', 'marche-potier' ); ?></p>
+					<?php esc_html_e( 'Dans « Gérer les éditions », ajoutez une édition, renseignez « Édition de l’année », les informations du marché, les dates d’inscription et au moins un administrateur dans « Organisateur et votes », puis publiez-la.', 'marche-potier' ); ?></p>
 				</li>
 				<li>
 					<p><strong><?php esc_html_e( 'Faire apparaître le formulaire', 'marche-potier' ); ?></strong><br>
-					<?php esc_html_e( 'Ajoutez le code suivant dans un bloc « Code court » d’une page WordPress, puis publiez cette page. Le formulaire accepte les candidatures pendant la période définie dans l’édition.', 'marche-potier' ); ?><br>
-					<code>[inscription_potier edition="2027"]</code></p>
+					<?php esc_html_e( 'Dans une page WordPress, cliquez sur « + », ajoutez le bloc « Formulaire de candidature », puis choisissez votre édition dans la liste « Titre (Année) ». Publiez la page. Le formulaire accepte les candidatures pendant la période définie dans l’édition.', 'marche-potier' ); ?></p>
 				</li>
 				<li>
 					<p><strong><?php esc_html_e( 'Examiner les candidatures', 'marche-potier' ); ?></strong><br>
@@ -73,15 +73,14 @@ final class Plugin {
 				</li>
 				<li>
 					<p><strong><?php esc_html_e( 'Faire apparaître la sélection', 'marche-potier' ); ?></strong><br>
-					<?php esc_html_e( 'Ajoutez le code suivant dans un bloc « Code court » d’une page WordPress et publiez la page. Lorsque votre sélection est prête, autorisez sa publication dans les réglages de l’édition pour afficher les potiers sélectionnés.', 'marche-potier' ); ?><br>
-					<code>[afficher_selection edition="2027"]</code></p>
+					<?php esc_html_e( 'Ajoutez le bloc « Présentation de la sélection » dans une page WordPress, choisissez votre édition et publiez la page. Lorsque la sélection est prête, ouvrez « Affichage sur le site », en bas de l’édition, cochez « Autoriser l’affichage public de la sélection » et enregistrez.', 'marche-potier' ); ?></p>
 				</li>
 			</ol>
-			<p class="description"><?php esc_html_e( 'Dans les deux codes, remplacez 2027 par l’année de votre édition.', 'marche-potier' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Chaque bloc conserve l’édition choisie, même si son titre ou son année change. Plusieurs éditions peuvent partager la même année.', 'marche-potier' ); ?></p>
 			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez au moins un administrateur du marché (nom et email). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». Les administrateurs affectés participent aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Point » affiche le total et la participation.', 'marche-potier' ); ?></p>
 			<?php else : ?>
 			<h2><?php esc_html_e( 'Examiner et voter', 'marche-potier' ); ?></h2>
-			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Votes pour la sélection », choisissez votre note de 0 à 5 et cliquez sur « Valider ». Vous pouvez consulter les autres notes et modifier la vôtre jusqu’à la clôture des votes.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Votes pour la sélection », choisissez votre note de 0 à 5 et cliquez sur « Valider ». En mode votes multiples, vous pouvez consulter les autres notes et modifier la vôtre à tout moment, indépendamment des dates d’inscription.', 'marche-potier' ); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php

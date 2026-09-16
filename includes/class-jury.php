@@ -34,7 +34,7 @@ final class Jury {
 	}
 	public static function settings( int $edition ): array {
 		$data = get_post_meta( $edition, self::META, true );
-		$data = array_merge( array( 'mode' => 'simple', 'closed' => false, 'members' => array(), 'revision' => '' ), is_array( $data ) ? $data : array() );
+		$data = array_merge( array( 'mode' => 'simple', 'members' => array(), 'revision' => '' ), is_array( $data ) ? $data : array() );
 		// Les anciennes affectations restent liées aux mêmes comptes et aux mêmes notes.
 		foreach ( $data['members'] as $uid => &$member ) {
 			$member['kind'] = $member['kind'] ?? ( user_can( $uid, 'mp_manage_editions' ) ? 'administrator' : 'voter' );
@@ -51,7 +51,7 @@ final class Jury {
 	}
 	public static function contact_email( int $edition ): string {
 		foreach ( self::administrators( $edition ) as $uid => $member ) { return get_userdata( $uid )->user_email; }
-		return Editions::settings( $edition )['organizer_email'] ?: (string) get_option( 'admin_email' );
+		return '';
 	}
 	public static function can_view_edition( int $edition ): bool {
 		if ( 'mp_edition' !== get_post_type( $edition ) || ! in_array( get_post_status( $edition ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
@@ -71,12 +71,9 @@ final class Jury {
 		wp_nonce_field( 'mp_jury_' . $post->ID, 'mp_jury_nonce' );
 		echo '<input type="hidden" name="mp_jury[revision]" value="' . esc_attr( $data['revision'] ) . '">';
 		echo '<p><label for="mp-jury-mode"><strong>Mode de sélection</strong></label> <select id="mp-jury-mode" name="mp_jury[mode]"><option value="simple" ' . selected( $data['mode'], 'simple', false ) . '>Simple — sélection directe</option><option value="multiple" ' . selected( $data['mode'], 'multiple', false ) . '>Votes multiples — notes de 0 à 5</option></select></p>';
-		echo '<p><label><input type="checkbox" name="mp_jury[closed]" value="1" ' . checked( $data['closed'], true, false ) . '> Votes clôturés (notes visibles, modifications désactivées)</label></p>';
+		echo '<p class="description">En mode votes multiples, les notes restent modifiables à tout moment, avant, pendant et après les inscriptions.</p>';
 		echo '<h3>Administrateur du marché</h3><p>Ajoutez au moins un administrateur actif avec son nom et son email. Il peut créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles du site, et gérer l’équipe. En mode simple, il décide de la sélection. En votes multiples, il donne aussi sa note de 0 à 5 et conserve la décision finale.</p>';
 		echo '<p class="description">Ces droits portent sur l’ensemble du site. Le rôle attribué est « [MP] Administrateur marché ». Chaque administrateur actif de cette édition reçoit les nouvelles candidatures. Le premier administrateur actif du tableau sert de contact pour les réponses des candidats.</p>';
-		if ( ! self::administrators( $post->ID ) && Editions::settings( $post->ID )['organizer_email'] ) {
-			echo '<p class="description">Ancien contact : <strong>' . esc_html( Editions::settings( $post->ID )['organizer_email'] ) . '</strong>. Il reste destinataire jusqu’à l’enregistrement d’un administrateur. Aucun droit de gestion ne lui est attribué automatiquement.</p>';
-		}
 		self::member_table( $data, 'administrators', 'administrator', 'Ajouter un administrateur' );
 		echo '<h3>Votant pour la sélection</h3><p>Le rôle « [MP] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
 		self::member_table( $data, 'members', 'voter', 'Ajouter un votant' );
@@ -111,7 +108,7 @@ final class Jury {
 		if ( ! current_user_can( 'mp_manage_jury' ) || ! current_user_can( 'mp_manage_editions' ) || 'mp_edition' !== get_post_type( $edition ) ) { return new \WP_Error( 'access', 'Accès refusé.' ); }
 		$old = self::settings( $edition );
 		if ( ( $raw['revision'] ?? null ) !== $old['revision'] ) { return new \WP_Error( 'conflict', 'L’équipe a changé depuis l’ouverture de cette page. Rechargez l’édition avant de recommencer.' ); }
-		if ( ! in_array( $raw['mode'] ?? null, array( 'simple', 'multiple' ), true ) || ! in_array( $raw['closed'] ?? '0', array( '0', '1' ), true ) || ! is_array( $raw['members'] ?? array() ) || ! is_array( $raw['administrators'] ?? array() ) || count( $raw['members'] ?? array() ) + count( $raw['administrators'] ?? array() ) > 100 ) { return new \WP_Error( 'invalid', 'Réglages invalides (100 membres maximum dans les deux tableaux).' ); }
+		if ( ! in_array( $raw['mode'] ?? null, array( 'simple', 'multiple' ), true ) || ! is_array( $raw['members'] ?? array() ) || ! is_array( $raw['administrators'] ?? array() ) || count( $raw['members'] ?? array() ) + count( $raw['administrators'] ?? array() ) > 100 ) { return new \WP_Error( 'invalid', 'Réglages invalides (100 membres maximum dans les deux tableaux).' ); }
 		$rows = array(); $emails = array();
 		foreach ( array( 'administrators' => 'administrator', 'members' => 'voter' ) as $group => $kind ) {
 			foreach ( $raw[ $group ] ?? array() as $row ) {
@@ -130,7 +127,7 @@ final class Jury {
 			}
 		}
 		if ( ! array_filter( $rows, static fn( $row ) => $row['active'] && 'administrator' === $row['kind'] ) ) { return new \WP_Error( 'administrator', 'Ajoutez au moins un administrateur du marché actif dans le premier tableau.' ); }
-		$data = array( 'mode' => $raw['mode'], 'closed' => '1' === ( $raw['closed'] ?? '0' ), 'members' => $old['members'], 'revision' => wp_generate_uuid4() );
+		$data = array( 'mode' => $raw['mode'], 'members' => $old['members'], 'revision' => wp_generate_uuid4() );
 		foreach ( $data['members'] as &$member ) { $member['active'] = false; } unset( $member );
 		$invitations = array();
 		foreach ( $rows as $row ) {
@@ -201,7 +198,7 @@ final class Jury {
 		$message .= '<p style="margin:28px 0"><a href="' . esc_url( $action_url ) . '" style="display:inline-block;background:#76533c;color:#ffffff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:bold">' . esc_html( $action_label ) . '</a></p>';
 		if ( $created ) { $message .= '<p>Une fois votre mot de passe choisi : <a href="' . esc_url( $login_url ) . '">accéder aux candidatures de l’édition</a>.</p>'; }
 		if ( $administrator ) { $message .= '<p>Vous pouvez gérer les éditions, les candidatures, les pages et les articles du site. Dans <strong>Gestion des candidatures → Examiner</strong>, vous enregistrez la sélection finale, en mode simple comme en votes multiples.</p>'; }
-		$message .= '<p>Dans <strong>Gestion des candidatures → Examiner</strong>, vous consultez les dossiers. En mode votes multiples, lorsque les votes sont ouverts, vous attribuez votre note de 0 à 5, voyez les autres notes et modifiez uniquement la vôtre.</p>';
+		$message .= '<p>Dans <strong>Gestion des candidatures → Examiner</strong>, vous consultez les dossiers. En mode votes multiples, vous attribuez votre note de 0 à 5, voyez les autres notes et modifiez uniquement la vôtre. Les dates d’inscription ne limitent pas la notation.</p>';
 		$message .= '<p style="margin-top:24px;font-size:14px">Mot de passe oublié ou lien expiré ? <a href="' . esc_url( wp_lostpassword_url( $destination ) ) . '">Demander un nouveau lien</a> en indiquant votre adresse email.</p>';
 		$message .= '</td></tr></table></td></tr></table></body></html>';
 		return wp_mail( $user->user_email, ( $administrator ? 'Invitation administrateur du marché — ' : 'Invitation au jury — ' ) . $title, $message, array( 'Content-Type: text/html; charset=UTF-8' ) );

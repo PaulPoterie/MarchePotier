@@ -87,7 +87,7 @@ final class Editions {
 
 	public static function settings( int $id ): array {
 		$value = get_post_meta( $id, self::META, true );
-		return array_merge( array( 'market_start' => '', 'market_end' => '', 'venue' => '', 'exhibitors' => '', 'price' => '', 'reduced_price' => '', 'reduced_description' => '', 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'organizer_email' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
+		return array_merge( array( 'market_start' => '', 'market_end' => '', 'venue' => '', 'exhibitors' => '', 'price' => '', 'reduced_price' => '', 'reduced_description' => '', 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
 	}
 
 	public static function assets(): void {
@@ -100,7 +100,7 @@ final class Editions {
 		wp_localize_script( 'mp-edition-trash', 'mpEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
 		if ( 'post' !== $screen->base ) { return; }
 		wp_enqueue_media();
-		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.16.0', true );
+		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.0-beta.4', true );
 	}
 
 	/** Documents publics distincts des justificatifs privés des candidats. */
@@ -136,6 +136,7 @@ final class Editions {
 
 	public static function market_fields( array $data ): void {
 		echo '<h3>Informations pratiques du marché</h3><p>Affichées au-dessus du formulaire public. Les dates du marché sont distinctes de la période de candidature. Les prix sont en euros, pour un emplacement sur l’ensemble du marché.</p><table class="form-table" role="presentation">';
+		echo '<tr><th><label for="mp-year">Édition de l’année *</label></th><td><input class="regular-text" id="mp-year" name="mp_edition[year]" type="number" min="2000" max="9999" required value="' . esc_attr( $data['year'] ) . '"></td></tr>';
 		$fields = array( 'market_start' => array( 'Date de début du marché', 'date' ), 'market_end' => array( 'Date de fin du marché', 'date' ), 'venue' => array( 'Lieu d’exposition', 'text' ), 'exhibitors' => array( 'Nombre d’exposants', 'number' ), 'price' => array( 'Prix de l’emplacement (€)', 'number' ), 'reduced_price' => array( 'Prix de l’emplacement — tarif réduit (€)', 'number' ) );
 		foreach ( $fields as $key => [ $label, $type ] ) {
 			$optional = 'reduced_price' === $key;
@@ -181,6 +182,16 @@ final class Editions {
 
 	public static function add_box(): void {
 		add_meta_box( 'mp-edition-settings', __( 'Paramètres de l’édition', 'marche-potier' ), array( self::class, 'render_box' ), 'mp_edition', 'normal', 'high' );
+		add_meta_box( 'mp-edition-publication', 'Affichage sur le site', array( self::class, 'publication_box' ), 'mp_edition', 'normal', 'low' );
+	}
+
+	public static function publication_box( \WP_Post $post ): void {
+		$data = self::settings( $post->ID );
+		echo '<h3>Afficher le formulaire de candidature</h3><ol><li>Enregistrez et publiez cette édition.</li><li>Ouvrez ou créez une page WordPress, cliquez sur « + » puis ajoutez le bloc <strong>Formulaire de candidature</strong>.</li><li>Dans le bloc, choisissez <strong>' . esc_html( Blocks::edition_label( $post->ID ) ) . '</strong> dans la liste des éditions, puis publiez ou mettez à jour la page.</li></ol>';
+		echo '<p>Le formulaire respecte les dates d’ouverture et de fermeture des inscriptions. Vous pouvez noter les candidatures à tout moment en mode votes multiples, indépendamment de ces dates.</p>';
+		echo '<h3>Afficher la sélection</h3><ol><li>Ajoutez le bloc <strong>Présentation de la sélection</strong> dans la page de votre choix.</li><li>Choisissez cette édition dans le bloc et publiez la page.</li><li>Lorsque la sélection est prête, cochez l’autorisation ci-dessous et enregistrez l’édition.</li></ol>';
+		echo '<p><label><input name="mp_edition[selection_public]" type="checkbox" value="1" ' . checked( $data['selection_public'], true, false ) . '> <strong>Autoriser l’affichage public de la sélection</strong></label></p>';
+		echo '<p class="description">Désactivé par défaut. Seuls les candidats sélectionnés ayant autorisé leur présentation sont affichés. Publier l’édition ne publie pas automatiquement la sélection.</p>';
 	}
 
 	public static function render_box( \WP_Post $post ): void {
@@ -191,16 +202,10 @@ final class Editions {
 		<h3>Période de candidature</h3>
 		<p><?php echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
 		<table class="form-table" role="presentation">
-			<tr><th><label for="mp-year"><?php esc_html_e( 'Année', 'marche-potier' ); ?></label></th><td><input id="mp-year" name="mp_edition[year]" type="number" min="2000" max="9999" required value="<?php echo esc_attr( $data['year'] ); ?>"></td></tr>
 			<?php foreach ( array( 'opens' => __( 'Ouverture des candidatures', 'marche-potier' ), 'closes' => __( 'Fermeture des candidatures', 'marche-potier' ) ) as $key => $label ) : ?>
 			<tr><th><label for="mp-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><input id="mp-<?php echo esc_attr( $key ); ?>" name="mp_edition[<?php echo esc_attr( $key ); ?>]" type="datetime-local" required value="<?php echo esc_attr( $data[ $key ] ); ?>"></td></tr>
 			<?php endforeach; ?>
-			<tr><th><?php esc_html_e( 'Sélection publique', 'marche-potier' ); ?></th><td><label><input name="mp_edition[selection_public]" type="checkbox" value="1" <?php checked( $data['selection_public'] ); ?>> <?php esc_html_e( 'Autoriser l’affichage public de la sélection', 'marche-potier' ); ?></label><p class="description"><?php esc_html_e( 'Désactivé par défaut. La galerie affiche les candidats sélectionnés ayant autorisé leur présentation. Le bouton WordPress « Publier » active l’édition, mais n’autorise pas à lui seul l’affichage des potiers.', 'marche-potier' ); ?></p></td></tr>
 		</table>
-		<h3>Afficher le formulaire de candidature</h3>
-		<p><label for="mp-form-shortcode">Shortcode à copier dans votre page WordPress</label></p>
-		<input id="mp-form-shortcode" class="large-text code" type="text" readonly value="<?php echo esc_attr( preg_match( '/^[2-9][0-9]{3}$/D', (string) $data['year'] ) ? '[inscription_potier edition="' . $data['year'] . '"]' : '' ); ?>" aria-describedby="mp-shortcode-help">
-		<p class="description" id="mp-shortcode-help">Renseignez l’année et enregistrez l’édition, puis collez ce code dans un bloc « Code court » de la page qui accueillera les candidatures. L’édition doit être publiée ; le formulaire respecte les dates d’ouverture et de fermeture.</p>
 		<h3>Informations complémentaires</h3>
 		<p><label for="mppresentation">Texte de présentation complémentaire</label></p>
 		<?php wp_editor( $data['presentation'], 'mppresentation', array(
@@ -306,8 +311,6 @@ final class Editions {
 		}
 		// Valider les paramètres avant toute création de compte ou invitation.
 		if ( isset( $_POST['mp_jury'] ) && ! Jury::save( $id ) ) { return; }
-		// Contact historique conservé uniquement tant que la nouvelle équipe n'est pas définie.
-		$data['organizer_email'] = Jury::administrators( $id ) ? '' : self::settings( $id )['organizer_email'];
 		// Un seul enregistrement pour ne pas mélanger anciens et nouveaux réglages.
 		update_post_meta( $id, self::META, wp_slash( $data ) );
 	}

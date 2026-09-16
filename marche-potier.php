@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Marché Potier
  * Description: Organisation des éditions, candidatures et sélections de marchés de potiers.
- * Version: 0.19.0-beta.3
+ * Version: 0.19.0-beta.4
  * Requires at least: 6.6
  * Requires PHP: 8.2
  * Text Domain: marche-potier
@@ -14,6 +14,7 @@ namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/includes/class-plugin.php';
+require_once __DIR__ . '/includes/class-blocks.php';
 require_once __DIR__ . '/includes/class-editions.php';
 require_once __DIR__ . '/includes/class-jury.php';
 require_once __DIR__ . '/includes/class-votes.php';

@@ -71,7 +71,7 @@ final class Votes {
 			$data = Records::data( $id ); $edition = (int) ( $data['edition_id'] ?? 0 ); $uid = get_current_user_id();
 			if ( ! Jury::can_view_application( $id ) || ! Jury::can_view_edition( $edition ) || empty( $data['potier_id'] ) || ! isset( Jury::members( $edition )[ $uid ] ) ) { return new \WP_Error( 'access', 'Vous ne pouvez pas voter pour cette candidature.', array( 'status' => 403 ) ); }
 			$settings = Jury::settings( $edition );
-			if ( 'multiple' !== $settings['mode'] || $settings['closed'] ) { return new \WP_Error( 'closed', 'Les votes sont fermés pour cette édition.', array( 'status' => 403 ) ); }
+			if ( 'multiple' !== $settings['mode'] ) { return new \WP_Error( 'mode', 'La notation nécessite le mode votes multiples.', array( 'status' => 403 ) ); }
 			if ( '1' !== get_option( 'mp_votes_schema_version' ) ) { return new \WP_Error( 'storage', 'Les votes ne sont pas encore disponibles. Contactez le responsable.', array( 'status' => 503 ) ); }
 			global $wpdb;
 			$result = $wpdb->query( $wpdb->prepare( 'INSERT INTO ' . self::table() . ' (application_id,edition_id,user_id,score,updated_at) VALUES (%d,%d,%d,%d,%s) ON DUPLICATE KEY UPDATE score=VALUES(score), updated_at=VALUES(updated_at)', $id, $edition, $uid, (int) $score, gmdate( 'Y-m-d H:i:s' ) ) );
@@ -92,7 +92,6 @@ final class Votes {
 		$data = Jury::settings( $edition ); $members = Jury::members( $edition ); $votes = self::all( array( $id ) )[ $id ] ?? array();
 		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">Votes pour la sélection</h2>';
 		if ( isset( $_GET['mp_vote_saved'] ) ) { echo '<div class="notice notice-success inline"><p>Votre note a été enregistrée.</p></div>'; }
-		if ( $data['closed'] ) { echo '<p><strong>Votes clôturés.</strong> Les notes restent consultables.</p>'; }
 		if ( ! $members ) { echo '<p>Aucun membre actif. Un administrateur du marché peut en ajouter dans l’édition.</p>'; }
 		echo '<table class="widefat striped"><thead><tr><th scope="col">Membre</th><th scope="col">Note / 5</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) {
@@ -101,7 +100,7 @@ final class Votes {
 			$mine = (int) $uid === get_current_user_id();
 			if ( ! $active && ! $vote ) { continue; }
 			echo '<tr><th scope="row">' . esc_html( $member['name'] ) . ( $mine ? ' — vous' : '' ) . ( ! $active ? '<br><small>Inactif · note exclue du total</small>' : '' ) . '</th><td>';
-			if ( $mine && $active && ! $data['closed'] ) {
+			if ( $mine && $active ) {
 				echo '<form class="mp-vote-form" method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '"><input type="hidden" name="action" value="mp_vote"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
 				wp_nonce_field( 'mp_vote_' . $id );
 				echo '<label class="screen-reader-text" for="mp-my-score">Votre note de 0 à 5</label><select required id="mp-my-score" name="score"><option value="">— Choisir —</option>';

@@ -44,7 +44,7 @@ if ( $new_admin ) { update_user_meta( $new_admin, '_mp_vote_test', $state['run']
 mp_check( $new_admin && get_userdata( $new_admin )->roles === array( 'mp_organizer' ) && isset( Jury::administrators( $edition )[ $new_admin ] ), 'Enregistrer l’édition crée le profil administrateur du marché' );
 $invitation = end( $mails );
 mp_check( count( $mails ) === $before_mails + 1 && str_contains( $invitation['subject'], 'Invitation administrateur du marché' ) && str_contains( $invitation['message'], 'Choisir mon mot de passe' ) && str_contains( $invitation['message'], 'enregistrez la sélection finale' ), 'Invitation administrateur avec choix du mot de passe et explication de son rôle' );
-mp_check( Editions::settings( $edition )['organizer_email'] === '' && Jury::contact_email( $edition ) === get_userdata( $manager )->user_email, 'Ancien contact remplacé par les comptes administrateurs' );
+mp_check( ! array_key_exists( 'organizer_email', Editions::settings( $edition ) ) && Jury::contact_email( $edition ) === get_userdata( $manager )->user_email, 'Le contact dépend uniquement du compte administrateur' );
 wp_set_current_user( $new_admin ); mp_check( true === Votes::record( $app, '0' ) && Votes::summary( $app )['expected'] === 5, 'Nouvel administrateur immédiatement autorisé à voter, zéro comptabilisé' );
 $multiple_app = mp_post( 'mp_candidature', 'Notifications plusieurs administrateurs' ); update_post_meta( $multiple_app, Records::META, Records::data( $app ) );
 $before_mails = count( $mails ); Notifications::send( $multiple_app ); $sent = array_slice( $mails, $before_mails );
