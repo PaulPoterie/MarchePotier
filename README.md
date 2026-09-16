@@ -1,16 +1,16 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.4 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.5 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
-La bêta 4 ajoute les blocs **Formulaire de candidature** et **Présentation de la sélection**, liés directement à l’édition choisie. Les votes restent possibles à toute date en mode multiple. Les destinataires des candidatures sont uniquement les administrateurs et votants affectés.
+Les blocs **Formulaire de candidature** et **Présentation de la sélection** sont liés directement à l’édition choisie. La bêta 5 supprime les anciens shortcodes et impose **un seul administrateur par édition**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
 
 [Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.4.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.5.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -22,7 +22,9 @@ Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essa
 
 Un administrateur WordPress accède au menu **Marché Potier**. Le rôle **[MP] Administrateur marché** permet de créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles, y compris ceux des autres comptes. Ces droits s’appliquent à l’ensemble du site. Ce rôle ne donne pas accès à la gestion des extensions, des utilisateurs ni aux réglages techniques de WordPress.
 
-Dans **Organisateur et votes** d’une édition, le premier tableau **Administrateur du marché** crée ou rattache ces comptes avec leur nom et leur email. Au moins un administrateur actif est nécessaire à l’enregistrement. Les administrateurs affectés décident de la sélection en mode simple et participent aussi aux votes multiples. Le second tableau **Votant pour la sélection** crée des comptes **[MP] Votant sélection**, limités à la consultation et à leur propre note dans les éditions affectées. Les droits préexistants d’un compte sont conservés ; déplacer un compte vers le tableau administrateur lui attribue les droits de gestion du marché.
+Dans **Organisateur et votes** d’une édition, renseignez le nom et l’email obligatoires de l’**Administrateur du marché**. Il est unique, toujours actif, décide de la sélection en mode simple et participe aussi aux votes multiples. Le tableau **Votant pour la sélection** crée des comptes **[MP] Votant sélection**, limités à la consultation et à leur propre note dans les éditions affectées. Il n’existe plus de bouton pour ajouter d’autres administrateurs.
+
+Pour remplacer l’administrateur, modifiez son nom et son email dans l’édition. Si le remplaçant figure déjà parmi les votants, décochez sa case **Actif** avant d’enregistrer : sa note reste liée au même compte. L’ancien administrateur devient votant inactif et sa note sort du total. Les droits WordPress préexistants de son compte sont conservés ; seul un administrateur du site peut les retirer.
 
 Les comptes existants gardent leurs identifiants et leurs mots de passe. Les anciens rôles sont renommés automatiquement sans recréer les comptes ; les notes restent associées aux mêmes personnes.
 
@@ -38,7 +40,7 @@ Renseignez :
 - Le tarif réduit, si nécessaire, avec l’explication des personnes concernées.
 - Le texte complémentaire, avec l’éditeur WordPress, et le règlement intérieur en PDF.
 - La longueur de stand par défaut et l’autorisation ou non de la modifier.
-- Le message de remerciement (un message standard est utilisé s’il reste vide) et les administrateurs dans **Organisateur et votes**. Le champ email organisateur indépendant est supprimé. Chaque administrateur actif reçoit les nouvelles candidatures et le premier du tableau est l’adresse de réponse des candidats.
+- Le message de remerciement (un message standard est utilisé s’il reste vide) et l’administrateur unique dans **Organisateur et votes**. Celui-ci reçoit les nouvelles candidatures et les réponses des candidats.
 
 Précisez dans le texte complémentaire ce qui est compris dans le prix, les éventuels équipements fournis, les modalités de paiement et la date prévue de réponse aux candidats.
 
@@ -51,6 +53,8 @@ Créez ou ouvrez une page WordPress. Cliquez sur **+**, recherchez **Formulaire 
 Le menu est aussi disponible dans les réglages du bloc. **Actualiser les éditions** recharge la liste après la création d’un marché dans un autre onglet. Une édition non publiée ou supprimée est signalée. Le bloc ne choisit jamais une autre édition à sa place. Ajoutez un seul formulaire de candidature par page.
 
 La rubrique **Affichage sur le site**, tout en bas de l’édition après les rôles, rappelle ces étapes.
+
+Les anciens shortcodes ne sont plus reconnus. Remplacez-les par les blocs correspondants et choisissez l’édition à afficher.
 
 Les informations du marché précèdent le formulaire. La période de candidature apparaît sous les blocs d’informations. Lorsque les dates ne permettent pas de candidater, un message remplace le formulaire.
 
@@ -78,7 +82,7 @@ Une même adresse email ne peut déposer deux candidatures pour la même éditio
 
 ## 6. Recevoir les confirmations
 
-L’écran final confirme l’enregistrement. Le candidat et les administrateurs affectés reçoivent chacun un récapitulatif comportant les noms des pièces reçues. En votes multiples, les votants actifs le reçoivent aussi. Les pièces ne sont pas jointes aux emails. L’équipe reçoit un lien vers le dossier, accessible après connexion. Le premier administrateur actif est l’adresse de réponse du candidat.
+L’écran final confirme l’enregistrement. Le candidat et l’administrateur de l’édition reçoivent chacun un récapitulatif comportant les noms des pièces reçues. En votes multiples, les votants actifs le reçoivent aussi. Les pièces ne sont pas jointes aux emails. L’équipe reçoit un lien vers le dossier, accessible après connexion. L’administrateur est l’adresse de réponse du candidat.
 
 La confirmation de dépôt ne vaut pas sélection. Changer une décision ne déclenche pas d’email automatique de sélection ou de refus dans cette version.
 

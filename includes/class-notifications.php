@@ -39,11 +39,12 @@ final class Notifications {
 		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $data['edition_id'] ), ENT_QUOTES ) );
 		$organizer = Jury::contact_email( (int) $data['edition_id'] );
 		$summary = self::summary( $data );
-		$administrators = Jury::administrators( (int) $data['edition_id'] );
+		$administrator = Jury::administrator( (int) $data['edition_id'] );
 		$recipients = array( 'candidate' => $data['identity']['email'] );
 		$seen = array();
-		$members = Jury::multiple( (int) $data['edition_id'] ) ? Jury::members( (int) $data['edition_id'] ) : $administrators;
+		$members = Jury::members( (int) $data['edition_id'] );
 		foreach ( $members as $uid => $member ) {
+			if ( ! Jury::multiple( (int) $data['edition_id'] ) && $uid !== $administrator ) { continue; }
 			$email = get_userdata( $uid )->user_email;
 			if ( ! isset( $seen[ strtolower( $email ) ] ) ) { $recipients[ 'jury_' . $uid ] = $email; $seen[ strtolower( $email ) ] = true; }
 		}

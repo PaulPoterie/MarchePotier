@@ -22,18 +22,21 @@ ob_start(); Review::decision_form( $app ); $html = ob_get_clean();
 mp_check( str_contains( $html, 'Enregistrer la sélection' ) && is_wp_error( Votes::record( $app, '4' ) ), 'Administrateur en mode simple : sélection disponible, notation désactivée' );
 $simple_app = mp_post( 'mp_candidature', 'Notifications mode simple' ); update_post_meta( $simple_app, Records::META, Records::data( $app ) );
 $before_mails = count( $mails ); Notifications::send( $simple_app ); $sent = array_slice( $mails, $before_mails );
-mp_check( count( $sent ) === 2 && $sent[1]['to'] === get_userdata( $manager )->user_email && in_array( 'Reply-To: ' . get_userdata( $manager )->user_email, $sent[0]['headers'], true ), 'Mode simple : candidat et administrateur notifiés, réponse au premier administrateur' );
+mp_check( count( $sent ) === 2 && $sent[1]['to'] === get_userdata( $manager )->user_email && in_array( 'Reply-To: ' . get_userdata( $manager )->user_email, $sent[0]['headers'], true ), 'Mode simple : candidat et administrateur unique notifiés, réponse à cet administrateur' );
 $raw = mp_raw( $edition ); $raw['mode'] = 'multiple'; mp_config( $edition, $raw );
-$before = Jury::settings( $edition ); $raw = mp_raw( $edition ); $raw['administrators'] = array();
-mp_check( is_wp_error( mp_config( $edition, $raw ) ) && Jury::settings( $edition ) === $before, 'Au moins un administrateur actif obligatoire, réglages conservés en cas de refus' );
-$raw = mp_raw( $edition ); $raw['administrators'][] = $raw['members'][0];
-mp_check( is_wp_error( mp_config( $edition, $raw ) ) && ! user_can( $a, 'mp_manage_editions' ), 'Même email dans les deux tableaux refusé avant toute promotion' );
-$raw = mp_raw( $edition ); $raw['administrators'] = 'invalide';
-mp_check( is_wp_error( mp_config( $edition, $raw ) ), 'Structure du tableau administrateur validée côté serveur' );
+$before = Jury::settings( $edition );
+foreach ( array( null, array(), 'invalide', array( mp_raw( $edition )['administrator'] ), array( 'name' => '', 'email' => 'gestion@example.test' ), array( 'name' => 'Gestion', 'email' => 'incorrect' ), array( 'name' => 'Gestion', 'email' => array( 'gestion@example.test' ) ), array( 'name' => 'Gestion', 'email' => 'gestion@example.test', 'active' => '0' ) ) as $invalid ) {
+	$raw = mp_raw( $edition ); $raw['administrator'] = $invalid;
+	mp_check( is_wp_error( mp_config( $edition, $raw ) ) && Jury::settings( $edition ) === $before, 'Administrateur obligatoire : structure, nom et email contrôlés avant écriture — ' . wp_json_encode( $invalid ) );
+}
+$raw = mp_raw( $edition ); $raw['administrators'] = array( $raw['administrator'], array( 'name' => 'Autre', 'email' => 'autre@example.test' ) );
+mp_check( is_wp_error( mp_config( $edition, $raw ) ) && Jury::settings( $edition ) === $before && ! email_exists( 'autre@example.test' ), 'Ancienne liste de plusieurs administrateurs refusée sans création de compte' );
+$raw = mp_raw( $edition ); $raw['administrator'] = array( 'name' => 'Alice', 'email' => get_userdata( $a )->user_email );
+mp_check( is_wp_error( mp_config( $edition, $raw ) ) && ! user_can( $a, 'mp_manage_editions' ), 'Même email administrateur et votant actif refusé avant toute promotion' );
 
 // Une erreur de paramètres ne doit jamais créer un compte ou accorder des droits.
 $new_email = 'mpvote_' . substr( $state['run'], 0, 8 ) . '_gestion@example.test';
-$raw = mp_raw( $edition ); $raw['administrators'][] = array( 'user_id' => '0', 'name' => 'Gestion test', 'email' => $new_email, 'active' => '1' );
+$raw = mp_raw( $edition ); $raw['administrator'] = array( 'name' => 'Gestion test', 'email' => $new_email );
 $_POST = array( 'mp_edition_nonce' => wp_create_nonce( 'mp_save_edition_' . $edition ), 'mp_edition' => array( 'year' => '2098', 'opens' => 'invalide', 'closes' => '2098-12-31T23:00' ), 'mp_jury_nonce' => wp_create_nonce( 'mp_jury_' . $edition ), 'mp_jury' => $raw );
 $before_mails = count( $mails ); Editions::save( $edition );
 mp_check( ! email_exists( $new_email ) && count( $mails ) === $before_mails && Jury::settings( $edition ) === $before, 'Dates invalides : aucun compte créé, aucune invitation ni changement d’équipe' );
@@ -41,24 +44,25 @@ $_POST['mp_edition'] = array( 'year' => '2098', 'opens' => '2020-01-01T00:00', '
 Editions::save( $edition ); $_POST = array();
 $new_admin = (int) email_exists( $new_email );
 if ( $new_admin ) { update_user_meta( $new_admin, '_mp_vote_test', $state['run'] ); $state['users'][] = $new_admin; mp_state(); }
-mp_check( $new_admin && get_userdata( $new_admin )->roles === array( 'mp_organizer' ) && isset( Jury::administrators( $edition )[ $new_admin ] ), 'Enregistrer l’édition crée le profil administrateur du marché' );
+mp_check( $new_admin && get_userdata( $new_admin )->roles === array( 'mp_organizer' ) && Jury::administrator( $edition ) === $new_admin, 'Enregistrer l’édition crée et affecte l’administrateur unique' );
 $invitation = end( $mails );
 mp_check( count( $mails ) === $before_mails + 1 && str_contains( $invitation['subject'], 'Invitation administrateur du marché' ) && str_contains( $invitation['message'], 'Choisir mon mot de passe' ) && str_contains( $invitation['message'], 'enregistrez la sélection finale' ), 'Invitation administrateur avec choix du mot de passe et explication de son rôle' );
-mp_check( ! array_key_exists( 'organizer_email', Editions::settings( $edition ) ) && Jury::contact_email( $edition ) === get_userdata( $manager )->user_email, 'Le contact dépend uniquement du compte administrateur' );
-wp_set_current_user( $new_admin ); mp_check( true === Votes::record( $app, '0' ) && Votes::summary( $app )['expected'] === 5, 'Nouvel administrateur immédiatement autorisé à voter, zéro comptabilisé' );
-$multiple_app = mp_post( 'mp_candidature', 'Notifications plusieurs administrateurs' ); update_post_meta( $multiple_app, Records::META, Records::data( $app ) );
+mp_check( ! array_key_exists( 'organizer_email', Editions::settings( $edition ) ) && Jury::contact_email( $edition ) === $new_email, 'Le contact suit le remplacement de l’administrateur unique' );
+mp_check( count( array_filter( Jury::settings( $edition )['members'], static fn( $member ) => 'administrator' === $member['kind'] ) ) === 1 && ! isset( Jury::members( $edition )[ $manager ] ), 'Un seul administrateur enregistré ; le précédent devient votant inactif' );
+mp_check( is_wp_error( Votes::record( $app, '3' ) ) && user_can( $manager, 'mp_manage_editions' ), 'Ancien administrateur exclu du vote, droits WordPress préexistants conservés' );
+wp_set_current_user( $new_admin ); mp_check( true === Votes::record( $app, '0' ) && Votes::summary( $app )['expected'] === 4 && Votes::summary( $app )['total'] === 9, 'Nouvel administrateur autorisé à voter, zéro comptabilisé et ancienne note exclue' );
+$multiple_app = mp_post( 'mp_candidature', 'Notifications administrateur unique' ); update_post_meta( $multiple_app, Records::META, Records::data( $app ) );
 $before_mails = count( $mails ); Notifications::send( $multiple_app ); $sent = array_slice( $mails, $before_mails );
-mp_check( count( $sent ) === 6 && count( array_unique( array_column( $sent, 'to' ) ) ) === 6 && in_array( $new_email, array_column( $sent, 'to' ), true ), 'Tous les administrateurs et votants actifs notifiés en mode multiple, sans doublon' );
-$raw = mp_raw( $edition ); $before = Jury::settings( $edition ); $raw['administrators'][1]['active'] = '0'; mp_config( $edition, $raw );
-mp_check( user_can( $new_admin, 'mp_manage_editions' ) && is_wp_error( Votes::record( $app, '3' ) ) && Votes::summary( $app )['expected'] === 4, 'Désactivation dans une édition : vote retiré, droits globaux du compte conservés' );
+mp_check( count( $sent ) === 5 && count( array_unique( array_column( $sent, 'to' ) ) ) === 5 && in_array( $new_email, array_column( $sent, 'to' ), true ) && ! in_array( get_userdata( $manager )->user_email, array_column( $sent, 'to' ), true ), 'Administrateur unique et votants actifs notifiés, ancien administrateur exclu' );
 
-// Déplacement d'un compte existant : la note suit son identifiant, sans doublon.
-$raw = mp_raw( $edition ); $raw['administrators'][] = $raw['members'][1]; unset( $raw['members'][1] );
-mp_check( true === mp_config( $edition, $raw ) && user_can( $b, 'mp_manage_editions' ) && in_array( 'mp_organizer', get_userdata( $b )->roles, true ) && ! in_array( 'mp_juror', get_userdata( $b )->roles, true ), 'Déplacer un votant dans les administrateurs attribue le rôle de gestion' );
-mp_check( (int) Votes::all( array( $app ) )[ $app ][ $b ]['score'] === 4 && Votes::summary( $app )['total'] === 11 && Votes::summary( $app )['expected'] === 4, 'Promotion : anciennes notes et totaux conservés sans double participation' );
+// Remplacement par un votant existant : sa note suit son compte sans doublon.
+$raw = mp_raw( $edition ); $raw['administrator'] = array( 'name' => 'Bruno', 'email' => get_userdata( $b )->user_email );
+foreach ( $raw['members'] as &$row ) { if ( (int) $row['user_id'] === $b ) { $row['active'] = '0'; } } unset( $row );
+mp_check( true === mp_config( $edition, $raw ) && Jury::administrator( $edition ) === $b && in_array( 'mp_organizer', get_userdata( $b )->roles, true ) && ! in_array( 'mp_juror', get_userdata( $b )->roles, true ), 'Un votant existant peut remplacer l’administrateur sans créer de compte' );
+mp_check( (int) Votes::all( array( $app ) )[ $app ][ $b ]['score'] === 4 && Votes::summary( $app )['total'] === 9 && Votes::summary( $app )['expected'] === 3, 'Remplacement : ancienne note du votant conservée sans double participation' );
 $site_admin = mp_user( 'AdminSite', 'administrator' );
 $raw = mp_raw( $edition );
-$raw['administrators'][] = array( 'user_id' => '0', 'name' => 'Administrateur WordPress existant', 'email' => get_userdata( $site_admin )->user_email, 'active' => '1' );
+$raw['administrator'] = array( 'name' => 'Administrateur WordPress existant', 'email' => get_userdata( $site_admin )->user_email );
 $roles_before = get_userdata( $site_admin )->roles;
 mp_check( true === mp_config( $edition, $raw ) && get_userdata( $site_admin )->roles === $roles_before, 'Le rôle d’un administrateur WordPress existant reste inchangé' );
 
@@ -66,7 +70,11 @@ wp_set_current_user( $a );
 mp_check( ! current_user_can( 'edit_posts' ) && ! current_user_can( 'edit_pages' ) && ! current_user_can( 'mp_manage_jury' ), 'Le votant limité ne récupère aucun droit de publication ni de gestion de l’équipe' );
 wp_set_current_user( $manager );
 ob_start(); Jury::box( get_post( $edition ) ); $html = ob_get_clean();
-mp_check( str_contains( $html, '<h3>Administrateur du marché</h3>' ) && str_contains( $html, '<h3>Votant pour la sélection</h3>' ) && substr_count( $html, '<table ' ) === 2, 'Deux tableaux distincts dans Organisateur et votes' );
+mp_check( substr_count( $html, 'name="mp_jury[administrator][name]"' ) === 1 && substr_count( $html, 'name="mp_jury[administrator][email]"' ) === 1 && ! str_contains( $html, 'mp_jury[administrators]' ) && ! str_contains( $html, 'mp-jury-move' ) && ! str_contains( $html, 'Ajouter un administrateur' ), 'Un seul formulaire administrateur, aucun ajout ni déplacement ; tableau votants conservé' );
 ob_start(); Editions::render_box( get_post( $edition ) ); $html = ob_get_clean();
 mp_check( ! str_contains( $html, 'name="mp_edition[organizer_email]"' ), 'Le champ email indépendant de l’organisateur a disparu' );
+$before_settings = Editions::settings( $edition );
+$_POST = array( 'mp_edition_nonce' => wp_create_nonce( 'mp_save_edition_' . $edition ), 'mp_edition' => array( 'year' => '2097', 'opens' => '2020-01-01T00:00', 'closes' => '2097-12-31T23:00' ) );
+Editions::save( $edition ); $_POST = array();
+mp_check( Editions::settings( $edition ) === $before_settings, 'Une requête omettant l’administrateur ne peut pas enregistrer les paramètres de l’édition' );
 wp_set_current_user( 1 );

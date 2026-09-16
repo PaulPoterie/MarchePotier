@@ -64,12 +64,12 @@ function mp_config( int $edition, array $raw ): true|WP_Error {
 	try { return Jury::configure( $edition, $raw ); } finally { SubmissionLock::release(); }
 }
 function mp_raw( int $edition ): array {
-	$data = Jury::settings( $edition ); $rows = array(); $administrators = array();
+	$data = Jury::settings( $edition ); $rows = array(); $administrator = array();
 	foreach ( $data['members'] as $uid => $member ) {
 		$row = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => get_userdata( $uid )->user_email, 'active' => $member['active'] ? '1' : '0' );
-		if ( 'administrator' === $member['kind'] ) { $administrators[] = $row; } else { $rows[] = $row; }
+		if ( 'administrator' === $member['kind'] ) { $administrator = array( 'name' => $row['name'], 'email' => $row['email'] ); } else { $rows[] = $row; }
 	}
-	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'members' => $rows, 'administrators' => $administrators );
+	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'members' => $rows, 'administrator' => $administrator );
 }
 class MPTestDenied extends RuntimeException {}
 class MPTestRedirect extends RuntimeException {}
@@ -92,7 +92,7 @@ try {
 		array( 'user_id' => '0', 'name' => 'Bruno', 'email' => get_userdata( $b )->user_email, 'active' => '1' ),
 		array( 'user_id' => '0', 'name' => 'Camille', 'email' => 'mpvote_' . substr( $state['run'], 0, 8 ) . '_camille@example.test', 'active' => '1' ),
 	) );
-	$raw['administrators'] = array( array( 'user_id' => '0', 'name' => 'Responsable', 'email' => get_userdata( $manager )->user_email, 'active' => '1' ) );
+	$raw['administrator'] = array( 'name' => 'Responsable', 'email' => get_userdata( $manager )->user_email );
 	$config_result = mp_config( $edition, $raw );
 	mp_check( true === $config_result, 'Organisateurs existants rattachés et nouveau compte créé' . ( is_wp_error( $config_result ) ? ' : ' . $config_result->get_error_message() : '' ) );
 	$c = (int) email_exists( $raw['members'][2]['email'] ); update_user_meta( $c, '_mp_vote_test', $state['run'] ); $state['users'][] = $c; mp_state();

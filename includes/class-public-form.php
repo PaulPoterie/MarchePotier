@@ -7,7 +7,6 @@ final class PublicForm {
 	private static array $values = array();
 	private const COOKIE = 'mp_form_session';
 	public static function hooks(): void {
-		add_shortcode( 'inscription_potier', array( self::class, 'shortcode' ) );
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
@@ -19,15 +18,7 @@ final class PublicForm {
 	}
 	private static function is_form_page(): bool {
 		$post = get_queried_object();
-		return is_singular() && $post instanceof \WP_Post && ( Blocks::contains( $post->post_content, Blocks::FORM ) || has_shortcode( $post->post_content, 'inscription_potier' ) );
-	}
-	public static function resolve( string $year ): int {
-		if ( ! preg_match( '/^[2-9][0-9]{3}$/D', $year ) ) { return 0; }
-		$matches = array();
-		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => 'publish', 'posts_per_page' => -1 ) ) as $edition ) {
-			if ( Editions::settings( $edition->ID )['year'] === $year ) { $matches[] = $edition->ID; }
-		}
-		return count( $matches ) === 1 ? $matches[0] : 0;
+		return is_singular() && $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::FORM );
 	}
 	private static function session(): string {
 		$value = $_COOKIE[ self::COOKIE ] ?? '';
@@ -55,7 +46,7 @@ final class PublicForm {
 		}
 		$edition = ctype_digit( $input['mp_edition'] ) ? (int) $input['mp_edition'] : 0;
 		$post = get_queried_object();
-		if ( $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::FORM ) && ! in_array( $edition, Blocks::edition_ids( $post->post_content, Blocks::FORM ), true ) ) {
+		if ( ! in_array( $edition, Blocks::edition_ids( $post->post_content, Blocks::FORM ), true ) ) {
 			self::fail( new \WP_Error( 'edition', 'L’édition affichée sur cette page a changé. Rechargez la page avant de renvoyer votre candidature.' ) ); return;
 		}
 		$issued = $input['mp_issued'];
@@ -180,11 +171,7 @@ final class PublicForm {
 		}
 		return false;
 	}
-	public static function shortcode( $attributes ): string {
-		$atts = shortcode_atts( array( 'edition' => '' ), $attributes );
-		return self::render( self::resolve( (string) $atts['edition'] ) );
-	}
-	/** Rendu commun ; les blocs désignent directement l’édition, jamais son année. */
+	/** Le bloc désigne directement l’édition par son identifiant. */
 	public static function render( int $edition ): string {
 		if ( 'mp_edition' !== get_post_type( $edition ) || 'publish' !== get_post_status( $edition ) ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
 		ob_start();

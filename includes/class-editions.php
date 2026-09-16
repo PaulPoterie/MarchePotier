@@ -234,7 +234,7 @@ final class Editions {
 		<p><label for="mp-thank-you">Message de remerciement</label></p>
 		<textarea class="large-text" rows="5" id="mp-thank-you" name="mp_edition[thank_you]" maxlength="5000" placeholder="<?php echo esc_attr( self::DEFAULT_THANK_YOU ); ?>"><?php echo esc_textarea( $data['thank_you'] ); ?></textarea>
 		<p class="description">Affiché après validation et repris dans l’email au candidat. Si vide, un message de confirmation standard est utilisé.</p>
-		<p class="description">Les destinataires des candidatures se définissent dans « Organisateur et votes », avec les comptes des administrateurs du marché.</p>
+		<p class="description">Le destinataire des candidatures se définit dans « Organisateur et votes », avec le compte de l’administrateur du marché. En votes multiples, les votants actifs reçoivent aussi les dossiers.</p>
 		<h3>Stand</h3>
 		<p><label for="mp-stand-length">Taille du stand par défaut (m)</label><br><input id="mp-stand-length" type="number" min="0.01" max="1000" step="0.01" required name="mp_edition[stand_length]" value="<?php echo esc_attr( $data['stand_length'] ); ?>"></p>
 		<p><label for="mp-stand-editable">Modifiable par le potier</label><br><select id="mp-stand-editable" name="mp_edition[stand_editable]"><option value="1" <?php selected( $data['stand_editable'], true ); ?>>Oui</option><option value="0" <?php selected( $data['stand_editable'], false ); ?>>Non</option></select></p>
@@ -310,7 +310,7 @@ final class Editions {
 			return;
 		}
 		// Valider les paramètres avant toute création de compte ou invitation.
-		if ( isset( $_POST['mp_jury'] ) && ! Jury::save( $id ) ) { return; }
+		if ( ! Jury::save( $id ) ) { return; }
 		// Un seul enregistrement pour ne pas mélanger anciens et nouveaux réglages.
 		update_post_meta( $id, self::META, wp_slash( $data ) );
 	}

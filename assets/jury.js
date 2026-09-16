@@ -13,17 +13,6 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 	table.addEventListener('click', function (event) {
 		if (event.target.closest('.mp-jury-remove')) event.target.closest('tr').remove();
-		const move = event.target.closest('.mp-jury-move');
-		if (!move) return;
-		const row = move.closest('tr');
-		const target = group.dataset.group === 'members' ? 'administrators' : 'members';
-		row.querySelectorAll('[name]').forEach(input => {
-			input.name = input.name.replace(/^mp_jury\[[^\]]+\]\[[^\]]+\]/, 'mp_jury[' + target + '][moved_' + index + ']');
-		});
-		index++;
-		move.textContent = target === 'members' ? 'Passer dans le tableau administrateur' : 'Passer dans le tableau votant';
-		document.querySelector('#mp-jury-' + target + ' tbody').appendChild(row);
-		row.querySelector('input[type="text"]').focus();
 	});
 	});
 });

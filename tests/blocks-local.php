@@ -84,3 +84,5 @@ mp_check( isset( $wp_meta_boxes['mp_edition']['normal']['low']['mp-edition-publi
 ob_start(); Jury::box( get_post( $block_edition_a ) ); $html = ob_get_clean();
 mp_check( ! str_contains( $html, 'Ancien contact' ) && ! str_contains( $html, 'mp_jury[closed]' ), 'Ancien contact et clôture des votes absents de l’écran d’édition' );
 wp_set_current_user( 1 );
+
+mp_check( ! shortcode_exists( 'inscription_potier' ) && ! shortcode_exists( 'afficher_selection' ) && ! str_contains( do_shortcode( '[inscription_potier edition="2030"][afficher_selection edition="2030"]' ), '<form ' ), 'Anciens shortcodes inactifs : aucun formulaire ni sélection rendu' );

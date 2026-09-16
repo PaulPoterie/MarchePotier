@@ -61,7 +61,7 @@ final class Plugin {
 			<ol>
 				<li>
 					<p><strong><?php esc_html_e( 'Créer une édition', 'marche-potier' ); ?></strong><br>
-					<?php esc_html_e( 'Dans « Gérer les éditions », ajoutez une édition, renseignez « Édition de l’année », les informations du marché, les dates d’inscription et au moins un administrateur dans « Organisateur et votes », puis publiez-la.', 'marche-potier' ); ?></p>
+					<?php esc_html_e( 'Dans « Gérer les éditions », ajoutez une édition, renseignez « Édition de l’année », les informations du marché, les dates d’inscription et l’administrateur unique obligatoire dans « Organisateur et votes », puis publiez-la.', 'marche-potier' ); ?></p>
 				</li>
 				<li>
 					<p><strong><?php esc_html_e( 'Faire apparaître le formulaire', 'marche-potier' ); ?></strong><br>
@@ -77,7 +77,7 @@ final class Plugin {
 				</li>
 			</ol>
 			<p class="description"><?php esc_html_e( 'Chaque bloc conserve l’édition choisie, même si son titre ou son année change. Plusieurs éditions peuvent partager la même année.', 'marche-potier' ); ?></p>
-			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez au moins un administrateur du marché (nom et email). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». Les administrateurs affectés participent aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Point » affiche le total et la participation.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez l’administrateur unique du marché (nom et email obligatoires). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». L’administrateur participe aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Point » affiche le total et la participation.', 'marche-potier' ); ?></p>
 			<?php else : ?>
 			<h2><?php esc_html_e( 'Examiner et voter', 'marche-potier' ); ?></h2>
 			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Votes pour la sélection », choisissez votre note de 0 à 5 et cliquez sur « Valider ». En mode votes multiples, vous pouvez consulter les autres notes et modifier la vôtre à tout moment, indépendamment des dates d’inscription.', 'marche-potier' ); ?></p>

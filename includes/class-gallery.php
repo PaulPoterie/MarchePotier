@@ -4,10 +4,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class Gallery {
 	public static function hooks(): void {
-		add_shortcode( 'afficher_selection', array( self::class, 'render' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			$post = get_queried_object();
-			if ( $post instanceof \WP_Post && ( Blocks::contains( $post->post_content, Blocks::SELECTION ) || has_shortcode( $post->post_content, 'afficher_selection' ) ) ) {
+			if ( $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::SELECTION ) ) {
 				wp_enqueue_style( 'mp-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.css', __FILE__ ), array(), '1.9.4' );
 				wp_enqueue_script( 'mp-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.js', __FILE__ ), array(), '1.9.4', true );
 				wp_enqueue_style( 'mp-gallery', plugins_url( '../assets/gallery.css', __FILE__ ), array( 'mp-leaflet' ), '0.8.0' );
@@ -40,13 +39,6 @@ final class Gallery {
 		$path = PrivateFiles::path( $file ); $mime = $file['mime'] ?? '';
 		if ( ! $path || ! in_array( $mime, array( 'image/jpeg', 'image/png', 'image/webp' ), true ) ) { wp_die( 'Photo indisponible.', '', array( 'response' => 404 ) ); }
 		nocache_headers(); header( 'X-Content-Type-Options: nosniff' ); header( 'Content-Type: ' . $mime ); header( 'Content-Length: ' . filesize( $path ) ); readfile( $path ); exit;
-	}
-	public static function render( $attributes ): string {
-		$atts = shortcode_atts( array( 'edition' => '' ), $attributes );
-		// Accepte aussi la syntaxe historique [afficher_selection="2027"].
-		$year = (string) $atts['edition'];
-		if ( ! $year && isset( $attributes[0] ) && is_string( $attributes[0] ) ) { $year = trim( $attributes[0], "=\"' " ); }
-		return self::render_edition( PublicForm::resolve( $year ) );
 	}
 	public static function render_edition( int $edition ): string {
 		if ( ! $edition || ! Editions::selection_is_public( $edition ) ) { return '<p>La sélection de cette édition n’est pas encore publiée.</p>'; }
