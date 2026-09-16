@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.8 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0-beta.9 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
 
 Cette version ajoute les notes de 0 à 5 par organisateur, les affectations par édition et les invitations. Voir le [guide des votes, des essais et du retour à la version précédente](docs/VOTES.md).
 
@@ -10,7 +10,7 @@ Les blocs **Formulaire de candidature** et **Présentation de la sélection** so
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.8.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.9.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Le ZIP contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions.
 
@@ -96,7 +96,8 @@ L’envoi utilise le système mail de WordPress. Testez la réception sur votre 
 
 Dans **Gestion des candidatures**, utilisez la recherche et les filtres d’édition et de décision. Le tableau peut défiler horizontalement. **Options de l’écran** permet de choisir le nombre de lignes par page.
 
-- **Examiner** ouvre les photos, les justificatifs et les informations du candidat. Cliquez sur une vignette pour ouvrir la visionneuse ; utilisez les flèches pour avancer et Échap pour fermer. Si le navigateur ne sait pas afficher un PDF, utilisez son lien d’ouverture ou de téléchargement.
+- **Examiner** présente d’abord la production, les techniques, le stand demandé et les photos du candidat. Cliquez sur une vignette pour ouvrir la visionneuse ; utilisez les flèches pour avancer et Échap pour fermer. La présentation de l’atelier suit les photos. Les coordonnées, les informations professionnelles, les justificatifs, le suivi interne et les autres candidatures se déplient à la demande. Si le navigateur ne sait pas afficher un PDF, utilisez son lien d’ouverture ou de téléchargement.
+- En votes multiples, le panneau **Ma note** reste à droite pendant la lecture sur ordinateur. Choisissez une note entre 0 et 5 puis cliquez sur **Valider ma note**. Le panneau distingue une note enregistrée d’une modification encore à valider. Les notes du jury et le total restent consultables ; sur téléphone et pour l’administrateur, dépliez **Notes du jury** pour les afficher. L’administrateur dispose aussi d’un encadré distinct pour la décision finale.
 - Choisissez **À examiner**, **Sélectionné** ou **Non sélectionné**, puis **Enregistrer la sélection**.
 - **Modifier** permet de corriger ensemble les coordonnées et la candidature, et de remplacer les photos ou justificatifs.
 - **Retour à la liste** ramène à la gestion des candidatures, ou au suivi des votes si le dossier a été ouvert depuis ce tableau.

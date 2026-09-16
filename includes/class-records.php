@@ -431,14 +431,14 @@ final class Records {
 		$position = array_search( $id, $ids, true );
 		$list_url = add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion' ) ), admin_url( 'admin.php' ) );
 		if ( 'votes' === ( $context['mp_from'] ?? '' ) ) { $list_url = VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ); }
-		echo '<nav aria-label="Navigation des candidatures"><p><a class="button" href="' . esc_url( $list_url ) . '">Retour à la liste</a> ';
+		echo '<nav class="mp-examiner-nav" aria-label="Navigation des candidatures"><div class="mp-examiner-nav-main"><a class="button" href="' . esc_url( $list_url ) . '">Retour à la liste</a> ';
 		if ( false !== $position ) {
 			if ( $position > 0 ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position - 1 ], $context ) ) . '">← Dossier précédent</a> '; }
-			echo '<span> Dossier ' . esc_html( ( $position + 1 ) . ' sur ' . count( $ids ) ) . ' </span> ';
+			echo '<span class="mp-examiner-position">Dossier ' . esc_html( ( $position + 1 ) . ' sur ' . count( $ids ) ) . '</span> ';
 			if ( isset( $ids[ $position + 1 ] ) ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position + 1 ], $context ) ) . '">Dossier suivant →</a> '; }
 		} else { echo '<span>Ce dossier ne correspond plus aux filtres de la liste.</span> '; }
-		echo '<a class="button" href="' . esc_url( VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ) ) . '">Suivi des votes</a> ';
-		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique des sélections</a></p></nav>';
+		echo '</div><div class="mp-examiner-nav-tools"><a class="button" href="' . esc_url( VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ) ) . '">Suivi des votes</a> ';
+		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique des sélections</a></div></nav>';
 	}
 
 	public static function row_actions( array $actions, \WP_Post $post ): array {
@@ -454,28 +454,45 @@ final class Records {
 		if ( ! self::valid_reference( $id, 'mp_candidature' ) ) { wp_die( 'Candidature introuvable.', '', array( 'response' => 404 ) ); }
 		if ( ! Jury::can_view_application( $id ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$data = self::data( $id );
-		echo '<div class="wrap"><h1>' . esc_html( get_the_title( $id ) ) . '</h1>';
-		echo '<div class="mp-review-heading"><div>';
+		$identity = $data['identity'] ?? array(); $activity = $data['activity'] ?? array();
+		$name = trim( ( $identity['first_name'] ?? '' ) . ' ' . ( $identity['last_name'] ?? '' ) );
+		$decision = in_array( $data['decision'] ?? '', array( 'selected', 'rejected' ), true ) ? $data['decision'] : 'pending';
+		echo '<div class="wrap mp-examiner"><header class="mp-examiner-heading"><div><p class="mp-examiner-edition">' . esc_html( ! empty( $data['edition_id'] ) ? get_the_title( $data['edition_id'] ) : 'Édition non renseignée' ) . '</p><h1>' . esc_html( $name ?: get_the_title( $id ) ) . '</h1>';
+		$subtitle = array_filter( array( $identity['company'] ?? '', trim( ( $identity['postcode'] ?? '' ) . ' ' . ( $identity['city'] ?? '' ) ), $identity['country'] ?? '' ) );
+		if ( $subtitle ) { echo '<p class="mp-examiner-subtitle">' . esc_html( implode( ' · ', $subtitle ) ) . '</p>'; }
+		echo '</div><span class="mp-examiner-status mp-examiner-status-' . esc_attr( $decision ) . '">Sélection : ' . esc_html( self::decisions()[ $decision ] ) . '</span></header>';
 		self::navigation( $id );
-		if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>'; }
-		if ( empty( $data['potier_id'] ) ) { echo '<p>Ce dossier ne possède pas encore de données enregistrées.</p></div></div></div>'; return; }
-		echo '<p><strong>Édition :</strong> ' . esc_html( get_the_title( $data['edition_id'] ) ) . ' — <strong>Décision :</strong> ' . esc_html( self::decisions()[ $data['decision'] ] ?? 'À examiner' ) . '</p>';
-		Review::decision_form( $id );
-		echo '</div>';
+		if ( empty( $data['potier_id'] ) ) {
+			echo '<p>Ce dossier ne possède pas encore de données enregistrées.</p>';
+			if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>'; }
+			echo '</div>'; return;
+		}
+		$has_actions = Jury::multiple( (int) $data['edition_id'] ) || current_user_can( 'mp_manage_applications' );
+		echo '<div class="mp-examiner-grid' . ( $has_actions ? '' : ' mp-examiner-grid-solo' ) . '">';
+		if ( $has_actions ) { echo '<aside class="mp-examiner-sidebar" aria-label="Notation et sélection">'; }
 		Votes::render( $id );
-		echo '</div>';
-		echo '<div class="mp-review-layout"><div><h2>Photos du potier</h2>';
-		Review::photos( $id );
+		if ( current_user_can( 'mp_manage_applications' ) ) {
+			echo '<section class="mp-examiner-card mp-examiner-decision"><h2>Décision de l’administrateur</h2>';
+			Review::decision_form( $id );
+			echo '<a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></section>';
+		}
+		if ( $has_actions ) { echo '</aside>'; }
+		echo '<div class="mp-examiner-content">';
+		Review::highlights( $activity );
+		echo '<section class="mp-examiner-card mp-examiner-photos"><div class="mp-examiner-section-heading"><h2>Photos du potier</h2><span>Cliquez pour agrandir</span></div>';
+		Review::photos( $id, '', true );
+		echo '</section><section class="mp-examiner-card"><h2>Présentation de l’atelier</h2><div class="mp-examiner-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : 'Aucune présentation renseignée.' ) ) . '</div></section>';
+		echo '<details class="mp-examiner-card mp-examiner-details"><summary>Coordonnées et liens</summary><div class="mp-examiner-details-body">';
+		Review::details_summary( Fields::identity(), $identity );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Informations professionnelles et vie associative</summary><div class="mp-examiner-details-body">';
+		$secondary_fields = array_diff_key( Fields::activity(), array_fill_keys( array( 'presentation', 'production', 'production_other', 'technique', 'technique_other', 'stand_length' ), true ) );
+		Review::details_summary( $secondary_fields, $activity );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Justificatifs et autorisation de présentation</summary><div class="mp-examiner-details-body">';
 		PrivateFiles::render( $id, true );
-		echo '</div><div><h2>Coordonnées transmises pour cette édition</h2>';
-		Fields::summary( Fields::identity(), $data['identity'] );
-		echo '<h2>Présentation, activité et stand</h2>';
-		Fields::summary( Fields::activity(), $data['activity'] );
 		if ( 'public' === ( $data['source'] ?? '' ) ) { echo '<p>Déposé depuis le formulaire public. Adresse email déclarée, non vérifiée. Autorisation de présentation publique : ' . esc_html( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' ) . '.</p>'; }
-		echo '<h2>Suivi interne</h2>';
-		Fields::summary( Fields::internal(), $data['internal'] );
-		echo '</div></div>';
-		echo '<h2>Autres candidatures de ce potier</h2>';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Suivi interne</summary><div class="mp-examiner-details-body">';
+		Review::details_summary( Fields::internal(), $data['internal'] ?? array() );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Autres candidatures de ce potier</summary><div class="mp-examiner-details-body">';
 		$history = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => 50, 'post__not_in' => array( $id ), 'meta_key' => '_mp_potier_id', 'meta_value' => $data['potier_id'], 'orderby' => 'date', 'order' => 'DESC' ) );
 		$history = array_filter( $history, static fn( $previous ) => Jury::can_view_application( $previous->ID ) );
 		if ( ! $history ) { echo '<p>Aucune autre candidature enregistrée.</p>'; }
@@ -485,7 +502,7 @@ final class Records {
 			if ( empty( $record['edition_id'] ) ) { continue; }
 			echo '<li><a href="' . esc_url( self::view_url( $previous->ID ) ) . '">' . esc_html( get_the_title( $record['edition_id'] ) ) . '</a> — ' . esc_html( self::decisions()[ $record['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</li>';
 		}
-		echo '</ul><p class="description">Les 50 autres dossiers les plus récents au maximum sont présentés ici.</p></div>';
+		echo '</ul><p class="description">Les 50 autres dossiers les plus récents au maximum sont présentés ici.</p></div></details></div></div></div>';
 	}
 
 	public static function history(): void {

@@ -99,26 +99,33 @@ final class Votes {
 		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
 		if ( ! Jury::can_view_application( $id ) || ! Jury::multiple( $edition ) ) { return; }
 		$data = Jury::settings( $edition ); $members = Jury::members( $edition ); $votes = self::all( array( $id ) )[ $id ] ?? array();
-		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">Votes pour la sélection</h2>';
-		if ( isset( $_GET['mp_vote_saved'] ) ) { echo '<div class="notice notice-success inline"><p>Votre note a été enregistrée.</p></div>'; }
+		$mine = self::mine( $id, $votes );
+		$summary = self::summary( $id, $votes );
+		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">' . ( $mine ? 'Ma note' : 'Votes pour la sélection' ) . '</h2>';
+		if ( isset( $_GET['mp_vote_saved'] ) ) { echo '<div class="notice notice-success inline" role="status"><p>Votre note a été enregistrée.</p></div>'; }
+		if ( $mine ) {
+			$score_value = null === $mine['score'] ? '' : (string) $mine['score'];
+			echo '<p class="mp-vote-member">' . esc_html( $mine['name'] ) . '</p><p class="mp-vote-state' . ( '' === $score_value ? ' mp-vote-state-pending' : '' ) . '" id="mp-vote-state" aria-live="polite">' . ( '' === $score_value ? 'À noter par moi' : 'Note enregistrée : ' . esc_html( $score_value ) . '/5' ) . '</p>';
+			echo '<form class="mp-vote-form" method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '"><input type="hidden" name="action" value="mp_vote"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
+			wp_nonce_field( 'mp_vote_' . $id );
+			echo '<label for="mp-my-score">Votre note de 0 à 5</label><div class="mp-vote-controls"><select required id="mp-my-score" name="score" aria-describedby="mp-vote-state mp-vote-help" data-saved-score="' . esc_attr( $score_value ) . '"><option value="">— Choisir —</option>';
+			for ( $score = 0; $score <= 5; ++$score ) { echo '<option value="' . esc_attr( $score ) . '"' . selected( $score_value, (string) $score, false ) . '>' . esc_html( $score ) . '</option>'; }
+			echo '</select> <button class="button button-primary">Valider ma note</button></div></form><p class="description" id="mp-vote-help">0 est une note. Vous pouvez modifier votre note puis la valider à nouveau.</p>';
+		}
+		echo '<p class="mp-vote-totals"><strong>' . esc_html( $summary['total'] ) . ' points</strong><span>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</span></p>';
+		// L’administrateur garde sa décision finale visible à côté de sa propre note.
+		echo '<details class="mp-jury-details"' . ( current_user_can( 'mp_manage_applications' ) ? '' : ' open' ) . '><summary>Notes du jury</summary>';
 		if ( ! $members ) { echo '<p>Aucun membre actif. Un administrateur du marché peut en ajouter dans l’édition.</p>'; }
 		echo '<table class="widefat striped"><thead><tr><th scope="col">Membre</th><th scope="col">Note / 5</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) {
 			$vote = $votes[ $uid ] ?? null;
 			$active = isset( $members[ $uid ] );
-			$mine = (int) $uid === get_current_user_id();
+			$is_mine = (int) $uid === get_current_user_id();
 			if ( ! $active && ! $vote ) { continue; }
-			echo '<tr><th scope="row">' . esc_html( $member['name'] ) . ( $mine ? ' — vous' : '' ) . ( ! $active ? '<br><small>Inactif · note exclue du total</small>' : '' ) . '</th><td>';
-			if ( $mine && $active ) {
-				echo '<form class="mp-vote-form" method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '"><input type="hidden" name="action" value="mp_vote"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
-				wp_nonce_field( 'mp_vote_' . $id );
-				echo '<label class="screen-reader-text" for="mp-my-score">Votre note de 0 à 5</label><select required id="mp-my-score" name="score"><option value="">— Choisir —</option>';
-				for ( $score = 0; $score <= 5; ++$score ) { echo '<option value="' . esc_attr( $score ) . '"' . ( $vote && (int) $vote['score'] === $score ? ' selected' : '' ) . '>' . esc_html( $score ) . '</option>'; }
-				echo '</select> <button class="button button-primary">Valider</button></form>';
-			} else { echo $vote ? esc_html( $vote['score'] . ' / 5' ) : 'Pas encore voté'; }
+			echo '<tr><th scope="row">' . esc_html( $member['name'] ) . ( $is_mine ? ' — vous' : '' ) . ( ! $active ? '<br><small>Inactif · note exclue du total</small>' : '' ) . '</th><td>';
+			echo $vote ? esc_html( $vote['score'] . ' / 5' ) : 'Pas encore voté';
 			echo '</td></tr>';
 		}
-		$summary = self::summary( $id, $votes );
-		echo '</tbody></table><p><strong>' . esc_html( $summary['total'] ) . ' points</strong> · ' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</p><p class="description">0 est une note. Une case vide signifie que la personne n’a pas encore voté. Les points aident à comparer les dossiers ; le responsable enregistre la sélection finale.</p></section>';
+		echo '</tbody></table></details><p class="description">Le responsable du marché enregistre la sélection finale.</p></section>';
 	}
 }

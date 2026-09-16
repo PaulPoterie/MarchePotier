@@ -45,22 +45,45 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.6' );
-			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.12.2', true );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9' );
+			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9', true );
 		} );
 	}
 
-	public static function photos( int $id, string $target = '' ): void {
+	public static function photos( int $id, string $target = '', bool $captions = false ): void {
 		$files = Records::data( $id )['files'] ?? array();
 		echo '<div class="mp-review-photos">';
 		$found = false;
 		foreach ( array( 'product1', 'product2', 'product3', 'stand' ) as $slot ) {
 			if ( empty( $files[ $slot ] ) ) { continue; }
 			$found = true; $url = PrivateFiles::url( $id, $slot );
+			if ( $captions ) { echo '<figure>'; }
 			echo '<a href="' . esc_url( $target ?: $url ) . '"' . ( $target ? '' : ' data-mp-viewer="image" data-label="' . esc_attr( PrivateFiles::slots()[ $slot ] ) . '" target="_blank" rel="noopener"' ) . '><img loading="lazy" src="' . esc_url( $url ) . '" alt="' . esc_attr( PrivateFiles::slots()[ $slot ] ) . '"></a>';
+			if ( $captions ) { echo '<figcaption>' . esc_html( PrivateFiles::slots()[ $slot ] ) . '</figcaption></figure>'; }
 		}
 		if ( ! $found ) { echo '<p>Aucune photo.</p>'; }
 		echo '</div>';
+	}
+
+	public static function highlights( array $activity ): void {
+		$schema = Fields::activity();
+		echo '<dl class="mp-examiner-facts">';
+		foreach ( array( 'production' => 'Production', 'technique' => 'Techniques', 'stand_length' => 'Stand demandé' ) as $key => $label ) {
+			$values = (array) ( $activity[ $key ] ?? array() );
+			$value = implode( ', ', array_filter( array_map( static fn( $item ) => $schema[ $key ][3][ $item ] ?? $item, $values ) ) );
+			if ( ! empty( $activity[ $key . '_other' ] ) ) { $value .= ( $value ? ' · ' : '' ) . $activity[ $key . '_other' ]; }
+			if ( 'stand_length' === $key && '' !== $value ) { $value .= ' m'; }
+			echo '<div><dt>' . esc_html( $label ) . '</dt><dd>' . esc_html( '' !== $value ? $value : 'Non renseigné' ) . '</dd></div>';
+		}
+		echo '</dl>';
+	}
+
+	/** Masque uniquement les lignes vides dans les rubriques secondaires du dossier. */
+	public static function details_summary( array $schema, array $data ): void {
+		$data = Fields::normalize_status( $data );
+		$schema = array_filter( $schema, static fn( $key ) => isset( $data[ $key ] ) && '' !== $data[ $key ] && array() !== $data[ $key ], ARRAY_FILTER_USE_KEY );
+		if ( ! $schema ) { echo '<p>Aucune information renseignée.</p>'; return; }
+		Fields::summary( $schema, $data );
 	}
 
 	public static function decision_form( int $id ): void {
