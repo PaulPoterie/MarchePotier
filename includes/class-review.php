@@ -45,7 +45,7 @@ final class Review {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.3' );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.4' );
 			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.1', true );
 		} );
 	}
@@ -188,6 +188,9 @@ final class Review {
 			echo '<p class="mp-review-actions"><a class="button button-primary" href="' . esc_url( $url ) . '">Examiner</a>';
 			if ( current_user_can( 'mp_manage_applications' ) ) { echo ' <a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier</a>'; }
 			echo '</p>';
+			$submitted = ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false;
+			$submitted_label = false !== $submitted ? wp_date( get_option( 'date_format' ) . ' à ' . get_option( 'time_format' ), $submitted ) : ( 'public' === ( $data['source'] ?? '' ) ? 'Non renseignée' : 'Saisie interne' );
+			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p>';
 			$mine = Votes::mine( $id, $votes[ $id ] ?? array() );
 			if ( null !== $mine ) {
 				echo '<p class="mp-my-vote">' . esc_html( 'Ma note (' . $mine['name'] . ') : ' ) . '<strong>' . esc_html( null === $mine['score'] ? 'À noter' : $mine['score'] . '/5' ) . '</strong></p>';
@@ -198,10 +201,11 @@ final class Review {
 			echo '</td><td class="mp-review-selection"><p class="mp-selection-badge mp-selection-' . esc_attr( $decision ) . '">' . esc_html( Records::decisions()[ $decision ] ) . '</p>';
 			$summary = Votes::summary( $id, $votes[ $id ] ?? array() );
 			echo '<p class="mp-points">' . ( $summary['multiple'] ? '<strong>' . esc_html( $summary['count'] ? $summary['total'] . ' points' : '—' ) . '</strong><br><small>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</small>' : 'Sans notation' ) . '</p></td><td>';
-			self::grouped_fields( $identity_schema, $identity, array( 'last_name', 'first_name', 'company', 'address', 'postcode', 'city', 'country' ) );
-			$submitted = ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false;
-			$submitted_label = false !== $submitted ? wp_date( get_option( 'date_format' ) . ' à ' . get_option( 'time_format' ), $submitted ) : ( 'public' === ( $data['source'] ?? '' ) ? 'Non renseignée' : 'Saisie interne' );
-			echo '<p class="mp-review-submitted"><strong>Soumission :</strong><br>' . esc_html( $submitted_label ) . '</p></td><td>';
+			self::grouped_fields( $identity_schema, $identity, array( 'last_name', 'first_name', 'company', 'address' ) );
+			$locality = trim( ( $identity['postcode'] ?? '' ) . ' ' . ( $identity['city'] ?? '' ) );
+			$country = trim( $identity['country'] ?? '' );
+			if ( '' !== $country ) { $locality .= ( '' !== $locality ? ', ' : '' ) . $country; }
+			echo '<p class="mp-review-location">' . esc_html( '' !== $locality ? $locality : '—' ) . '</p></td><td>';
 			self::grouped_fields( $identity_schema, $identity, array( 'phone', 'email', 'website', 'facebook', 'instagram' ) );
 			echo '</td><td class="mp-review-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : '—' ) ) . '</td><td>';
 			self::grouped_fields( $activity_schema, $activity, array( 'production', 'production_other', 'technique', 'technique_other' ) );

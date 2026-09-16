@@ -30,7 +30,8 @@
 .mp-review-table .mp-review-edition { margin:8px 0; color:#646970; font-size:12px; }
 .mp-review-table .mp-review-actions { margin:10px 0; }
 .mp-review-table .mp-my-vote { margin-bottom:12px; }
-.mp-review-table .mp-review-submitted { margin:12px 0 0; padding-top:10px; border-top:1px solid #dcdcde; }
+.mp-review-table .mp-review-submitted { margin:8px 0; color:#50575e; font-size:12px; }
+.mp-review-table .mp-review-location { margin:7px 0 0; }
 .mp-review-table .mp-review-presentation { line-height:1.65; }
 .mp-review-table .mp-selection-badge { display:inline-block; margin:0 0 12px; padding:5px 8px; border-radius:5px; background:#e8eaed; color:#3c434a; font-weight:600; }
 .mp-review-table .mp-selection-selected { background:#edf7ed; color:#225b28; }
