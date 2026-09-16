@@ -90,11 +90,11 @@ final class Votes {
 		$edition = (int) ( Records::data( $id )['edition_id'] ?? 0 );
 		if ( ! Jury::can_view_application( $id ) || ! Jury::multiple( $edition ) ) { return; }
 		$data = Jury::settings( $edition ); $members = Jury::members( $edition ); $votes = self::all( array( $id ) )[ $id ] ?? array();
-		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">Votes des organisateurs</h2>';
+		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">Votes pour la sélection</h2>';
 		if ( isset( $_GET['mp_vote_saved'] ) ) { echo '<div class="notice notice-success inline"><p>Votre note a été enregistrée.</p></div>'; }
 		if ( $data['closed'] ) { echo '<p><strong>Votes clôturés.</strong> Les notes restent consultables.</p>'; }
-		if ( ! $members ) { echo '<p>Aucun organisateur actif. Le responsable peut en ajouter dans l’édition.</p>'; }
-		echo '<table class="widefat striped"><thead><tr><th scope="col">Organisateur</th><th scope="col">Note / 5</th></tr></thead><tbody>';
+		if ( ! $members ) { echo '<p>Aucun membre actif. Un administrateur du marché peut en ajouter dans l’édition.</p>'; }
+		echo '<table class="widefat striped"><thead><tr><th scope="col">Membre</th><th scope="col">Note / 5</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) {
 			$vote = $votes[ $uid ] ?? null;
 			$active = isset( $members[ $uid ] );

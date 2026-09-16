@@ -78,10 +78,10 @@ final class Plugin {
 				</li>
 			</ol>
 			<p class="description"><?php esc_html_e( 'Dans les deux codes, remplacez 2027 par l’année de votre édition.', 'marche-potier' ); ?></p>
-			<p><?php esc_html_e( 'Pour noter les dossiers à plusieurs, ouvrez « Organisateurs et votes » dans l’édition, choisissez « Votes multiples » et ajoutez les noms et emails des votants. Chaque personne vote dans « Examiner ». La colonne « Point » affiche le total et le nombre de votes.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Dans « Organisateur et votes » de l’édition, renseignez au moins un administrateur du marché (nom et email). Il gère le marché, les pages et les articles, et prend la décision finale. Pour noter les dossiers à plusieurs, choisissez « Votes multiples » et complétez le tableau « Votant pour la sélection ». Les administrateurs affectés participent aussi aux votes. Chaque personne note dans « Examiner » ; la colonne « Point » affiche le total et la participation.', 'marche-potier' ); ?></p>
 			<?php else : ?>
 			<h2><?php esc_html_e( 'Examiner et voter', 'marche-potier' ); ?></h2>
-			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans le tableau des organisateurs, choisissez votre note de 0 à 5 et cliquez sur « Valider ». Vous pouvez consulter les autres notes et modifier la vôtre jusqu’à la clôture des votes.', 'marche-potier' ); ?></p>
+			<p><?php esc_html_e( 'Ouvrez « Examiner les candidatures », choisissez votre édition puis un dossier. Dans « Votes pour la sélection », choisissez votre note de 0 à 5 et cliquez sur « Valider ». Vous pouvez consulter les autres notes et modifier la vôtre jusqu’à la clôture des votes.', 'marche-potier' ); ?></p>
 			<?php endif; ?>
 		</div>
 		<?php

@@ -1,7 +1,8 @@
 .mp-jury-scroll { width:100%; overflow:auto; }
-#mp-jury-members { min-width:650px; table-layout:fixed; }
-#mp-jury-members th:nth-child(1) { width:23%; }
-#mp-jury-members th:nth-child(2) { width:33%; }
-#mp-jury-members th:nth-child(3) { width:12%; }
-#mp-jury-members input[type="text"],#mp-jury-members input[type="email"] { width:100%; min-width:0; }
-#mp-jury-members th,#mp-jury-members td { overflow-wrap:anywhere; vertical-align:middle; }
+.mp-jury-members { min-width:650px; table-layout:fixed; }
+.mp-jury-members th:nth-child(1) { width:22%; }
+.mp-jury-members th:nth-child(2) { width:30%; }
+.mp-jury-members th:nth-child(3) { width:14%; }
+.mp-jury-members input[type="text"],.mp-jury-members input[type="email"] { width:100%; min-width:0; }
+.mp-jury-members th,.mp-jury-members td { overflow-wrap:anywhere; vertical-align:middle; }
+.mp-jury-members .mp-jury-move { display:block; margin-top:8px; text-align:left; }

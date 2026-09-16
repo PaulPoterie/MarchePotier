@@ -1,9 +1,9 @@
 document.addEventListener('DOMContentLoaded', function () {
-	const table = document.querySelector('#mp-jury-members tbody');
-	const template = document.getElementById('mp-jury-template');
-	const add = document.getElementById('mp-jury-add');
-	if (!table || !template || !add) return;
 	let index = 0;
+	document.querySelectorAll('.mp-jury-group').forEach(group => {
+	const table = group.querySelector('tbody');
+	const template = group.querySelector('template');
+	const add = group.querySelector('.mp-jury-add');
 	add.addEventListener('click', function () {
 		const row = template.content.cloneNode(true);
 		row.querySelectorAll('[name]').forEach(input => { input.name = input.name.replace('__INDEX__', 'new_' + index); });
@@ -13,5 +13,17 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 	table.addEventListener('click', function (event) {
 		if (event.target.closest('.mp-jury-remove')) event.target.closest('tr').remove();
+		const move = event.target.closest('.mp-jury-move');
+		if (!move) return;
+		const row = move.closest('tr');
+		const target = group.dataset.group === 'members' ? 'administrators' : 'members';
+		row.querySelectorAll('[name]').forEach(input => {
+			input.name = input.name.replace(/^mp_jury\[[^\]]+\]\[[^\]]+\]/, 'mp_jury[' + target + '][moved_' + index + ']');
+		});
+		index++;
+		move.textContent = target === 'members' ? 'Passer dans le tableau administrateur' : 'Passer dans le tableau votant';
+		document.querySelector('#mp-jury-' + target + ' tbody').appendChild(row);
+		row.querySelector('input[type="text"]').focus();
+	});
 	});
 });

@@ -27,6 +27,13 @@ Editions::install_permissions(); Records::permissions(); Jury::install(); Votes:
 wp_set_current_user( 0 ); wp_set_current_user( 1 );
 function mp_cleanup( array $state ): void {
 	wp_set_current_user( 1 ); $_POST = array();
+	// Inclut les contenus créés dans le navigateur avec les comptes fictifs de ce test.
+	if ( ! empty( $state['users'] ) ) {
+		$browser_posts = get_posts( array( 'post_type' => array( 'post', 'page', 'mp_edition', 'mp_candidature' ), 'post_status' => array_values( get_post_stati() ), 'author__in' => $state['users'], 'posts_per_page' => -1 ) );
+		foreach ( $browser_posts as $post ) {
+			if ( 'auto-draft' === $post->post_status || str_starts_with( $post->post_title, '[TEST VOTES]' ) ) { wp_delete_post( $post->ID, true ); }
+		}
+	}
 	foreach ( array_reverse( $state['posts'] ?? array() ) as $id ) { if ( get_post_meta( $id, '_mp_vote_test', true ) === $state['run'] ) { wp_delete_post( $id, true ); } }
 	foreach ( $state['users'] ?? array() as $uid ) { if ( get_user_meta( $uid, '_mp_vote_test', true ) === $state['run'] ) { wp_delete_user( $uid ); } }
 }
@@ -57,11 +64,12 @@ function mp_config( int $edition, array $raw ): true|WP_Error {
 	try { return Jury::configure( $edition, $raw ); } finally { SubmissionLock::release(); }
 }
 function mp_raw( int $edition ): array {
-	$data = Jury::settings( $edition ); $rows = array();
+	$data = Jury::settings( $edition ); $rows = array(); $administrators = array();
 	foreach ( $data['members'] as $uid => $member ) {
-		$rows[] = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => get_userdata( $uid )->user_email, 'active' => $member['active'] ? '1' : '0' );
+		$row = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => get_userdata( $uid )->user_email, 'active' => $member['active'] ? '1' : '0' );
+		if ( 'administrator' === $member['kind'] ) { $administrators[] = $row; } else { $rows[] = $row; }
 	}
-	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'closed' => $data['closed'] ? '1' : '0', 'members' => $rows );
+	return array( 'revision' => $data['revision'], 'mode' => $data['mode'], 'closed' => $data['closed'] ? '1' : '0', 'members' => $rows, 'administrators' => $administrators );
 }
 class MPTestDenied extends RuntimeException {}
 class MPTestRedirect extends RuntimeException {}
@@ -84,6 +92,7 @@ try {
 		array( 'user_id' => '0', 'name' => 'Bruno', 'email' => get_userdata( $b )->user_email, 'active' => '1' ),
 		array( 'user_id' => '0', 'name' => 'Camille', 'email' => 'mpvote_' . substr( $state['run'], 0, 8 ) . '_camille@example.test', 'active' => '1' ),
 	) );
+	$raw['administrators'] = array( array( 'user_id' => '0', 'name' => 'Responsable', 'email' => get_userdata( $manager )->user_email, 'active' => '1' ) );
 	$config_result = mp_config( $edition, $raw );
 	mp_check( true === $config_result, 'Organisateurs existants rattachés et nouveau compte créé' . ( is_wp_error( $config_result ) ? ' : ' . $config_result->get_error_message() : '' ) );
 	$c = (int) email_exists( $raw['members'][2]['email'] ); update_user_meta( $c, '_mp_vote_test', $state['run'] ); $state['users'][] = $c; mp_state();
@@ -145,7 +154,7 @@ try {
 	mp_check( substr_count( $html, 'name="score"' ) === 1 && str_contains( $html, 'Bruno — vous' ) && str_contains( $html, '5 / 5' ), 'Un seul sélecteur personnel, autres notes visibles' );
 	mp_check( ! str_contains( $html, 'Modifier ce dossier' ) && ! str_contains( $html, 'Enregistrer la sélection' ) && ! str_contains( $html, 'candidature=' . $hidden ), 'Actions réservées et historique interdit absents' );
 	ob_start(); Review::table(); $html = ob_get_clean();
-	mp_check( str_contains( $html, '8 points' ) && str_contains( $html, '2 vote(s) sur 3' ) && ! str_contains( $html, 'Exporter CSV' ), 'Total, participation et accès export dans la gestion' );
+	mp_check( str_contains( $html, '8 points' ) && str_contains( $html, '2 vote(s) sur 4' ) && ! str_contains( $html, 'Exporter CSV' ), 'Total et participation des administrateurs et votants, accès export dans la gestion' );
 	$_GET = array(); ob_start(); Records::history(); $html = ob_get_clean();
 	mp_check( ! str_contains( $html, 'confidentielle' ), 'Historique filtré par édition autorisée' );
 	$_GET = array( 'candidature' => (string) $hidden ); mp_denied( array( Records::class, 'view' ), 'Accès direct à un autre dossier refusé' );
@@ -167,15 +176,15 @@ try {
 	wp_set_current_user( $a ); mp_check( is_wp_error( Votes::record( $app, '1' ) ), 'Clôture contrôlée côté serveur' );
 	ob_start(); Votes::render( $app ); $html = ob_get_clean(); mp_check( str_contains( $html, 'Votes clôturés' ) && ! str_contains( $html, 'name="score"' ), 'Votes clôturés visibles sans sélecteur' );
 	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['closed'] = '0'; $raw['members'][0]['active'] = '0'; mp_config( $edition, $raw );
-	mp_check( Votes::summary( $app )['total'] === 4 && Votes::summary( $app )['expected'] === 2, 'Retrait : ancienne note conservée mais exclue du total' );
+	mp_check( Votes::summary( $app )['total'] === 4 && Votes::summary( $app )['expected'] === 3, 'Retrait : ancienne note conservée mais exclue du total' );
 	wp_set_current_user( $a ); mp_check( ! Jury::can_view_application( $app ) && is_wp_error( Votes::record( $app, '5' ) ), 'Retrait coupe accès et vote immédiatement' );
 	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['members'][0]['active'] = '1'; $raw['mode'] = 'simple'; mp_config( $edition, $raw );
 	wp_set_current_user( $a ); mp_check( is_wp_error( Votes::record( $app, '2' ) ), 'Mode simple refuse les notes' );
 	ob_start(); Votes::render( $app ); $html = ob_get_clean(); mp_check( '' === $html && count( Votes::all( array( $app ) )[ $app ] ) === 2, 'Mode simple masque les votes sans les effacer' );
 	wp_set_current_user( 1 ); $raw = mp_raw( $edition ); $raw['mode'] = 'multiple'; mp_config( $edition, $raw );
 	$before_mails = count( $mails ); Notifications::send( $app );
-	mp_check( count( $mails ) - $before_mails === 4, 'Notification candidat et trois organisateurs, adresse principale dédoublonnée' );
-	Notifications::send( $app ); mp_check( count( $mails ) - $before_mails === 4, 'Notifications non répétées après un second appel' );
+	mp_check( count( $mails ) - $before_mails === 5, 'Notification candidat, administrateur et trois votants sans doublon' );
+	Notifications::send( $app ); mp_check( count( $mails ) - $before_mails === 5, 'Notifications non répétées après un second appel' );
 	$failure = static fn( $pre, $mail ) => $mail['to'] === get_userdata( $b )->user_email ? false : $pre;
 	add_filter( 'pre_wp_mail', $failure, 200, 2 );
 	Notifications::send( $second );
@@ -197,6 +206,7 @@ try {
 	mp_check( Records::navigation_ids( array( 'mp_edition' => $edition, 'orderby' => 'points', 'order' => 'DESC' ) ) === array( $app, $second ), 'Tri numérique décroissant sur toutes les candidatures' );
 	wp_trash_post( $second ); wp_set_current_user( $b ); mp_check( is_wp_error( Votes::record( $second, '2' ) ), 'Vote refusé sur dossier à la corbeille' );
 	wp_set_current_user( 1 ); wp_untrash_post( $second );
+	require __DIR__ . '/market-administrators.php';
 	$passed = true; echo "SUCCÈS : $checks vérifications. Emails interceptés.\n";
 } finally {
 	if ( ! $keep || ! $passed ) { mp_cleanup( $state ); if ( is_file( $manifest ) ) { unlink( $manifest ); } }

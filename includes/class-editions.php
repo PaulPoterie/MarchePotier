@@ -20,7 +20,7 @@ final class Editions {
 
 	/** Migration idempotente, y compris lors d'une mise à jour sans réactivation. */
 	public static function install_permissions(): void {
-		if ( '2' === get_option( 'mp_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
+		if ( '3' === get_option( 'mp_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$admin = get_role( 'administrator' );
@@ -28,13 +28,30 @@ final class Editions {
 			return;
 		}
 		$admin->add_cap( 'mp_manage_editions' );
-		add_role( 'mp_organizer', __( 'Organisateur de marché', 'marche-potier' ), array( 'read' => true, 'mp_manage_editions' => true ) );
+		add_role( 'mp_organizer', '[MP] Administrateur marché', array( 'read' => true, 'mp_manage_editions' => true ) );
 		$organizer = get_role( 'mp_organizer' );
 		if ( $organizer ) {
 			$organizer->add_cap( 'mp_manage_editions' );
 			$organizer->add_cap( 'upload_files' );
+			foreach ( array( 'posts', 'pages' ) as $type ) {
+				foreach ( array( 'edit_', 'edit_others_', 'edit_private_', 'edit_published_', 'publish_', 'read_private_', 'delete_', 'delete_others_', 'delete_private_', 'delete_published_' ) as $prefix ) {
+					$organizer->add_cap( $prefix . $type );
+				}
+			}
+			$organizer->add_cap( 'manage_categories' );
 		}
-		update_option( 'mp_permissions_version', '2', false );
+		self::rename_role( 'mp_organizer', '[MP] Administrateur marché' );
+		update_option( 'mp_permissions_version', '3', false );
+		wp_get_current_user()->get_role_caps();
+	}
+
+	/** add_role ne renomme pas les rôles existants ; leurs identifiants restent stables. */
+	public static function rename_role( string $slug, string $label ): void {
+		$roles = wp_roles();
+		if ( ! isset( $roles->roles[ $slug ] ) ) { return; }
+		$roles->roles[ $slug ]['name'] = $label;
+		$roles->role_names[ $slug ] = $label;
+		update_option( $roles->role_key, $roles->roles );
 	}
 
 	public static function register(): void {
@@ -212,8 +229,7 @@ final class Editions {
 		<p><label for="mp-thank-you">Message de remerciement</label></p>
 		<textarea class="large-text" rows="5" id="mp-thank-you" name="mp_edition[thank_you]" maxlength="5000" placeholder="<?php echo esc_attr( self::DEFAULT_THANK_YOU ); ?>"><?php echo esc_textarea( $data['thank_you'] ); ?></textarea>
 		<p class="description">Affiché après validation et repris dans l’email au candidat. Si vide, un message de confirmation standard est utilisé.</p>
-		<p><label for="mp-organizer-email">Email de l’organisateur</label><br><input class="regular-text" type="email" id="mp-organizer-email" name="mp_edition[organizer_email]" value="<?php echo esc_attr( $data['organizer_email'] ); ?>"></p>
-		<p class="description">Destinataire des nouvelles candidatures et adresse de réponse des candidats. Si vide, l’adresse d’administration du site est utilisée : <?php echo esc_html( get_option( 'admin_email' ) ); ?>.</p>
+		<p class="description">Les destinataires des candidatures se définissent dans « Organisateur et votes », avec les comptes des administrateurs du marché.</p>
 		<h3>Stand</h3>
 		<p><label for="mp-stand-length">Taille du stand par défaut (m)</label><br><input id="mp-stand-length" type="number" min="0.01" max="1000" step="0.01" required name="mp_edition[stand_length]" value="<?php echo esc_attr( $data['stand_length'] ); ?>"></p>
 		<p><label for="mp-stand-editable">Modifiable par le potier</label><br><select id="mp-stand-editable" name="mp_edition[stand_editable]"><option value="1" <?php selected( $data['stand_editable'], true ); ?>>Oui</option><option value="0" <?php selected( $data['stand_editable'], false ); ?>>Non</option></select></p>
@@ -250,8 +266,7 @@ final class Editions {
 		if ( ! $opens || ! $closes || $closes <= $opens ) {
 			return null;
 		}
-		foreach ( array( 'thank_you', 'organizer_email' ) as $key ) { if ( ! is_string( $data[ $key ] ?? '' ) ) { return null; } }
-		if ( strlen( $data['thank_you'] ?? '' ) > 20000 || ( ! empty( $data['organizer_email'] ) && ! is_email( $data['organizer_email'] ) ) ) { return null; }
+		if ( ! is_string( $data['thank_you'] ?? '' ) || strlen( $data['thank_you'] ?? '' ) > 20000 ) { return null; }
 		$stand = $data['stand_length'] ?? '5';
 		if ( ! is_string( $stand ) || ! preg_match( '/^\d+(?:[.,]\d{1,2})?$/D', $stand ) ) { return null; }
 		$stand = str_replace( ',', '.', $stand );
@@ -265,7 +280,6 @@ final class Editions {
 		}
 		return $market + array(
 			'thank_you' => sanitize_textarea_field( $data['thank_you'] ?? '' ),
-			'organizer_email' => sanitize_email( $data['organizer_email'] ?? '' ),
 			'presentation' => isset( $data['presentation'] ) ? wp_kses_post( $data['presentation'] ) : '',
 			'image' => $media['image'], 'rules' => $media['rules'], 'application_document' => 0,
 			'stand_length' => $stand, 'stand_editable' => '1' === ( $data['stand_editable'] ?? '1' ),
@@ -290,6 +304,10 @@ final class Editions {
 			} );
 			return;
 		}
+		// Valider les paramètres avant toute création de compte ou invitation.
+		if ( isset( $_POST['mp_jury'] ) && ! Jury::save( $id ) ) { return; }
+		// Contact historique conservé uniquement tant que la nouvelle équipe n'est pas définie.
+		$data['organizer_email'] = Jury::administrators( $id ) ? '' : self::settings( $id )['organizer_email'];
 		// Un seul enregistrement pour ne pas mélanger anciens et nouveaux réglages.
 		update_post_meta( $id, self::META, wp_slash( $data ) );
 	}

@@ -36,13 +36,16 @@ final class Notifications {
 	/** Une tentative par destinataire : un nouvel appel ne duplique pas les emails. */
 	public static function send( int $app ): void {
 		$data = Records::data( $app );
-		$edition = Editions::settings( (int) $data['edition_id'] );
 		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $data['edition_id'] ), ENT_QUOTES ) );
-		$organizer = $edition['organizer_email'] ?: get_option( 'admin_email' );
+		$organizer = Jury::contact_email( (int) $data['edition_id'] );
 		$summary = self::summary( $data );
-		$recipients = array( 'candidate' => $data['identity']['email'], 'organizer' => $organizer );
-		$seen = array( strtolower( $organizer ) => true );
-		foreach ( Jury::members( (int) $data['edition_id'] ) as $uid => $member ) {
+		$administrators = Jury::administrators( (int) $data['edition_id'] );
+		$recipients = array( 'candidate' => $data['identity']['email'] );
+		// Les anciennes éditions continuent à recevoir leurs notifications avant leur mise à jour.
+		if ( ! $administrators ) { $recipients['organizer'] = $organizer; }
+		$seen = $administrators ? array() : array( strtolower( $organizer ) => true );
+		$members = Jury::multiple( (int) $data['edition_id'] ) ? Jury::members( (int) $data['edition_id'] ) : $administrators;
+		foreach ( $members as $uid => $member ) {
 			$email = get_userdata( $uid )->user_email;
 			if ( ! isset( $seen[ strtolower( $email ) ] ) ) { $recipients[ 'jury_' . $uid ] = $email; $seen[ strtolower( $email ) ] = true; }
 		}
@@ -57,7 +60,7 @@ final class Notifications {
 			$subject = ( $candidate ? 'Confirmation de candidature — ' : 'Nouvelle candidature — ' ) . $title;
 			$body = $candidate ? Editions::thank_you( (int) $data['edition_id'] ) . "\n\nVotre candidature est enregistrée. Cette confirmation ne vaut pas sélection.\n\n" : "Une nouvelle candidature a été enregistrée.\n\n";
 			$body .= 'Édition : ' . $title . "\nDossier n° " . $app . "\n\n" . $summary;
-			if ( ! $candidate ) { $body .= "\n\nExaminer le dossier et voter si les votes sont ouverts (connexion organisateur requise) :\n" . Records::view_url( $app, array( 'mp_from' => 'gestion', 'mp_edition' => (int) $data['edition_id'] ) ); }
+			if ( ! $candidate ) { $body .= "\n\nExaminer le dossier (connexion à votre compte requise) :\n" . Records::view_url( $app, array( 'mp_from' => 'gestion', 'mp_edition' => (int) $data['edition_id'] ) ); }
 			$headers = array( 'Content-Type: text/plain; charset=UTF-8' );
 			$reply = $candidate ? $organizer : $data['identity']['email'];
 			if ( is_email( $reply ) ) { $headers[] = 'Reply-To: ' . $reply; }

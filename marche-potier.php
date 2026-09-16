@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Marché Potier
  * Description: Organisation des éditions, candidatures et sélections de marchés de potiers.
- * Version: 0.19.0-beta.2
+ * Version: 0.19.0-beta.3
  * Requires at least: 6.6
  * Requires PHP: 8.2
  * Text Domain: marche-potier
