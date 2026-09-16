@@ -4,11 +4,6 @@ document.addEventListener('click', (event) => {
     window.location.assign(row.dataset.mpDossier);
 });
 
-// Sur téléphone, garder l’action personnelle avant les photos sans dérouler tout le jury.
-if (window.matchMedia('(max-width: 782px)').matches) {
-    document.querySelectorAll('.mp-examiner .mp-jury-details').forEach((details) => { details.open = false; });
-}
-
 const myScore = document.querySelector('.mp-examiner #mp-my-score');
 const voteState = document.querySelector('.mp-examiner #mp-vote-state');
 if (myScore && voteState) {

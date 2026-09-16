@@ -482,17 +482,17 @@ final class Records {
 		echo '<section class="mp-examiner-card mp-examiner-photos"><div class="mp-examiner-section-heading"><h2>Photos du potier</h2><span>Cliquez pour agrandir</span></div>';
 		Review::photos( $id, '', true );
 		echo '</section><section class="mp-examiner-card"><h2>Présentation de l’atelier</h2><div class="mp-examiner-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : 'Aucune présentation renseignée.' ) ) . '</div></section>';
-		echo '<details class="mp-examiner-card mp-examiner-details"><summary>Coordonnées et liens</summary><div class="mp-examiner-details-body">';
+		echo '<details class="mp-examiner-card mp-examiner-details" open><summary>Coordonnées et liens</summary><div class="mp-examiner-details-body">';
 		Review::details_summary( Fields::identity(), $identity );
-		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Informations professionnelles et vie associative</summary><div class="mp-examiner-details-body">';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Informations professionnelles et vie associative</summary><div class="mp-examiner-details-body">';
 		$secondary_fields = array_diff_key( Fields::activity(), array_fill_keys( array( 'presentation', 'production', 'production_other', 'technique', 'technique_other', 'stand_length' ), true ) );
 		Review::details_summary( $secondary_fields, $activity );
-		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Justificatifs et autorisation de présentation</summary><div class="mp-examiner-details-body">';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Justificatifs et autorisation de présentation</summary><div class="mp-examiner-details-body">';
 		PrivateFiles::render( $id, true );
 		if ( 'public' === ( $data['source'] ?? '' ) ) { echo '<p>Déposé depuis le formulaire public. Adresse email déclarée, non vérifiée. Autorisation de présentation publique : ' . esc_html( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' ) . '.</p>'; }
-		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Suivi interne</summary><div class="mp-examiner-details-body">';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Suivi interne</summary><div class="mp-examiner-details-body">';
 		Review::details_summary( Fields::internal(), $data['internal'] ?? array() );
-		echo '</div></details><details class="mp-examiner-card mp-examiner-details"><summary>Autres candidatures de ce potier</summary><div class="mp-examiner-details-body">';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Autres candidatures de ce potier</summary><div class="mp-examiner-details-body">';
 		$history = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => 50, 'post__not_in' => array( $id ), 'meta_key' => '_mp_potier_id', 'meta_value' => $data['potier_id'], 'orderby' => 'date', 'order' => 'DESC' ) );
 		$history = array_filter( $history, static fn( $previous ) => Jury::can_view_application( $previous->ID ) );
 		if ( ! $history ) { echo '<p>Aucune autre candidature enregistrée.</p>'; }

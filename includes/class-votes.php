@@ -113,8 +113,7 @@ final class Votes {
 			echo '</select> <button class="button button-primary">Valider ma note</button></div></form><p class="description" id="mp-vote-help">0 est une note. Vous pouvez modifier votre note puis la valider à nouveau.</p>';
 		}
 		echo '<p class="mp-vote-totals"><strong>' . esc_html( $summary['total'] ) . ' points</strong><span>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</span></p>';
-		// L’administrateur garde sa décision finale visible à côté de sa propre note.
-		echo '<details class="mp-jury-details"' . ( current_user_can( 'mp_manage_applications' ) ? '' : ' open' ) . '><summary>Notes du jury</summary>';
+		echo '<details class="mp-jury-details" open><summary>Notes du jury</summary>';
 		if ( ! $members ) { echo '<p>Aucun membre actif. Un administrateur du marché peut en ajouter dans l’édition.</p>'; }
 		echo '<table class="widefat striped"><thead><tr><th scope="col">Membre</th><th scope="col">Note / 5</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) {
