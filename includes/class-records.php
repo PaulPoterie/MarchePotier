@@ -96,22 +96,26 @@ final class Records {
 		return array( 'pending' => 'À examiner', 'selected' => 'Sélectionné', 'rejected' => 'Non sélectionné' );
 	}
 
-	public static function render_list_filters( string $post_type ): void {
-		if ( 'mp_candidature' !== $post_type || ! current_user_can( 'mp_manage_applications' ) ) {
+	public static function render_list_filters( string $post_type, bool $grouped = false ): void {
+		if ( 'mp_candidature' !== $post_type || ! Jury::can_review() ) {
 			return;
 		}
-		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
-		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
-		echo '<label class="screen-reader-text" for="mp-edition-filter">Filtrer par édition</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
+		$edition = (int) ( Request::query( 'mp_edition' ) ?? 0 );
+		$decision = Request::query( 'mp_decision' ) ?? '';
+		if ( $grouped ) { echo '<div class="mp-filter-field">'; }
+		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="mp-edition-filter">' . ( $grouped ? 'Édition' : 'Filtrer par édition' ) . '</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
 		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) ) as $item ) {
+			if ( ! Jury::can_view_edition( $item->ID ) ) { continue; }
 			echo '<option value="' . esc_attr( $item->ID ) . '" ' . selected( $edition, $item->ID, false ) . '>' . esc_html( $item->post_title ) . '</option>';
 		}
 		echo '</select> ';
-		echo '<label class="screen-reader-text" for="mp-decision-filter">Filtrer par décision</label><select id="mp-decision-filter" name="mp_decision"><option value="">Toutes les décisions</option>';
+		if ( $grouped ) { echo '</div><div class="mp-filter-field">'; }
+		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="mp-decision-filter">' . ( $grouped ? 'Sélection' : 'Filtrer par décision' ) . '</label><select id="mp-decision-filter" name="mp_decision"><option value="">Toutes les décisions</option>';
 		foreach ( self::decisions() as $key => $label ) {
 			echo '<option value="' . esc_attr( $key ) . '" ' . selected( $decision, $key, false ) . '>' . esc_html( $label ) . '</option>';
 		}
 		echo '</select>';
+		if ( $grouped ) { echo '</div>'; }
 	}
 
 	public static function apply_list_filters( \WP_Query $query ): void {
@@ -119,8 +123,8 @@ final class Records {
 			return;
 		}
 		$meta_query = (array) $query->get( 'meta_query' );
-		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
-		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
+		$edition = (int) ( Request::query( 'mp_edition' ) ?? 0 );
+		$decision = Request::query( 'mp_decision' ) ?? '';
 		if ( $edition && self::valid_reference( $edition, 'mp_edition' ) ) {
 			$meta_query[] = array( 'key' => '_mp_edition_id', 'value' => $edition, 'type' => 'NUMERIC' );
 		}
@@ -167,9 +171,9 @@ final class Records {
 
 	public static function save_inline_decision( int $id ): void {
 		if ( self::$updating_title || ! current_user_can( 'mp_select_applications' ) ) { return; }
-		$nonce = $_POST['_inline_edit'] ?? null;
-		$decision = $_POST['mp_inline_decision'] ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), 'inlineeditnonce' ) || ! is_string( $decision ) || ! isset( self::decisions()[ $decision ] ) ) { return; }
+		$nonce = Request::post( '_inline_edit' ) ?? null;
+		$decision = Request::post( 'mp_inline_decision' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'inlineeditnonce' ) || ! is_string( $decision ) || ! isset( self::decisions()[ $decision ] ) ) { return; }
 		$data = self::data( $id );
 		if ( empty( $data['potier_id'] ) || empty( $data['edition_id'] ) ) { return; }
 		$data['decision'] = $decision;
@@ -265,10 +269,11 @@ final class Records {
 		$application = 'mp_candidature' === $post->post_type;
 		if ( ! $application ) { return; }
 		if ( self::$updating_title || ! in_array( $post->post_type, array( 'mp_potier', 'mp_candidature' ), true ) || wp_is_post_revision( $id ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( $application ? 'mp_manage_applications' : 'mp_manage_potiers' ) ) { return; }
-		$nonce = $_POST['mp_record_nonce'] ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), 'mp_record_' . $id ) ) { return; }
-		$raw = $_POST['mp_record'] ?? null;
-		$data = is_array( $raw ) ? self::prepare( wp_unslash( $raw ), self::data( $id ), $application ) : new \WP_Error( 'mp_form', 'Formulaire invalide.' );
+		$nonce = Request::post( 'mp_record_nonce' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_record_' . $id ) ) { return; }
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Structured answers are validated by prepare() below, after the nonce and permission checks.
+		$raw = isset( $_POST['mp_record'] ) && is_array( $_POST['mp_record'] ) ? wp_unslash( $_POST['mp_record'] ) : null;
+		$data = is_array( $raw ) ? self::prepare( $raw, self::data( $id ), $application ) : new \WP_Error( 'mp_form', 'Formulaire invalide.' );
 		$locked = false;
 		if ( ! is_wp_error( $data ) && class_exists( SubmissionLock::class ) ) {
 			$locked = SubmissionLock::acquire();
@@ -277,6 +282,7 @@ final class Records {
 		try {
 		if ( ! is_wp_error( $data ) && $application ) {
 			$data['potier_id'] = PublicForm::find_potier( $data['identity'] );
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query, WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- Existence check limited to one ID for a potter and edition; exclude only the current application.
 			$duplicates = $data['potier_id'] ? get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array_merge( self::STATUSES, array( 'trash' ) ), 'posts_per_page' => 1, 'fields' => 'ids', 'post__not_in' => array( $id ), 'meta_query' => array( array( 'key' => '_mp_potier_id', 'value' => $data['potier_id'] ), array( 'key' => '_mp_edition_id', 'value' => $data['edition_id'] ) ) ) ) : array();
 			if ( $duplicates ) { $data = new \WP_Error( 'mp_duplicate', 'Ce potier possède déjà une candidature pour cette édition, éventuellement dans la corbeille. Retrouvez le dossier existant.' ); }
 			if ( ! is_wp_error( $data ) && class_exists( PublicForm::class ) && ! empty( $data['identity']['email'] ) && PublicForm::duplicate( $data['edition_id'], $data['identity']['email'], $id ) ) { $data = new \WP_Error( 'mp_duplicate_email', 'Cette adresse email possède déjà une candidature pour cette édition.' ); }
@@ -292,6 +298,7 @@ final class Records {
 			$current_files = self::data( $id )['files'] ?? array();
 			$uploads = array();
 			foreach ( PrivateFiles::slots() as $slot => $label ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Upload metadata is checked by PrivateFiles::store; never unslash uploaded bytes or PHP temporary paths.
 				if ( isset( $_FILES[ 'mp_admin_' . $slot ] ) ) { $uploads[ $slot ] = $_FILES[ 'mp_admin_' . $slot ]; }
 			}
 			if ( $uploads ) { $new_files = PrivateFiles::store( $uploads, true ); }
@@ -319,7 +326,7 @@ final class Records {
 			set_transient( 'mp_record_error_' . get_current_user_id() . '_' . $id, 'Enregistrement impossible. Les fichiers précédents sont conservés.', 120 );
 			return;
 		}
-		PrivateFiles::remove( $replaced );
+		MediaLibrary::finalize( $id );
 		if ( $application ) {
 			// Index de recherche, les réponses restent réunies dans META.
 			update_post_meta( $id, '_mp_potier_id', $data['potier_id'] );
@@ -345,7 +352,7 @@ final class Records {
 
 	public static function notice(): void {
 		$screen = get_current_screen();
-		$id = isset( $_GET['post'] ) && is_string( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+		$id = (int) ( Request::query( 'post' ) ?? 0 );
 		if ( ! $screen || ! in_array( $screen->post_type, array( 'mp_potier', 'mp_candidature' ), true ) || ! current_user_can( 'mp_candidature' === $screen->post_type ? 'mp_manage_applications' : 'mp_manage_potiers' ) ) { return; }
 		$key = 'mp_record_error_' . get_current_user_id() . '_' . $id;
 		$error = get_transient( $key );
@@ -357,40 +364,105 @@ final class Records {
 
 	public static function menu(): void {
 		// Page accessible par les liens des dossiers, sans entrée autonome dans le menu.
-		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_manage_applications', 'mp-dossier', array( self::class, 'view' ) );
+		$hook = add_submenu_page( '', 'Consulter une candidature', 'Consulter une candidature', 'mp_review_applications', 'mp-dossier', array( self::class, 'view' ) );
 		// Une page sans parent n’est pas retrouvée par get_admin_page_title().
 		add_action( 'load-' . $hook, static function () { $GLOBALS['title'] = 'Consulter une candidature'; } );
-		add_submenu_page( 'marche-potier', 'Historique des candidatures', 'Historique', 'mp_manage_applications', 'mp-historique', array( self::class, 'history' ) );
+		add_submenu_page( 'marche-potier', 'Historique des sélections', 'Historique des sélections', 'mp_review_applications', 'mp-historique', array( self::class, 'history' ) );
 	}
 
 	public static function view_url( int $id, array $context = array() ): string {
 		return add_query_arg( array_merge( $context, array( 'page' => 'mp-dossier', 'candidature' => $id ) ), admin_url( 'admin.php' ) );
 	}
 
-	/** Seuls les paramètres connus de la liste sont conservés, jamais une URL de retour libre. */
+	/**
+	 * Liste blanche GET partagée par gestion, examen, votes et export.
+	 * mp_sort est normalisé en orderby/order ; ces deux clés circulent ensuite dans les liens.
+	 * mp_from indique l’écran de retour, jamais une URL libre fournie par le navigateur.
+	 */
 	public static function list_context(): array {
 		$context = array();
-		if ( 'gestion' === ( $_GET['mp_from'] ?? '' ) ) { $context['mp_from'] = 'gestion'; }
+		$from = Request::query( 'mp_from' );
+		if ( in_array( $from, array( 'gestion', 'votes' ), true ) ) { $context['mp_from'] = $from; }
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
-			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
+			$value = Request::query( $key );
+			if ( null !== $value && ctype_digit( $value ) && (int) $value > 0 ) { $context[ $key ] = (int) $value; }
 		}
-		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
-			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && in_array( $_GET[ $key ], $allowed, true ) ) { $context[ $key ] = $_GET[ $key ]; }
+		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'mp_my_vote' => array( 'rated', 'unrated' ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points', 'submitted', 'name' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
+			$value = Request::query( $key );
+			if ( in_array( $value, $allowed, true ) ) { $context[ $key ] = $value; }
 		}
-		if ( isset( $_GET['s'] ) && is_string( $_GET['s'] ) ) { $context['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) ); }
+		$search = Request::query( 's' );
+		if ( null !== $search ) { $context['s'] = $search; }
+		$sort = Request::query( 'mp_sort' );
+		if ( null !== $sort && isset( self::sort_options()[ $sort ] ) ) {
+			[ $context['orderby'], $direction ] = explode( '_', $sort );
+			$context['order'] = strtoupper( $direction );
+		}
 		return $context;
 	}
 
+	public static function sort_options(): array {
+		return array(
+			'points_desc' => 'Points — du plus élevé au plus faible',
+			'points_asc' => 'Points — du plus faible au plus élevé',
+			'submitted_desc' => 'Soumission — plus récentes d’abord',
+			'submitted_asc' => 'Soumission — plus anciennes d’abord',
+			'name_asc' => 'Nom — A à Z',
+			'name_desc' => 'Nom — Z à A',
+		);
+	}
+
+	/** Tri des données du dossier, distinctes du titre et de la date de création WordPress. */
+	private static function sort_ids( array $ids, string $by, string $order ): array {
+		if ( 'points' === $by ) { return Votes::sort_ids( $ids, $order ); }
+		if ( ! in_array( $by, array( 'submitted', 'name' ), true ) ) { return $ids; }
+		$values = array();
+		foreach ( $ids as $id ) {
+			$data = self::data( $id );
+			$values[ $id ] = 'submitted' === $by
+				? ( ! empty( $data['submitted_at'] ) ? strtotime( $data['submitted_at'] ) : false )
+				: array_map( static fn( $value ) => strtolower( remove_accents( trim( $value ) ) ), array( $data['identity']['last_name'] ?? '', $data['identity']['first_name'] ?? '' ) );
+		}
+		$direction = 'ASC' === strtoupper( $order ) ? 1 : -1;
+		usort( $ids, static function ( int $a, int $b ) use ( $values, $by, $direction ): int {
+			$left = $values[ $a ]; $right = $values[ $b ];
+			$missing_left = 'submitted' === $by ? false === $left : '' === $left[0];
+			$missing_right = 'submitted' === $by ? false === $right : '' === $right[0];
+			// Une valeur absente reste à la fin, quel que soit le sens du tri.
+			if ( $missing_left !== $missing_right ) { return $missing_left ? 1 : -1; }
+			$comparison = 'submitted' === $by ? $left <=> $right : ( strcmp( $left[0], $right[0] ) ?: strcmp( $left[1], $right[1] ) );
+			return $direction * ( $comparison ?: ( $a <=> $b ) );
+		} );
+		return $ids;
+	}
+
+	/**
+	 * Tous les IDs consultables par la session, filtrés puis triés ; aucune pagination ici.
+	 * La gestion découpe cette liste, l’export la prend entière, Examiner y trouve ses voisins.
+	 * Les tris title/date restent reconnus pour les liens issus des écrans WordPress natifs.
+	 */
 	public static function navigation_ids( array $context ): array {
+		if ( ! Jury::can_review() ) { return array(); }
 		$args = array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'fields' => 'ids', 'orderby' => 'date', 'order' => 'DESC' );
 		foreach ( array( 'post_status', 'orderby', 'order', 'm', 'author' ) as $key ) {
 			if ( isset( $context[ $key ] ) ) { $args[ $key ] = $context[ $key ]; }
 		}
+		if ( in_array( $args['orderby'], array( 'points', 'submitted', 'name' ), true ) ) { $args['orderby'] = 'date'; }
 		// Un second critère garantit un parcours stable lorsque deux dossiers ont la même date.
 		$args['orderby'] = array( $args['orderby'] => strtoupper( $args['order'] ), 'ID' => strtoupper( $args['order'] ) );
-		if ( ! empty( $context['mp_edition'] ) && self::valid_reference( (int) $context['mp_edition'], 'mp_edition' ) ) { $args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $context['mp_edition'], 'type' => 'NUMERIC' ); }
+		if ( ! empty( $context['mp_edition'] ) ) {
+			if ( ! Jury::can_view_edition( (int) $context['mp_edition'] ) ) { return array(); }
+			$args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $context['mp_edition'], 'type' => 'NUMERIC' );
+		}
+		if ( ! current_user_can( 'mp_manage_applications' ) ) {
+			$editions = Jury::edition_ids();
+			if ( ! $editions ) { return array(); }
+			$args['meta_query'][] = array( 'key' => '_mp_edition_id', 'value' => $editions, 'compare' => 'IN', 'type' => 'NUMERIC' );
+		}
 		if ( isset( self::decisions()[ $context['mp_decision'] ?? '' ] ) ) { $args['meta_query'][] = array( 'key' => '_mp_decision', 'value' => $context['mp_decision'] ); }
 		$ids = array_map( 'intval', get_posts( $args ) );
+		update_meta_cache( 'post', $ids );
+		$ids = array_values( array_filter( $ids, array( Jury::class, 'can_view_application' ) ) );
 		$search = trim( (string) ( $context['s'] ?? '' ) );
 		if ( '' !== $search ) {
 			$terms = preg_split( '/\s+/u', strtolower( remove_accents( $search ) ), -1, PREG_SPLIT_NO_EMPTY );
@@ -403,7 +475,14 @@ final class Records {
 				return true;
 			} ) );
 		}
-		return $ids;
+		if ( in_array( $context['mp_my_vote'] ?? '', array( 'rated', 'unrated' ), true ) ) {
+			$votes = Votes::all( $ids ); $rated = 'rated' === $context['mp_my_vote'];
+			$ids = array_values( array_filter( $ids, static function ( $id ) use ( $votes, $rated ) {
+				$mine = Votes::mine( $id, $votes[ $id ] ?? array() );
+				return null !== $mine && $rated === ( null !== $mine['score'] );
+			} ) );
+		}
+		return self::sort_ids( $ids, $context['orderby'] ?? 'submitted', $context['order'] ?? 'DESC' );
 	}
 
 	private static function navigation( int $id ): void {
@@ -411,13 +490,15 @@ final class Records {
 		$ids = self::navigation_ids( $context );
 		$position = array_search( $id, $ids, true );
 		$list_url = add_query_arg( array_merge( $context, array( 'page' => 'mp-gestion' ) ), admin_url( 'admin.php' ) );
-		echo '<nav aria-label="Navigation des candidatures"><p><a class="button" href="' . esc_url( $list_url ) . '">Retour à la liste</a> ';
+		if ( 'votes' === ( $context['mp_from'] ?? '' ) ) { $list_url = VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ); }
+		echo '<nav class="mp-examiner-nav" aria-label="Navigation des candidatures"><div class="mp-examiner-nav-main"><a class="button" href="' . esc_url( $list_url ) . '">Retour à la liste</a> ';
 		if ( false !== $position ) {
 			if ( $position > 0 ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position - 1 ], $context ) ) . '">← Dossier précédent</a> '; }
-			echo '<span> Dossier ' . esc_html( ( $position + 1 ) . ' sur ' . count( $ids ) ) . ' </span> ';
+			echo '<span class="mp-examiner-position">Dossier ' . esc_html( ( $position + 1 ) . ' sur ' . count( $ids ) ) . '</span> ';
 			if ( isset( $ids[ $position + 1 ] ) ) { echo '<a class="button" href="' . esc_url( self::view_url( $ids[ $position + 1 ], $context ) ) . '">Dossier suivant →</a> '; }
 		} else { echo '<span>Ce dossier ne correspond plus aux filtres de la liste.</span> '; }
-		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique</a></p></nav>';
+		echo '</div><div class="mp-examiner-nav-tools"><a class="button" href="' . esc_url( VoteTracking::url( (int) ( self::data( $id )['edition_id'] ?? 0 ) ) ) . '">Suivi des votes</a> ';
+		echo '<a class="button" href="' . esc_url( admin_url( 'admin.php?page=mp-historique' ) ) . '">Historique des sélections</a></div></nav>';
 	}
 
 	public static function row_actions( array $actions, \WP_Post $post ): array {
@@ -428,30 +509,53 @@ final class Records {
 	}
 
 	public static function view(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		$id = isset( $_GET['candidature'] ) && is_string( $_GET['candidature'] ) ? absint( $_GET['candidature'] ) : 0;
+		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		$id = (int) ( Request::query( 'candidature' ) ?? 0 );
 		if ( ! self::valid_reference( $id, 'mp_candidature' ) ) { wp_die( 'Candidature introuvable.', '', array( 'response' => 404 ) ); }
+		if ( ! Jury::can_view_application( $id ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$data = self::data( $id );
-		echo '<div class="wrap"><h1>' . esc_html( get_the_title( $id ) ) . '</h1>';
+		$identity = $data['identity'] ?? array(); $activity = $data['activity'] ?? array();
+		$name = trim( ( $identity['first_name'] ?? '' ) . ' ' . ( $identity['last_name'] ?? '' ) );
+		$decision = in_array( $data['decision'] ?? '', array( 'selected', 'rejected' ), true ) ? $data['decision'] : 'pending';
+		echo '<div class="wrap mp-examiner"><header class="mp-examiner-heading"><div><p class="mp-examiner-edition">' . esc_html( ! empty( $data['edition_id'] ) ? get_the_title( $data['edition_id'] ) : 'Édition non renseignée' ) . '</p><h1>' . esc_html( $name ?: get_the_title( $id ) ) . '</h1>';
+		$subtitle = array_filter( array( $identity['company'] ?? '', trim( ( $identity['postcode'] ?? '' ) . ' ' . ( $identity['city'] ?? '' ) ), $identity['country'] ?? '' ) );
+		if ( $subtitle ) { echo '<p class="mp-examiner-subtitle">' . esc_html( implode( ' · ', $subtitle ) ) . '</p>'; }
+		echo '</div><span class="mp-examiner-status mp-examiner-status-' . esc_attr( $decision ) . '">Sélection : ' . esc_html( self::decisions()[ $decision ] ) . '</span></header>';
 		self::navigation( $id );
-		echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>';
-		if ( empty( $data['potier_id'] ) ) { echo '<p>Ce dossier ne possède pas encore de données enregistrées. Utilisez « Modifier ce dossier » pour le compléter.</p></div>'; return; }
-		echo '<p><strong>Édition :</strong> ' . esc_html( get_the_title( $data['edition_id'] ) ) . ' — <strong>Décision :</strong> ' . esc_html( self::decisions()[ $data['decision'] ] ?? 'À examiner' ) . '</p>';
-		Review::decision_form( $id );
-		echo '<div class="mp-review-layout"><div><h2>Photos du potier</h2>';
-		Review::photos( $id );
-		SocialImages::render( $id );
+		if ( empty( $data['potier_id'] ) ) {
+			echo '<p>Ce dossier ne possède pas encore de données enregistrées.</p>';
+			if ( current_user_can( 'mp_manage_applications' ) ) { echo '<p><a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></p>'; }
+			echo '</div>'; return;
+		}
+		$has_actions = Jury::multiple( (int) $data['edition_id'] ) || current_user_can( 'mp_manage_applications' );
+		echo '<div class="mp-examiner-grid' . ( $has_actions ? '' : ' mp-examiner-grid-solo' ) . '">';
+		if ( $has_actions ) { echo '<aside class="mp-examiner-sidebar" aria-label="Notation et sélection">'; }
+		Votes::render( $id );
+		if ( current_user_can( 'mp_manage_applications' ) ) {
+			echo '<section class="mp-examiner-card mp-examiner-decision"><h2>Décision de l’administrateur</h2>';
+			Review::decision_form( $id );
+			echo '<a class="button" href="' . esc_url( get_edit_post_link( $id, 'raw' ) ) . '">Modifier ce dossier</a></section>';
+		}
+		if ( $has_actions ) { echo '</aside>'; }
+		echo '<div class="mp-examiner-content">';
+		Review::highlights( $activity );
+		echo '<section class="mp-examiner-card mp-examiner-photos"><div class="mp-examiner-section-heading"><h2>Photos du potier</h2><span>Cliquez pour agrandir</span></div>';
+		Review::photos( $id, '', true );
+		echo '</section><section class="mp-examiner-card"><h2>Présentation de l’atelier</h2><div class="mp-examiner-presentation">' . nl2br( esc_html( ! empty( $activity['presentation'] ) ? $activity['presentation'] : 'Aucune présentation renseignée.' ) ) . '</div></section>';
+		echo '<details class="mp-examiner-card mp-examiner-details" open><summary>Coordonnées et liens</summary><div class="mp-examiner-details-body">';
+		Review::details_summary( Fields::identity(), $identity );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Informations professionnelles et vie associative</summary><div class="mp-examiner-details-body">';
+		$secondary_fields = array_diff_key( Fields::activity(), array_fill_keys( array( 'presentation', 'production', 'production_other', 'technique', 'technique_other', 'stand_length' ), true ) );
+		Review::details_summary( $secondary_fields, $activity );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Justificatifs et autorisation de présentation</summary><div class="mp-examiner-details-body">';
 		PrivateFiles::render( $id, true );
-		echo '</div><div><h2>Coordonnées transmises pour cette édition</h2>';
-		Fields::summary( Fields::identity(), $data['identity'] );
-		echo '<h2>Présentation, activité et stand</h2>';
-		Fields::summary( Fields::activity(), $data['activity'] );
 		if ( 'public' === ( $data['source'] ?? '' ) ) { echo '<p>Déposé depuis le formulaire public. Adresse email déclarée, non vérifiée. Autorisation de présentation publique : ' . esc_html( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' ) . '.</p>'; }
-		echo '<h2>Suivi interne</h2>';
-		Fields::summary( Fields::internal(), $data['internal'] );
-		echo '</div></div>';
-		echo '<h2>Autres candidatures de ce potier</h2>';
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Suivi interne</summary><div class="mp-examiner-details-body">';
+		Review::details_summary( Fields::internal(), $data['internal'] ?? array() );
+		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Autres candidatures de ce potier</summary><div class="mp-examiner-details-body">';
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value, WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- Bounded 50-item history scoped to one potter, excluding only the open dossier; WordPress primes post metadata.
 		$history = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => 50, 'post__not_in' => array( $id ), 'meta_key' => '_mp_potier_id', 'meta_value' => $data['potier_id'], 'orderby' => 'date', 'order' => 'DESC' ) );
+		$history = array_filter( $history, static fn( $previous ) => Jury::can_view_application( $previous->ID ) );
 		if ( ! $history ) { echo '<p>Aucune autre candidature enregistrée.</p>'; }
 		echo '<ul>';
 		foreach ( $history as $previous ) {
@@ -459,13 +563,15 @@ final class Records {
 			if ( empty( $record['edition_id'] ) ) { continue; }
 			echo '<li><a href="' . esc_url( self::view_url( $previous->ID ) ) . '">' . esc_html( get_the_title( $record['edition_id'] ) ) . '</a> — ' . esc_html( self::decisions()[ $record['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</li>';
 		}
-		echo '</ul><p class="description">Les 50 autres dossiers les plus récents au maximum sont présentés ici.</p></div>';
+		echo '</ul><p class="description">Les 50 autres dossiers les plus récents au maximum sont présentés ici.</p></div></details></div></div></div>';
 	}
 
 	public static function history(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$editions = get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$applications = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' ) );
+		$editions = array_values( array_filter( $editions, static fn( $edition ) => Jury::can_view_edition( $edition->ID ) ) );
+		$applications = array_values( array_filter( $applications, static fn( $application ) => Jury::can_view_application( $application->ID ) ) );
 		$edition_ids = array_fill_keys( wp_list_pluck( $editions, 'ID' ), true );
 		$totals = array_fill_keys( array_keys( $edition_ids ), array( 'selected' => 0, 'applications' => 0 ) );
 		$rows = array();
@@ -487,7 +593,7 @@ final class Records {
 		usort( $rows, static function ( array $left, array $right ): int {
 			return strcmp( ( $left['identity']['last_name'] ?? '' ) . "\0" . ( $left['identity']['first_name'] ?? '' ), ( $right['identity']['last_name'] ?? '' ) . "\0" . ( $right['identity']['first_name'] ?? '' ) );
 		} );
-		echo '<div class="wrap"><h1>Historique des candidatures</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
+		echo '<div class="wrap"><h1>Historique des sélections</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
 		if ( ! $editions ) { echo '<p>Aucune édition enregistrée.</p></div>'; return; }
 		echo '<p class="mp-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="mp-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat mp-history-table" style="--mp-editions:' . count( $editions ) . '"><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
 		foreach ( $editions as $edition ) {

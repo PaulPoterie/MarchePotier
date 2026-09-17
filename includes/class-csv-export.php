@@ -9,19 +9,10 @@ final class CsvExport {
 		add_action( 'admin_post_nopriv_mp_export_file', array( self::class, 'file' ) );
 	}
 	public static function file_url( int $id, string $slot ): string {
-		return add_query_arg( array( 'action' => 'mp_export_file', 'application' => $id, 'slot' => $slot ), admin_url( 'admin-post.php' ) );
+		return PrivateFiles::url( $id, $slot );
 	}
-	/** Lien durable, sans jeton exporté : les droits sont revérifiés à chaque ouverture. */
-	public static function file(): void {
-		if ( ! is_user_logged_in() ) { auth_redirect(); exit; }
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		$id = is_string( $_GET['application'] ?? null ) ? absint( $_GET['application'] ) : 0;
-		$slot = is_string( $_GET['slot'] ?? null ) ? $_GET['slot'] : '';
-		if ( ! isset( PrivateFiles::slots()[ $slot ] ) || 'mp_candidature' !== get_post_type( $id ) || 'trash' === get_post_status( $id ) || empty( Records::data( $id )['files'][ $slot ] ) ) { wp_die( 'Fichier introuvable.', '', array( 'response' => 404 ) ); }
-		nocache_headers();
-		wp_safe_redirect( html_entity_decode( PrivateFiles::url( $id, $slot ), ENT_QUOTES, 'UTF-8' ) );
-		exit;
-	}
+	/** Compatibility with links exported before migration to the media library. */
+	public static function file(): void { PrivateFiles::download(); }
 	public static function headers(): array {
 		$row = array( 'Numéro de candidature', 'Édition', 'Sélection' );
 		foreach ( array( Fields::identity(), Fields::activity(), Fields::internal() ) as $schema ) { foreach ( $schema as $field ) { $row[] = $field[0]; } }
@@ -52,6 +43,7 @@ final class CsvExport {
 		return preg_match( '/^[\s\x{FEFF}]*[=+@-]/u', $value ) || preg_match( '/^[\t\r\n]/', $value ) ? "'" . $value : $value;
 	}
 	public static function write( $stream, array $ids ): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Write the UTF-8 BOM to the caller's output stream; buffering the complete CSV would grow memory with the export size.
 		fwrite( $stream, "\xEF\xBB\xBF" );
 		fputcsv( $stream, self::headers(), ';', '"', '', "\r\n" );
 		foreach ( $ids as $id ) { fputcsv( $stream, array_map( array( self::class, 'cell' ), self::row( $id ) ), ';', '"', '', "\r\n" ); }
@@ -65,6 +57,8 @@ final class CsvExport {
 		header( 'X-Content-Type-Options: nosniff' );
 		header( 'Content-Disposition: attachment; filename="candidatures-' . gmdate( 'Y-m-d-His' ) . '.csv"' );
 		$stream = fopen( 'php://output', 'wb' );
-		self::write( $stream, $ids ); fclose( $stream ); exit;
+		self::write( $stream, $ids );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close the php://output stream after sending CSV rows; no filesystem file is being modified.
+		fclose( $stream ); exit;
 	}
 }

@@ -5,9 +5,9 @@ defined( 'ABSPATH' ) || exit;
 final class PublicForm {
 	private static ?\WP_Error $error = null;
 	private static array $values = array();
+	private static bool $consent = false;
 	private const COOKIE = 'mp_form_session';
 	public static function hooks(): void {
-		add_shortcode( 'inscription_potier', array( self::class, 'shortcode' ) );
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
@@ -19,18 +19,11 @@ final class PublicForm {
 	}
 	private static function is_form_page(): bool {
 		$post = get_queried_object();
-		return is_singular() && $post instanceof \WP_Post && has_shortcode( $post->post_content, 'inscription_potier' );
-	}
-	public static function resolve( string $year ): int {
-		if ( ! preg_match( '/^[2-9][0-9]{3}$/D', $year ) ) { return 0; }
-		$matches = array();
-		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => 'publish', 'posts_per_page' => -1 ) ) as $edition ) {
-			if ( Editions::settings( $edition->ID )['year'] === $year ) { $matches[] = $edition->ID; }
-		}
-		return count( $matches ) === 1 ? $matches[0] : 0;
+		return is_singular() && $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::FORM );
 	}
 	private static function session(): string {
-		$value = $_COOKIE[ self::COOKIE ] ?? '';
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Reject anything except the exact 64-character session token below.
+		$value = isset( $_COOKIE[ self::COOKIE ] ) && is_string( $_COOKIE[ self::COOKIE ] ) ? wp_unslash( $_COOKIE[ self::COOKIE ] ) : '';
 		return is_string( $value ) && preg_match( '/^[a-f0-9]{64}$/D', $value ) ? $value : '';
 	}
 	private static function signature( int $edition, string $issued, string $random ): string {
@@ -38,22 +31,30 @@ final class PublicForm {
 	}
 	public static function request(): void {
 		if ( ! self::is_form_page() ) { return; }
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress page-cache interoperability constant; must keep this external name.
 		if ( ! defined( 'DONOTCACHEPAGE' ) ) { define( 'DONOTCACHEPAGE', true ); }
 		nocache_headers();
-		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? 'GET' ) ) {
+		if ( 'INVALID' === Request::method() ) { status_header( 405 ); return; }
+		if ( 'POST' !== Request::method() ) {
 			$value = self::session() ?: bin2hex( random_bytes( 32 ) );
 			setcookie( self::COOKIE, $value, array( 'expires' => time() + DAY_IN_SECONDS, 'path' => '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) );
 			$_COOKIE[ self::COOKIE ] = $value;
 			return;
 		}
-		if ( (int) ( $_SERVER['CONTENT_LENGTH'] ?? 0 ) > 6 * PrivateFiles::MAX_SIZE + 1048576 ) { self::fail( new \WP_Error( 'size', 'L’envoi est trop volumineux. Chaque fichier est limité à ' . PrivateFiles::size_label() . '.' ) ); return; }
+		if ( Request::content_length() > 6 * PrivateFiles::MAX_SIZE + 1048576 ) { self::fail( new \WP_Error( 'size', 'L’envoi est trop volumineux. Chaque fichier est limité à ' . PrivateFiles::size_label() . '.' ) ); return; }
 		unset( $_POST['mp_record_nonce'], $_POST['mp_edition_nonce'] );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Structured answers are type-checked and validated by Fields::validate in submit; tokens are verified below before any mutation.
 		$input = wp_unslash( $_POST );
+		self::$consent = isset( $input['mp_photo_consent'] ) && '1' === $input['mp_photo_consent'];
 		self::$values = isset( $input['mp_record'] ) && is_array( $input['mp_record'] ) ? $input['mp_record'] : array();
 		foreach ( array( 'mp_edition', 'mp_issued', 'mp_random', 'mp_signature', 'mp_nonce' ) as $key ) {
 			if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) { self::fail( new \WP_Error( 'session', 'L’envoi a expiré ou dépasse la limite du serveur. Rechargez la page pour retrouver les pièces déjà reçues.' ) ); return; }
 		}
 		$edition = ctype_digit( $input['mp_edition'] ) ? (int) $input['mp_edition'] : 0;
+		$post = get_queried_object();
+		if ( ! in_array( $edition, Blocks::edition_ids( $post->post_content, Blocks::FORM ), true ) ) {
+			self::fail( new \WP_Error( 'edition', 'L’édition affichée sur cette page a changé. Rechargez la page avant de renvoyer votre candidature.' ) ); return;
+		}
 		$issued = $input['mp_issued'];
 		if ( ! self::session() || ! ctype_digit( $issued ) || (int) $issued > time() || time() - (int) $issued > DAY_IN_SECONDS || ! preg_match( '/^[a-f0-9]{32}$/D', $input['mp_random'] ) || ! hash_equals( self::signature( $edition, $issued, $input['mp_random'] ), $input['mp_signature'] ) || ! wp_verify_nonce( $input['mp_nonce'], 'mp_public_' . $edition ) ) {
 			self::fail( new \WP_Error( 'session', 'La session a expiré. Rechargez la page ; les cookies doivent être autorisés pour envoyer une candidature.' ) ); return;
@@ -71,7 +72,7 @@ final class PublicForm {
 				} elseif ( ! Editions::is_open( $edition ) ) {
 					$result = new \WP_Error( 'closed', 'Les candidatures sont fermées pour cette édition.' );
 				} else {
-					$rate = 'mp_upload_rate_' . hash_hmac( 'sha256', (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ), wp_salt() );
+					$rate = 'mp_upload_rate_' . hash_hmac( 'sha256', Request::remote_address(), wp_salt() );
 					$attempts = (int) get_transient( $rate );
 					if ( $attempts >= 90 ) { $result = new \WP_Error( 'rate', 'Trop de transferts. Réessayez dans quinze minutes.' ); }
 					else {
@@ -85,7 +86,7 @@ final class PublicForm {
 			wp_send_json_success( $result );
 		}
 		// Débit limité par adresse réseau hachée et fenêtre courte ; aucun IP brut conservé.
-		$rate = 'mp_rate_' . hash_hmac( 'sha256', (string) ( $_SERVER['REMOTE_ADDR'] ?? '' ), wp_salt() );
+		$rate = 'mp_rate_' . hash_hmac( 'sha256', Request::remote_address(), wp_salt() );
 		$attempts = (int) get_transient( $rate );
 		if ( $attempts >= 15 ) { self::fail( new \WP_Error( 'rate', 'Trop de tentatives. Réessayez dans quinze minutes.' ) ); return; }
 		set_transient( $rate, $attempts + 1, 900 );
@@ -93,7 +94,7 @@ final class PublicForm {
 		if ( is_wp_error( $result ) ) { self::fail( $result ); return; }
 		self::success( $edition );
 	}
-	private static function async(): bool { return isset( $_GET['mp_async'] ) && '1' === $_GET['mp_async']; }
+	private static function async(): bool { return ( null !== Request::query( 'mp_async' ) ) && '1' === Request::query( 'mp_async' ); }
 	private static function fail( \WP_Error $error ): void {
 		self::$error = $error;
 		if ( self::async() ) { wp_send_json_error( array( 'code' => $error->get_error_code(), 'message' => $error->get_error_message() ), 400 ); }
@@ -127,7 +128,7 @@ final class PublicForm {
 			$email = strtolower( $clean['identity']['email'] );
 			if ( self::duplicate( $edition, $email ) ) { return new \WP_Error( 'duplicate', 'Une candidature utilise déjà cette adresse email pour cette édition. Pour une correction, contactez l’organisateur.' ); }
 			$potier = self::find_potier( $clean['identity'] );
-			$files = $draft ? UploadDrafts::copies( $draft, $revision ) : PrivateFiles::store( $uploads );
+			$files = $draft ? UploadDrafts::files( $draft, $revision ) : PrivateFiles::store( $uploads );
 			if ( is_wp_error( $files ) ) { $error = $files; $files = array(); return $error; }
 			// Recontrôle après le traitement des images : un formulaire ancien ne contourne pas la fermeture.
 			if ( ! Editions::is_open( $edition ) ) { return new \WP_Error( 'closed', 'La période de candidature vient de se terminer.' ); }
@@ -145,12 +146,14 @@ final class PublicForm {
 			if ( ! update_post_meta( $app, Records::META, wp_slash( $data ) ) || ! update_post_meta( $app, '_mp_potier_id', $potier ) || ! update_post_meta( $app, '_mp_edition_id', $edition ) || ! update_post_meta( $app, '_mp_decision', 'pending' ) ) { throw new \RuntimeException( 'metadata' ); }
 			if ( $draft && ! update_post_meta( $app, '_mp_upload_key', $draft ) ) { throw new \RuntimeException( 'receipt' ); }
 			$ok = true;
+			MediaLibrary::finalize( $app );
+			update_post_meta( $app, '_mp_media_migrated', 1 );
 			if ( $draft ) { UploadDrafts::finish( $draft ); }
 			return $app;
 		} catch ( \Throwable $error ) {
 			return new \WP_Error( 'save', 'L’enregistrement n’a pas abouti. Réessayez plus tard ; les pièces envoyées séparément restent disponibles pendant leur durée de conservation.' );
 		} finally {
-			if ( ! $ok ) { foreach ( array_reverse( $created ) as $id ) { wp_delete_post( $id, true ); } PrivateFiles::remove( $files ); }
+			if ( ! $ok ) { foreach ( array_reverse( $created ) as $id ) { wp_delete_post( $id, true ); } if ( ! $draft ) { PrivateFiles::remove( $files ); } }
 			SubmissionLock::release();
 			if ( $ok && ! empty( $created ) && isset( $app ) && is_int( $app ) ) {
 				try { Notifications::send( $app ); } catch ( \Throwable $error ) { update_post_meta( $app, '_mp_mail_error', 'failed' ); }
@@ -161,7 +164,9 @@ final class PublicForm {
 	public static function find_potier( array $submitted ): int {
 		$email = strtolower( trim( $submitted['email'] ?? '' ) );
 		if ( '' === $email ) { return 0; }
-		foreach ( get_posts( array( 'post_type' => 'mp_potier', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC' ) ) as $id ) {
+		$ids = get_posts( array( 'post_type' => 'mp_potier', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC' ) );
+		update_meta_cache( 'post', $ids );
+		foreach ( $ids as $id ) {
 			$identity = Records::data( $id )['identity'] ?? array();
 			if ( strtolower( trim( $identity['email'] ?? '' ) ) === $email && self::name_key( $identity ) === self::name_key( $submitted ) ) { return (int) $id; }
 		}
@@ -171,19 +176,21 @@ final class PublicForm {
 		return strtolower( remove_accents( trim( $identity['last_name'] ?? '' ) . '|' . trim( $identity['first_name'] ?? '' ) ) );
 	}
 	public static function duplicate( int $edition, string $email, int $exclude = 0 ): bool {
-		foreach ( get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future', 'trash' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_mp_edition_id', 'meta_value' => $edition ) ) as $id ) {
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Complete edition-scoped duplicate check, including trash; batch metadata loading below avoids N+1 reads.
+		$ids = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future', 'trash' ), 'posts_per_page' => -1, 'fields' => 'ids', 'meta_key' => '_mp_edition_id', 'meta_value' => $edition ) );
+		update_meta_cache( 'post', $ids );
+		foreach ( $ids as $id ) {
 			if ( $id !== $exclude && strtolower( Records::data( $id )['identity']['email'] ?? '' ) === strtolower( $email ) ) { return true; }
 		}
 		return false;
 	}
-	public static function shortcode( $attributes ): string {
-		$atts = shortcode_atts( array( 'edition' => '' ), $attributes );
-		$edition = self::resolve( (string) $atts['edition'] );
-		if ( ! $edition ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
+	/** Le bloc désigne directement l’édition par son identifiant. */
+	public static function render( int $edition ): string {
+		if ( 'mp_edition' !== get_post_type( $edition ) || 'publish' !== get_post_status( $edition ) ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
 		ob_start();
-		echo '<section id="mp-inscription" class="mp-public"><p class="mp-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( (string) $atts['edition'] ) . '</h2>';
-		echo Editions::introduction( $edition );
-		if ( isset( $_GET['mp_sent'] ) && self::session() && (int) get_transient( 'mp_receipt_' . hash( 'sha256', self::session() ) ) === $edition ) {
+		echo '<section id="mp-inscription" class="mp-public"><p class="mp-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( Blocks::edition_label( $edition ) ) . '</h2>';
+		echo wp_kses_post( Editions::introduction( $edition ) );
+		if ( ( null !== Request::query( 'mp_sent' ) ) && self::session() && (int) get_transient( 'mp_receipt_' . hash( 'sha256', self::session() ) ) === $edition ) {
 			echo '<div class="mp-success" data-mp-edition="' . esc_attr( $edition ) . '" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</div></section>';
 			return ob_get_clean();
 		}
@@ -209,7 +216,7 @@ final class PublicForm {
 			if ( 'insurance' === $slot ) { echo '<small id="mp-file-insurance-help">Joignez une attestation d’assurance responsabilité civile professionnelle valide au jour de l’envoi de votre dossier et comportant la mention « Marchés ou foires en extérieur ».</small>'; }
 			echo '</div>';
 		}
-		echo '</div></fieldset><div class="mp-consent"><p><label><input type="checkbox" name="mp_photo_consent" value="1" required ' . checked( isset( $_POST['mp_photo_consent'] ) && '1' === $_POST['mp_photo_consent'], true, false ) . '> J’autorise l’affichage de ma présentation, de mes photos de créations et la localisation publique de l’adresse fournie sur la carte si je suis sélectionné(e). (Obligatoire)</label></p><p>Votre email et votre téléphone sont destinés à l’équipe organisatrice et ne sont pas affichés dans la présentation publique. Si votre candidature est sélectionnée, votre présentation, votre nom, votre ville, vos liens et vos photos de créations pourront être présentés, et votre adresse localisée sur la carte. La localisation des adresses françaises utilise le service IGN.</p></div>';
+		echo '</div></fieldset><div class="mp-consent"><p><label><input type="checkbox" name="mp_photo_consent" value="1" required ' . checked( self::$consent, true, false ) . '> J’autorise l’affichage de ma présentation, de mes photos de créations et la localisation publique de l’adresse fournie sur la carte si je suis sélectionné(e). (Obligatoire)</label></p><p>Votre email et votre téléphone sont destinés à l’équipe organisatrice et ne sont pas affichés dans la présentation publique. Si votre candidature est sélectionnée, votre présentation, votre nom, votre ville, vos liens et vos photos de créations pourront être présentés, et votre adresse localisée sur la carte. La localisation des adresses françaises utilise le service IGN.</p></div>';
 		$privacy = get_privacy_policy_url();
 		if ( $privacy ) { echo '<p><a href="' . esc_url( $privacy ) . '">Politique de confidentialité</a></p>'; }
 		echo '<button type="submit">Envoyer ma candidature</button></form></section>';
@@ -227,9 +234,7 @@ final class PublicForm {
 			if ( 'address' === $key ) { $field[1] = 'text'; }
 			if ( 'instagram' === $key ) { $field[0] = 'Instagram — nom de compte'; $field[1] = 'text'; }
 			$id = 'mp-public-' . $key; $name = 'mp_record[' . $group . '][' . $key . ']';
-			$condition = isset( $field[4] ) ? ' data-parent="' . esc_attr( $field[4][0] ) . '" data-choice="' . esc_attr( $field[4][1] ) . '"' : '';
-			$required = $field[2] ? ' required' : '';
-			echo '<div class="mp-field' . ( 'activity' === $group || in_array( $field[1], array( 'textarea', 'multiple' ), true ) || in_array( $key, array( 'company', 'address' ), true ) || ( isset( $field[4] ) && 'association_names' !== $key ) ? ' mp-field-wide' : '' ) . '"' . $condition . '>';
+			echo '<div class="mp-field' . ( 'activity' === $group || in_array( $field[1], array( 'textarea', 'multiple' ), true ) || in_array( $key, array( 'company', 'address' ), true ) || ( isset( $field[4] ) && 'association_names' !== $key ) ? ' mp-field-wide' : '' ) . '"' . ( isset( $field[4] ) ? ' data-parent="' . esc_attr( $field[4][0] ) . '" data-choice="' . esc_attr( $field[4][1] ) . '"' : '' ) . '>';
 			if ( 'multiple' === $field[1] ) {
 				echo '<fieldset data-multiple="' . esc_attr( $key ) . '"><legend>' . esc_html( $field[0] ) . ' *</legend>';
 				foreach ( $field[3] as $option => $label ) { echo '<label class="mp-choice"><input type="checkbox" name="' . esc_attr( $name . '[]' ) . '" value="' . esc_attr( $option ) . '" ' . checked( in_array( $option, $value, true ), true, false ) . '> ' . esc_html( $label ) . '</label>'; }
@@ -239,28 +244,29 @@ final class PublicForm {
 				if ( 'address' === $key ) { echo '<small id="mp-address-help">Si votre candidature est sélectionnée, cette adresse sera utilisée pour situer votre atelier sur la carte publique des potiers.</small>'; }
 				if ( 'presentation' === $key ) { echo '<small id="mp-presentation-help">Décrivez votre parcours, votre démarche et votre travail (300 mots maximum).</small>'; }
 				if ( 'association_details' === $key ) { echo '<small id="mp-association-help">(Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</small>'; }
-				$attrs = ' id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"' . $required;
-				if ( 'website' === $key ) { $attrs .= ' placeholder="https://www.monatelier.fr"'; }
-				if ( 'facebook' === $key ) { $attrs .= ' placeholder="https://www.facebook.com/monatelier"'; }
-				if ( 'instagram' === $key ) { $attrs .= ' placeholder="@monatelier" autocapitalize="none" spellcheck="false"'; }
-				if ( 'professional_status' === $key ) { $attrs .= ' aria-describedby="mp-professional-status-help"'; }
-				if ( 'address' === $key ) { $attrs .= ' aria-describedby="mp-address-help"'; }
-				if ( 'presentation' === $key ) { $attrs .= ' aria-describedby="mp-presentation-help mp-presentation-count"'; }
-				if ( 'association_details' === $key ) { $attrs .= ' aria-describedby="mp-association-help"'; }
-				if ( $locked ) { $attrs .= ' readonly aria-describedby="mp-stand-fixed"'; echo '<small id="mp-stand-fixed">Taille fixée par l’organisateur.</small>'; }
-				if ( 'textarea' === $field[1] ) { echo '<textarea rows="4" maxlength="10000"' . $attrs . '>' . esc_textarea( $value ) . '</textarea>'; }
+				if ( $locked ) { echo '<small id="mp-stand-fixed">Taille fixée par l’organisateur.</small>'; }
+				if ( 'textarea' === $field[1] ) { echo '<textarea rows="4" maxlength="10000"'; self::render_attributes( $id, $name, $key, (bool) $field[2], $locked ); echo '>' . esc_textarea( $value ) . '</textarea>'; }
 				elseif ( 'select' === $field[1] ) {
-					echo '<select' . $attrs . '><option value="">Choisir…</option>';
+					echo '<select'; self::render_attributes( $id, $name, $key, (bool) $field[2], $locked ); echo '><option value="">Choisir…</option>';
 					foreach ( $field[3] as $option => $label ) { echo '<option value="' . esc_attr( $option ) . '" ' . selected( $value, $option, false ) . '>' . esc_html( $label ) . '</option>'; }
 					echo '</select>';
 					if ( 'professional_status' === $key ) { self::status_help( 'mp-professional-status-help' ); }
-				} else { echo '<input type="' . esc_attr( $field[1] ) . '"' . $attrs . ' value="' . esc_attr( $value ) . '"' . ( 'number' === $field[1] ? ' min="0.01" max="1000" step="0.01"' : ' maxlength="1000"' ) . '>'; }
+				} else { echo '<input type="' . esc_attr( $field[1] ) . '"'; self::render_attributes( $id, $name, $key, (bool) $field[2], $locked ); echo ' value="' . esc_attr( $value ) . '"' . ( 'number' === $field[1] ? ' min="0.01" max="1000" step="0.01"' : ' maxlength="1000"' ) . '>'; }
 			}
 			if ( 'presentation' === $key ) { echo '<small id="mp-presentation-count" role="status" hidden></small>'; }
 			if ( isset( $field[4] ) ) { echo '<small>À préciser si la réponse correspondante est « ' . esc_html( $schema[ $field[4][0] ][3][ $field[4][1] ] ) . ' ».</small>'; }
 			echo '</div>';
 		}
 		echo '</div></fieldset>';
+	}
+	private static function render_attributes( string $id, string $name, string $key, bool $required, bool $locked ): void {
+		echo ' id="' . esc_attr( $id ) . '" name="' . esc_attr( $name ) . '"' . ( $required ? ' required' : '' );
+		$placeholders = array( 'website' => 'https://www.monatelier.fr', 'facebook' => 'https://www.facebook.com/monatelier', 'instagram' => '@monatelier' );
+		if ( isset( $placeholders[ $key ] ) ) { echo ' placeholder="' . esc_attr( $placeholders[ $key ] ) . '"'; }
+		if ( 'instagram' === $key ) { echo ' autocapitalize="none" spellcheck="false"'; }
+		$help = array( 'professional_status' => 'mp-professional-status-help', 'address' => 'mp-address-help', 'presentation' => 'mp-presentation-help mp-presentation-count', 'association_details' => 'mp-association-help' );
+		if ( $locked ) { echo ' readonly aria-describedby="mp-stand-fixed"'; }
+		elseif ( isset( $help[ $key ] ) ) { echo ' aria-describedby="' . esc_attr( $help[ $key ] ) . '"'; }
 	}
 	private static function status_help( string $id ): void {
 		echo '<div id="' . esc_attr( $id ) . '" aria-live="polite">';

@@ -2,18 +2,24 @@
 namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
-/** Verrou MySQL de connexion : commun aux dépôts et sauvegardes internes. */
+/**
+ * Verrou MySQL par site pour dépôts, fichiers, affectations, notes et réservations d’emails.
+ * Il n’est pas réentrant : ne pas acquérir un second verrou dans une fonction appelée sous verrou.
+ * Toujours libérer dans finally. Ce verrou ne remplace ni une transaction ni un numéro de révision.
+ */
 final class SubmissionLock {
 	private static bool $held = false;
 	private static function name(): string { global $wpdb; return 'mp_' . hash( 'sha256', DB_NAME . $wpdb->prefix ); }
 	public static function acquire(): bool {
 		global $wpdb;
 		if ( self::$held ) { return false; }
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- GET_LOCK must execute on the live MySQL connection; caching would bypass mutual exclusion.
 		self::$held = '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 3)', substr( self::name(), 0, 64 ) ) );
 		return self::$held;
 	}
 	public static function release(): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- RELEASE_LOCK must execute on the same connection; never cache lock operations.
 		if ( self::$held ) { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', substr( self::name(), 0, 64 ) ) ); self::$held = false; }
 	}
 }
