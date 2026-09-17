@@ -13,11 +13,13 @@ final class SubmissionLock {
 	public static function acquire(): bool {
 		global $wpdb;
 		if ( self::$held ) { return false; }
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- GET_LOCK must execute on the live MySQL connection; caching would bypass mutual exclusion.
 		self::$held = '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 3)', substr( self::name(), 0, 64 ) ) );
 		return self::$held;
 	}
 	public static function release(): void {
 		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- RELEASE_LOCK must execute on the same connection; never cache lock operations.
 		if ( self::$held ) { $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', substr( self::name(), 0, 64 ) ) ); self::$held = false; }
 	}
 }

@@ -9,6 +9,7 @@ final class Votes {
 		add_action( 'admin_init', array( self::class, 'install' ) );
 		add_action( 'admin_post_mp_vote', array( self::class, 'save' ) );
 		add_action( 'before_delete_post', static function ( $id, $post ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table deletion on permanent application removal; no read cache to invalidate.
 			if ( 'mp_candidature' === $post->post_type && '1' === get_option( 'mp_votes_schema_version' ) ) { global $wpdb; $wpdb->delete( self::table(), array( 'application_id' => $id ), array( '%d' ) ); }
 		}, 10, 2 );
 	}
@@ -28,6 +29,7 @@ final class Votes {
 			UNIQUE KEY application_user (application_id,user_id),
 			KEY edition_id (edition_id)
 		) $collation;" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirm dbDelta created the real custom table before marking the schema available.
 		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) { update_option( 'mp_votes_schema_version', '1', false ); }
 	}
 	/**
@@ -38,7 +40,10 @@ final class Votes {
 		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
 		if ( ! $ids || '1' !== get_option( 'mp_votes_schema_version' ) ) { return array(); }
 		global $wpdb;
-		$rows = $wpdb->get_results( 'SELECT application_id, edition_id, user_id, score, updated_at FROM ' . self::table() . ' WHERE application_id IN (' . implode( ',', $ids ) . ')', ARRAY_A );
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		// Only generated %d placeholders are interpolated; every ID and the table identifier are prepared.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Fresh grouped read of custom votes, including writes from other jury sessions.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT application_id, edition_id, user_id, score, updated_at FROM %i WHERE application_id IN ($placeholders)", array_merge( array( self::table() ), $ids ) ), ARRAY_A );
 		$result = array();
 		foreach ( $rows as $row ) { $result[ (int) $row['application_id'] ][ (int) $row['user_id'] ] = $row; }
 		return $result;
@@ -91,15 +96,16 @@ final class Votes {
 			if ( 'multiple' !== $settings['mode'] ) { return new \WP_Error( 'mode', 'La notation nécessite le mode votes multiples.', array( 'status' => 403 ) ); }
 			if ( '1' !== get_option( 'mp_votes_schema_version' ) ) { return new \WP_Error( 'storage', 'Les votes ne sont pas encore disponibles. Contactez le responsable.', array( 'status' => 503 ) ); }
 			global $wpdb;
-			$result = $wpdb->query( $wpdb->prepare( 'INSERT INTO ' . self::table() . ' (application_id,edition_id,user_id,score,updated_at) VALUES (%d,%d,%d,%d,%s) ON DUPLICATE KEY UPDATE score=VALUES(score), updated_at=VALUES(updated_at)', $id, $edition, $uid, (int) $score, gmdate( 'Y-m-d H:i:s' ) ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table UPSERT under lock; fresh grouped reads reflect concurrent jury writes.
+			$result = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (application_id,edition_id,user_id,score,updated_at) VALUES (%d,%d,%d,%d,%s) ON DUPLICATE KEY UPDATE score=VALUES(score), updated_at=VALUES(updated_at)', self::table(), $id, $edition, $uid, (int) $score, gmdate( 'Y-m-d H:i:s' ) ) );
 			return false === $result ? new \WP_Error( 'storage', 'La note n’a pas été enregistrée. Réessayez.', array( 'status' => 500 ) ) : true;
 		} finally { SubmissionLock::release(); }
 	}
 	public static function save(): void {
-		$id = is_string( $_POST['candidature'] ?? null ) ? absint( $_POST['candidature'] ) : 0;
+		$id = (int) ( Request::post( 'candidature' ) ?? 0 );
 		check_admin_referer( 'mp_vote_' . $id );
-		$result = self::record( $id, $_POST['score'] ?? null );
-		if ( is_wp_error( $result ) ) { wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => $result->get_error_data()['status'] ?? 400, 'back_link' => true ) ); }
+		$result = self::record( $id, Request::post( 'score' ) );
+		if ( is_wp_error( $result ) ) { $status = (int) ( $result->get_error_data()['status'] ?? 400 ); wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) $status, 'back_link' => true ) ); }
 		wp_safe_redirect( add_query_arg( 'mp_vote_saved', '1', Records::view_url( $id, Records::list_context() ) ), 303 );
 		exit;
 	}
@@ -110,7 +116,7 @@ final class Votes {
 		$mine = self::mine( $id, $votes );
 		$summary = self::summary( $id, $votes );
 		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">' . ( $mine ? 'Ma note' : 'Votes pour la sélection' ) . '</h2>';
-		if ( isset( $_GET['mp_vote_saved'] ) ) { echo '<div class="notice notice-success inline" role="status"><p>Votre note a été enregistrée.</p></div>'; }
+		if ( null !== Request::query( 'mp_vote_saved' ) ) { echo '<div class="notice notice-success inline" role="status"><p>Votre note a été enregistrée.</p></div>'; }
 		if ( $mine ) {
 			$score_value = null === $mine['score'] ? '' : (string) $mine['score'];
 			echo '<p class="mp-vote-member">' . esc_html( $mine['name'] ) . '</p><p class="mp-vote-state' . ( '' === $score_value ? ' mp-vote-state-pending' : '' ) . '" id="mp-vote-state" aria-live="polite">' . ( '' === $score_value ? 'À noter par moi' : 'Note enregistrée : ' . esc_html( $score_value ) . '/5' ) . '</p>';

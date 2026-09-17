@@ -9,8 +9,8 @@ final class VoteTracking {
 			add_submenu_page( 'marche-potier', 'Suivi des votes', 'Suivi des votes', 'mp_review_applications', 'mp-suivi-votes', array( self::class, 'render' ) );
 		} );
 		add_action( 'admin_enqueue_scripts', static function () {
-			if ( 'mp-suivi-votes' === ( $_GET['page'] ?? '' ) ) {
-				wp_enqueue_style( 'mp-vote-tracking', plugins_url( '../assets/vote-tracking.css', __FILE__ ), array(), '0.19.0-beta.7' );
+			if ( 'mp-suivi-votes' === ( Request::query( 'page' ) ?? '' ) ) {
+				wp_enqueue_style( 'mp-vote-tracking', plugins_url( '../assets/vote-tracking.css', __FILE__ ), array(), '0.19.0' );
 			}
 		} );
 	}
@@ -38,7 +38,7 @@ final class VoteTracking {
 	}
 	public static function render(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		$requested = $_GET['mp_edition'] ?? '';
+		$requested = Request::query( 'mp_edition' ) ?? ( Request::has_query( 'mp_edition' ) ? null : '' );
 		if ( ! is_string( $requested ) || ( '' !== $requested && ( ! ctype_digit( $requested ) || (int) $requested < 1 ) ) ) { wp_die( 'Édition invalide.', '', array( 'response' => 400 ) ); }
 		$editions = Jury::edition_ids();
 		$edition = '' !== $requested ? (int) $requested : ( $editions[0] ?? 0 );
@@ -46,7 +46,7 @@ final class VoteTracking {
 		echo '<div class="wrap"><h1>Suivi des votes</h1>';
 		if ( ! $editions ) { echo '<p>Aucune édition accessible.</p></div>'; return; }
 		$data = self::data( $edition );
-		if ( is_wp_error( $data ) ) { wp_die( esc_html( $data->get_error_message() ), '', array( 'response' => $data->get_error_data()['status'] ?? 403 ) ); }
+		if ( is_wp_error( $data ) ) { $status = (int) ( $data->get_error_data()['status'] ?? 403 ); wp_die( esc_html( $data->get_error_message() ), '', array( 'response' => (int) $status ) ); }
 		echo '<form method="get" class="mp-vote-tracking-filter"><input type="hidden" name="page" value="mp-suivi-votes"><label for="mp-tracking-edition">Édition</label> <select id="mp-tracking-edition" name="mp_edition">';
 		foreach ( $editions as $id ) { echo '<option value="' . esc_attr( $id ) . '" ' . selected( $edition, $id, false ) . '>' . esc_html( Blocks::edition_label( $id ) ) . '</option>'; }
 		echo '</select> <button class="button">Afficher</button></form>';

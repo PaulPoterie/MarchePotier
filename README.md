@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0-beta.9 — 16 septembre 2026 — branche `feature/votes-organisateurs`.
+Version 0.19.0 — 17 septembre 2026 — branche `main`.
 
 Ce dépôt contient le code actif du plugin : administration du marché, candidatures, notes de 0 à 5, invitations, suivi des votes et blocs publics.
 
@@ -9,11 +9,11 @@ Ce dépôt contient le code actif du plugin : administration du marché, candida
 
 Les blocs **Formulaire de candidature** et **Présentation de la sélection** utilisent l’ID de l’édition choisie. Il n’y a plus de shortcodes. Chaque édition demande **un seul administrateur**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
 
-[Télécharger la version stable précédente 0.18.0](https://github.com/PaulPoterie/MarchePotier/releases/download/v0.18.0/marche-potier-0.18.0.zip)
+Version stable actuelle : **0.19.0**. Archive d’installation : `marche-potier-0.19.0.zip`.
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0-beta.9.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Un ZIP de livraison contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
@@ -81,7 +81,7 @@ Photos : JPEG, PNG ou WebP. Justificatifs : PDF ou images dans ces mêmes format
 
 Les fichiers partent séparément dès leur sélection. Une progression, un état et une possibilité de réessayer accompagnent chaque pièce. **Recevoir les pièces ne valide pas la candidature** : le candidat doit encore cliquer sur **Envoyer ma candidature**.
 
-Les textes et les choix sont sauvegardés dans le navigateur pendant au plus 24 heures. Les pièces reçues disposent également d’une conservation temporaire de 24 heures ; le délai du texte est raccourci si les pièces expirent plus tôt. Pour reprendre, utiliser le même navigateur et conserver ses cookies et données de site. Une erreur de validation ne supprime pas le brouillon. Après confirmation de l’enregistrement, le brouillon est effacé. Aucun bouton « Effacer le brouillon » n’est encore proposé.
+Les textes et les choix sont sauvegardés dans le navigateur pendant au plus 24 heures. Les pièces reçues disposent également d’une conservation temporaire de 24 heures ; le délai du texte est raccourci si les pièces expirent plus tôt. Pour reprendre, utiliser le même navigateur et conserver ses cookies et données de site. Une erreur de validation ne supprime pas le brouillon. Après confirmation de l’enregistrement, les mêmes médias sont rattachés à la candidature et deviennent définitifs ; seules les données du brouillon sont effacées. Les copies pour les réseaux sociaux sont générées après validation. Le nettoyage ne supprime que les pièces provisoires expirées et non utilisées par une candidature, jamais les médias ordinaires non attachés. Aucun bouton « Effacer le brouillon » n’est encore proposé.
 
 Le consentement à la présentation publique en cas de sélection est obligatoire. L’adresse sera utilisée pour localiser l’atelier sur la carte.
 
@@ -111,7 +111,7 @@ Dans **Gestion des candidatures**, utilisez la recherche et les filtres d’édi
 
 En **Votes multiples**, chaque administrateur ou votant affecté peut noter et corriger sa propre note à tout moment, même avant l’ouverture ou après la fermeture des inscriptions. Il n’y a pas d’option de clôture des votes. Le mode simple conserve les notes mais masque la notation.
 
-La mise à la corbeille permet de retirer un spam ou un doublon. Le bouton **Corbeille** ouvre la liste native WordPress : restaurez-y un dossier supprimé par erreur. La suppression définitive retire aussi les fichiers gérés pour ce dossier ; elle nécessite donc une sauvegarde préalable si vous souhaitez pouvoir revenir en arrière.
+La mise à la corbeille permet de retirer un spam ou un doublon. Le bouton **Corbeille** ouvre la liste native WordPress : restaurez-y un dossier supprimé par erreur. La suppression définitive du dossier conserve ses médias dans la médiathèque, pour ne pas casser leurs éventuelles réutilisations. Supprimez explicitement les médias devenus inutiles dans la médiathèque.
 
 ### Suivi des votes
 
@@ -139,14 +139,18 @@ La galerie affiche tous les sélectionnés : trois colonnes sur grand écran, un
 
 La carte utilise OpenStreetMap, sans clé API configurée dans le plugin. Le géocodage automatique actuel concerne les adresses françaises via l’IGN et dépend des tâches planifiées WordPress. Une adresse étrangère ou non reconnue peut rester absente de la carte, sans empêcher la fiche d’apparaître dans la galerie.
 
-Lors de l’envoi des trois photos de créations, le plugin prépare automatiquement des copies JPEG de 1080 × 1350 pixels pour de futures publications Instagram et Facebook. La photo entière est conservée sur fond blanc, sans remplacer l’image du dossier. Aucun champ supplémentaire ni rubrique dédiée n’apparaît dans **Examiner**. Cette version ne publie pas automatiquement sur ces réseaux.
+Après validation de la candidature, le plugin prépare automatiquement des copies JPEG de 1080 × 1350 pixels pour de futures publications Instagram et Facebook. La photo entière est conservée sur fond blanc, sans remplacer l’image du dossier. Les copies sont disponibles dans la médiathèque et par des liens sous les photos dans **Examiner**. Cette version ne publie pas automatiquement sur ces réseaux.
 
 ## 10. Sauvegarde et entretien
 
-Sauvegardez **la base WordPress et uploads ensemble**. Le plugin utilise le sous-dossier `marche-potier` du répertoire uploads configuré par WordPress, avec des noms de fichiers aléatoires. Une réinstallation du seul ZIP ne restaure pas les candidatures ni leurs fichiers.
+Sauvegardez **la base WordPress et uploads ensemble**. Les nouvelles pièces sont des médias WordPress dans le répertoire uploads configuré. Les anciennes pièces sont importées progressivement dans la médiathèque, sans déplacement si elles sont déjà dans uploads. Une réinstallation du seul ZIP ne restaure pas les candidatures ni leurs fichiers.
 
 Avant chaque campagne, contrôlez les dates, le règlement, le tarif, les coordonnées organisateur et la réception des emails. Après une mise à jour WordPress, PHP, du thème, du cache ou du plugin, essayez un dépôt sur un site de test, l’examen d’un dossier et la galerie.
 
 La page de candidature doit être exclue des caches de page/CDN. Le navigateur doit accepter les cookies ; JavaScript apporte la progression et la reprise. Les tâches planifiées WordPress doivent fonctionner pour nettoyer les pièces temporaires et préparer les localisations.
 
 Cette version ne comporte pas de service de mise à jour automatique depuis GitHub. La mise à jour se fait en téléversant le nouveau ZIP. Conservez une sauvegarde avant tout remplacement.
+
+### Médiathèque et liens des pièces
+
+Photos, justificatifs et copies pour les réseaux sociaux sont accessibles par leur URL sans connexion. Les justificatifs ne figurent pas dans la galerie publique. Le CSV contient les liens directs ; son export et les dossiers restent réservés aux comptes autorisés. Dans la vue liste de la médiathèque, la colonne Marché Potier distingue les envois provisoires des pièces rattachées à une candidature. Remplacer une pièce conserve l’ancien média.

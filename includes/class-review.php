@@ -36,17 +36,17 @@ final class Review {
 		} );
 		add_action( 'admin_post_mp_review_decision', array( self::class, 'save_decision' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
-			if ( 'mp-historique' === ( $_GET['page'] ?? '' ) ) {
+			if ( 'mp-historique' === ( Request::query( 'page' ) ?? '' ) ) {
 				wp_enqueue_style( 'mp-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.17.4' );
 				return;
 			}
-			if ( ! in_array( $_GET['page'] ?? '', array( 'mp-gestion', 'mp-dossier' ), true ) ) { return; }
-			if ( 'mp-dossier' === ( $_GET['page'] ?? '' ) ) {
+			if ( ! in_array( Request::query( 'page' ) ?? '', array( 'mp-gestion', 'mp-dossier' ), true ) ) { return; }
+			if ( 'mp-dossier' === ( Request::query( 'page' ) ?? '' ) ) {
 				wp_enqueue_style( 'mp-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.12.0' );
 				wp_enqueue_script( 'mp-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.12.0', true );
 			}
-			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0-beta.9.6' );
-			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0-beta.9.2', true );
+			wp_enqueue_style( 'mp-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.0' );
+			wp_enqueue_script( 'mp-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.0', true );
 		} );
 	}
 
@@ -63,6 +63,7 @@ final class Review {
 		}
 		if ( ! $found ) { echo '<p>Aucune photo.</p>'; }
 		echo '</div>';
+		if ( $captions && ! $target ) { SocialImages::render( $id ); }
 	}
 
 	public static function highlights( array $activity ): void {
@@ -88,7 +89,7 @@ final class Review {
 
 	public static function decision_form( int $id ): void {
 		if ( ! current_user_can( 'mp_manage_applications' ) || ! current_user_can( 'mp_select_applications' ) ) { return; }
-		if ( isset( $_GET['mp_decision_saved'] ) ) { echo '<div class="notice notice-success inline"><p>Sélection enregistrée.</p></div>'; }
+		if ( null !== Request::query( 'mp_decision_saved' ) ) { echo '<div class="notice notice-success inline"><p>Sélection enregistrée.</p></div>'; }
 		echo '<form method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '" class="mp-review-decision"><input type="hidden" name="action" value="mp_review_decision"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
 		wp_nonce_field( 'mp_review_decision_' . $id );
 		echo '<label for="mp-review-decision"><strong>Sélection pour cette édition</strong></label> <select id="mp-review-decision" name="decision">';
@@ -98,9 +99,9 @@ final class Review {
 
 	public static function save_decision(): void {
 		if ( ! current_user_can( 'mp_manage_applications' ) || ! current_user_can( 'mp_select_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		$id = is_string( $_POST['candidature'] ?? null ) ? absint( $_POST['candidature'] ) : 0;
+		$id = (int) ( Request::post( 'candidature' ) ?? 0 );
 		check_admin_referer( 'mp_review_decision_' . $id );
-		$decision = $_POST['decision'] ?? '';
+		$decision = Request::post( 'decision' ) ?? '';
 		if ( ! is_string( $decision ) || ! isset( Records::decisions()[ $decision ] ) || 'mp_candidature' !== get_post_type( $id ) || ! in_array( get_post_status( $id ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { wp_die( 'Candidature ou décision invalide.', '', array( 'response' => 400 ) ); }
 		if ( ! SubmissionLock::acquire() ) { wp_die( 'Un enregistrement est en cours. Réessayez.', '', array( 'response' => 409 ) ); }
 		try {
@@ -137,7 +138,7 @@ final class Review {
 			} elseif ( 'tel' === $field[1] && preg_match( '/[0-9]/', $value ) ) {
 				$html = '<a href="' . esc_url( 'tel:' . preg_replace( '/[^0-9+]/', '', $value ) ) . '">' . esc_html( $value ) . '</a>';
 			}
-			echo '<div><dt>' . esc_html( $labels[ $key ] ?? $field[0] ) . '</dt><dd>' . $html . '</dd></div>';
+			echo '<div><dt>' . esc_html( $labels[ $key ] ?? $field[0] ) . '</dt><dd>' . wp_kses( $html, array( 'a' => array( 'href' => true, 'target' => true, 'rel' => true ), 'br' => array() ) ) . '</dd></div>';
 		}
 		echo '</dl>';
 	}
@@ -177,8 +178,8 @@ final class Review {
 			echo '<div class="mp-management-actions"><a class="button" href="' . esc_url( admin_url( 'post-new.php?post_type=mp_candidature' ) ) . '">Ajouter une candidature</a><a class="button mp-export-button" href="' . esc_url( $export_url ) . '">Exporter CSV</a><a class="mp-trash-link" href="' . esc_url( $trash_url ) . '">Corbeille (' . esc_html( (string) $trash_count ) . ')</a></div>';
 		}
 		echo '</div><hr class="wp-header-end">';
-		if ( ! empty( $_GET['mp_trashed'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
-		if ( ! empty( $_GET['mp_deleted'] ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
+		if ( ! empty( Request::query( 'mp_trashed' ) ) ) { echo '<div class="notice notice-success"><p>Candidature(s) placée(s) dans la corbeille. Vous pouvez les restaurer depuis le bouton Corbeille.</p></div>'; }
+		if ( ! empty( Request::query( 'mp_deleted' ) ) ) { echo '<div class="notice notice-success"><p>Candidature(s) supprimée(s) définitivement.</p></div>'; }
 	}
 
 	private static function management_filters( array $context ): void {

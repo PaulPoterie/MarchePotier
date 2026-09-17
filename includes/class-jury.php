@@ -15,8 +15,8 @@ final class Jury {
 		add_action( 'admin_enqueue_scripts', static function () {
 			$screen = get_current_screen();
 			if ( $screen && 'mp_edition' === $screen->post_type && 'post' === $screen->base ) {
-				wp_enqueue_script( 'mp-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.0-beta.5', true );
-				wp_enqueue_style( 'mp-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.0-beta.5' );
+				wp_enqueue_script( 'mp-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.0', true );
+				wp_enqueue_style( 'mp-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.0' );
 			}
 		} );
 	}
@@ -233,13 +233,14 @@ final class Jury {
 	}
 	public static function save( int $edition ): bool {
 		if ( wp_is_post_revision( $edition ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'mp_manage_jury' ) ) { return false; }
-		$nonce = $_POST['mp_jury_nonce'] ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( wp_unslash( $nonce ), 'mp_jury_' . $edition ) ) {
+		$nonce = Request::post( 'mp_jury_nonce' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_jury_' . $edition ) ) {
 			set_transient( 'mp_jury_error_' . get_current_user_id(), 'Session expirée. Rechargez l’édition avant de réessayer.', 120 );
 			return false;
 		}
 		$locked = SubmissionLock::acquire();
 		try {
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- configure() validates the full member schema under lock, after nonce and capability checks.
 			$result = $locked && is_array( $_POST['mp_jury'] ?? null ) ? self::configure( $edition, wp_unslash( $_POST['mp_jury'] ) ) : new \WP_Error( 'busy', 'Enregistrement indisponible. Réessayez.' );
 			if ( is_wp_error( $result ) ) { set_transient( 'mp_jury_error_' . get_current_user_id(), $result->get_error_message(), 120 ); }
 		} finally { if ( $locked ) { SubmissionLock::release(); } }

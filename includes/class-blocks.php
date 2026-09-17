@@ -17,8 +17,8 @@ final class Blocks {
 		} );
 	}
 	public static function register(): void {
-		wp_register_script( 'mp-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.0-beta.4', true );
-		wp_register_style( 'mp-blocks-editor', plugins_url( '../assets/blocks-editor.css', __FILE__ ), array(), '0.19.0-beta.4' );
+		wp_register_script( 'mp-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.0', true );
+		wp_register_style( 'mp-blocks-editor', plugins_url( '../assets/blocks-editor.css', __FILE__ ), array(), '0.19.0' );
 		foreach ( array( self::FORM => 'Formulaire de candidature', self::SELECTION => 'Présentation de la sélection' ) as $name => $title ) {
 			register_block_type( $name, array(
 				'api_version' => 3,

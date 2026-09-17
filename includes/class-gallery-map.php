@@ -36,6 +36,7 @@ final class GalleryMap {
 		$key = 'mp_address_' . $signature;
 		$features = get_transient( $key );
 		if ( false === $features ) {
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Existing documented mp_ provider filter API; preserve site customizations.
 			$response = wp_remote_get( add_query_arg( array( 'q' => trim( $address . ' ' . $postcode . ' ' . $city ), 'index' => 'address', 'limit' => 2 ), apply_filters( 'mp_address_geocoder_url', 'https://data.geopf.fr/geocodage/search' ) ), array( 'timeout' => 8, 'user-agent' => 'MarchePotier/0.8.0 (' . home_url() . ')' ) );
 			if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) { return; }
 			$json = json_decode( wp_remote_retrieve_body( $response ), true );
@@ -62,6 +63,7 @@ final class GalleryMap {
 			$points[] = array( 'lat' => $point['lat'], 'lon' => $point['lon'], 'name' => trim( ( $identity['last_name'] ?? '' ) . ' ' . ( $identity['first_name'] ?? '' ) ), 'city' => $identity['city'] ?? '', 'address' => trim( ( $identity['address'] ?? '' ) . ', ' . ( $identity['postcode'] ?? '' ) . ' ' . ( $identity['city'] ?? '' ) ), 'target' => $prefix . $id );
 		}
 		if ( ! $points ) { return; }
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Existing documented mp_ provider filter API; preserve site customizations.
 		echo '<section class="mp-map-section" aria-label="Carte des potiers"><div class="mp-map-heading"><div><p class="mp-map-eyebrow">À travers les ateliers</p><h2>Les potiers sur la carte</h2></div><p>' . esc_html( count( $points ) ) . ' potiers localisés · adresses des candidats</p></div><div class="mp-gallery-map" aria-label="Carte OpenStreetMap des adresses des potiers" data-points="' . esc_attr( wp_json_encode( $points ) ) . '" data-tiles="' . esc_attr( apply_filters( 'mp_map_tile_url', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png' ) ) . '"></div><p class="mp-map-caption">Cliquez sur un point pour retrouver les potiers à cette adresse. Adresses déclarées par les candidats. Fond de carte : <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>.</p></section>';
 	}
 }

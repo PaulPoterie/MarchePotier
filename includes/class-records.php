@@ -100,8 +100,8 @@ final class Records {
 		if ( 'mp_candidature' !== $post_type || ! Jury::can_review() ) {
 			return;
 		}
-		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
-		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
+		$edition = (int) ( Request::query( 'mp_edition' ) ?? 0 );
+		$decision = Request::query( 'mp_decision' ) ?? '';
 		if ( $grouped ) { echo '<div class="mp-filter-field">'; }
 		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="mp-edition-filter">' . ( $grouped ? 'Édition' : 'Filtrer par édition' ) . '</label><select id="mp-edition-filter" name="mp_edition"><option value="">Toutes les éditions</option>';
 		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) ) as $item ) {
@@ -123,8 +123,8 @@ final class Records {
 			return;
 		}
 		$meta_query = (array) $query->get( 'meta_query' );
-		$edition = isset( $_GET['mp_edition'] ) && is_string( $_GET['mp_edition'] ) ? absint( $_GET['mp_edition'] ) : 0;
-		$decision = isset( $_GET['mp_decision'] ) && is_string( $_GET['mp_decision'] ) ? $_GET['mp_decision'] : '';
+		$edition = (int) ( Request::query( 'mp_edition' ) ?? 0 );
+		$decision = Request::query( 'mp_decision' ) ?? '';
 		if ( $edition && self::valid_reference( $edition, 'mp_edition' ) ) {
 			$meta_query[] = array( 'key' => '_mp_edition_id', 'value' => $edition, 'type' => 'NUMERIC' );
 		}
@@ -171,9 +171,9 @@ final class Records {
 
 	public static function save_inline_decision( int $id ): void {
 		if ( self::$updating_title || ! current_user_can( 'mp_select_applications' ) ) { return; }
-		$nonce = $_POST['_inline_edit'] ?? null;
-		$decision = $_POST['mp_inline_decision'] ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), 'inlineeditnonce' ) || ! is_string( $decision ) || ! isset( self::decisions()[ $decision ] ) ) { return; }
+		$nonce = Request::post( '_inline_edit' ) ?? null;
+		$decision = Request::post( 'mp_inline_decision' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'inlineeditnonce' ) || ! is_string( $decision ) || ! isset( self::decisions()[ $decision ] ) ) { return; }
 		$data = self::data( $id );
 		if ( empty( $data['potier_id'] ) || empty( $data['edition_id'] ) ) { return; }
 		$data['decision'] = $decision;
@@ -269,10 +269,11 @@ final class Records {
 		$application = 'mp_candidature' === $post->post_type;
 		if ( ! $application ) { return; }
 		if ( self::$updating_title || ! in_array( $post->post_type, array( 'mp_potier', 'mp_candidature' ), true ) || wp_is_post_revision( $id ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( $application ? 'mp_manage_applications' : 'mp_manage_potiers' ) ) { return; }
-		$nonce = $_POST['mp_record_nonce'] ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $nonce ) ), 'mp_record_' . $id ) ) { return; }
-		$raw = $_POST['mp_record'] ?? null;
-		$data = is_array( $raw ) ? self::prepare( wp_unslash( $raw ), self::data( $id ), $application ) : new \WP_Error( 'mp_form', 'Formulaire invalide.' );
+		$nonce = Request::post( 'mp_record_nonce' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_record_' . $id ) ) { return; }
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Structured answers are validated by prepare() below, after the nonce and permission checks.
+		$raw = isset( $_POST['mp_record'] ) && is_array( $_POST['mp_record'] ) ? wp_unslash( $_POST['mp_record'] ) : null;
+		$data = is_array( $raw ) ? self::prepare( $raw, self::data( $id ), $application ) : new \WP_Error( 'mp_form', 'Formulaire invalide.' );
 		$locked = false;
 		if ( ! is_wp_error( $data ) && class_exists( SubmissionLock::class ) ) {
 			$locked = SubmissionLock::acquire();
@@ -281,6 +282,7 @@ final class Records {
 		try {
 		if ( ! is_wp_error( $data ) && $application ) {
 			$data['potier_id'] = PublicForm::find_potier( $data['identity'] );
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query, WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- Existence check limited to one ID for a potter and edition; exclude only the current application.
 			$duplicates = $data['potier_id'] ? get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array_merge( self::STATUSES, array( 'trash' ) ), 'posts_per_page' => 1, 'fields' => 'ids', 'post__not_in' => array( $id ), 'meta_query' => array( array( 'key' => '_mp_potier_id', 'value' => $data['potier_id'] ), array( 'key' => '_mp_edition_id', 'value' => $data['edition_id'] ) ) ) ) : array();
 			if ( $duplicates ) { $data = new \WP_Error( 'mp_duplicate', 'Ce potier possède déjà une candidature pour cette édition, éventuellement dans la corbeille. Retrouvez le dossier existant.' ); }
 			if ( ! is_wp_error( $data ) && class_exists( PublicForm::class ) && ! empty( $data['identity']['email'] ) && PublicForm::duplicate( $data['edition_id'], $data['identity']['email'], $id ) ) { $data = new \WP_Error( 'mp_duplicate_email', 'Cette adresse email possède déjà une candidature pour cette édition.' ); }
@@ -296,6 +298,7 @@ final class Records {
 			$current_files = self::data( $id )['files'] ?? array();
 			$uploads = array();
 			foreach ( PrivateFiles::slots() as $slot => $label ) {
+				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Upload metadata is checked by PrivateFiles::store; never unslash uploaded bytes or PHP temporary paths.
 				if ( isset( $_FILES[ 'mp_admin_' . $slot ] ) ) { $uploads[ $slot ] = $_FILES[ 'mp_admin_' . $slot ]; }
 			}
 			if ( $uploads ) { $new_files = PrivateFiles::store( $uploads, true ); }
@@ -323,7 +326,7 @@ final class Records {
 			set_transient( 'mp_record_error_' . get_current_user_id() . '_' . $id, 'Enregistrement impossible. Les fichiers précédents sont conservés.', 120 );
 			return;
 		}
-		PrivateFiles::remove( $replaced );
+		MediaLibrary::finalize( $id );
 		if ( $application ) {
 			// Index de recherche, les réponses restent réunies dans META.
 			update_post_meta( $id, '_mp_potier_id', $data['potier_id'] );
@@ -349,7 +352,7 @@ final class Records {
 
 	public static function notice(): void {
 		$screen = get_current_screen();
-		$id = isset( $_GET['post'] ) && is_string( $_GET['post'] ) ? absint( $_GET['post'] ) : 0;
+		$id = (int) ( Request::query( 'post' ) ?? 0 );
 		if ( ! $screen || ! in_array( $screen->post_type, array( 'mp_potier', 'mp_candidature' ), true ) || ! current_user_can( 'mp_candidature' === $screen->post_type ? 'mp_manage_applications' : 'mp_manage_potiers' ) ) { return; }
 		$key = 'mp_record_error_' . get_current_user_id() . '_' . $id;
 		$error = get_transient( $key );
@@ -378,16 +381,21 @@ final class Records {
 	 */
 	public static function list_context(): array {
 		$context = array();
-		if ( in_array( $_GET['mp_from'] ?? '', array( 'gestion', 'votes' ), true ) ) { $context['mp_from'] = $_GET['mp_from']; }
+		$from = Request::query( 'mp_from' );
+		if ( in_array( $from, array( 'gestion', 'votes' ), true ) ) { $context['mp_from'] = $from; }
 		foreach ( array( 'mp_edition', 'paged', 'm', 'author' ) as $key ) {
-			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && absint( $_GET[ $key ] ) ) { $context[ $key ] = absint( $_GET[ $key ] ); }
+			$value = Request::query( $key );
+			if ( null !== $value && ctype_digit( $value ) && (int) $value > 0 ) { $context[ $key ] = (int) $value; }
 		}
 		foreach ( array( 'mp_decision' => array_keys( self::decisions() ), 'mp_my_vote' => array( 'rated', 'unrated' ), 'post_status' => self::STATUSES, 'orderby' => array( 'title', 'date', 'modified', 'ID', 'author', 'points', 'submitted', 'name' ), 'order' => array( 'asc', 'desc', 'ASC', 'DESC' ) ) as $key => $allowed ) {
-			if ( isset( $_GET[ $key ] ) && is_string( $_GET[ $key ] ) && in_array( $_GET[ $key ], $allowed, true ) ) { $context[ $key ] = $_GET[ $key ]; }
+			$value = Request::query( $key );
+			if ( in_array( $value, $allowed, true ) ) { $context[ $key ] = $value; }
 		}
-		if ( isset( $_GET['s'] ) && is_string( $_GET['s'] ) ) { $context['s'] = sanitize_text_field( wp_unslash( $_GET['s'] ) ); }
-		if ( is_string( $_GET['mp_sort'] ?? null ) && isset( self::sort_options()[ $_GET['mp_sort'] ] ) ) {
-			[ $context['orderby'], $direction ] = explode( '_', $_GET['mp_sort'] );
+		$search = Request::query( 's' );
+		if ( null !== $search ) { $context['s'] = $search; }
+		$sort = Request::query( 'mp_sort' );
+		if ( null !== $sort && isset( self::sort_options()[ $sort ] ) ) {
+			[ $context['orderby'], $direction ] = explode( '_', $sort );
 			$context['order'] = strtoupper( $direction );
 		}
 		return $context;
@@ -453,6 +461,7 @@ final class Records {
 		}
 		if ( isset( self::decisions()[ $context['mp_decision'] ?? '' ] ) ) { $args['meta_query'][] = array( 'key' => '_mp_decision', 'value' => $context['mp_decision'] ); }
 		$ids = array_map( 'intval', get_posts( $args ) );
+		update_meta_cache( 'post', $ids );
 		$ids = array_values( array_filter( $ids, array( Jury::class, 'can_view_application' ) ) );
 		$search = trim( (string) ( $context['s'] ?? '' ) );
 		if ( '' !== $search ) {
@@ -501,7 +510,7 @@ final class Records {
 
 	public static function view(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		$id = isset( $_GET['candidature'] ) && is_string( $_GET['candidature'] ) ? absint( $_GET['candidature'] ) : 0;
+		$id = (int) ( Request::query( 'candidature' ) ?? 0 );
 		if ( ! self::valid_reference( $id, 'mp_candidature' ) ) { wp_die( 'Candidature introuvable.', '', array( 'response' => 404 ) ); }
 		if ( ! Jury::can_view_application( $id ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$data = self::data( $id );
@@ -544,6 +553,7 @@ final class Records {
 		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Suivi interne</summary><div class="mp-examiner-details-body">';
 		Review::details_summary( Fields::internal(), $data['internal'] ?? array() );
 		echo '</div></details><details class="mp-examiner-card mp-examiner-details" open><summary>Autres candidatures de ce potier</summary><div class="mp-examiner-details-body">';
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value, WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- Bounded 50-item history scoped to one potter, excluding only the open dossier; WordPress primes post metadata.
 		$history = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => 50, 'post__not_in' => array( $id ), 'meta_key' => '_mp_potier_id', 'meta_value' => $data['potier_id'], 'orderby' => 'date', 'order' => 'DESC' ) );
 		$history = array_filter( $history, static fn( $previous ) => Jury::can_view_application( $previous->ID ) );
 		if ( ! $history ) { echo '<p>Aucune autre candidature enregistrée.</p>'; }

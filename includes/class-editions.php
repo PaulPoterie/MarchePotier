@@ -95,12 +95,13 @@ final class Editions {
 		if ( ! $screen || 'mp_edition' !== $screen->post_type || ! in_array( $screen->base, array( 'post', 'edit' ), true ) || ! current_user_can( 'mp_manage_editions' ) ) { return; }
 		global $wpdb;
 		// Inclut les candidatures en corbeille, qui peuvent être restaurées.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One grouped relation query per edition screen, including trashed applications; fresh state prevents misleading deletion warnings.
 		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = %s", '_mp_edition_id', 'mp_candidature' ) );
 		wp_enqueue_script( 'mp-edition-trash', plugins_url( '../assets/edition-trash.js', __FILE__ ), array(), '0.15.1', true );
 		wp_localize_script( 'mp-edition-trash', 'mpEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
 		if ( 'post' !== $screen->base ) { return; }
 		wp_enqueue_media();
-		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.0-beta.4', true );
+		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.0', true );
 	}
 
 	/** Documents publics distincts des justificatifs privés des candidats. */
@@ -140,8 +141,7 @@ final class Editions {
 		$fields = array( 'market_start' => array( 'Date de début du marché', 'date' ), 'market_end' => array( 'Date de fin du marché', 'date' ), 'venue' => array( 'Lieu d’exposition', 'text' ), 'exhibitors' => array( 'Nombre d’exposants', 'number' ), 'price' => array( 'Prix de l’emplacement (€)', 'number' ), 'reduced_price' => array( 'Prix de l’emplacement — tarif réduit (€)', 'number' ) );
 		foreach ( $fields as $key => [ $label, $type ] ) {
 			$optional = 'reduced_price' === $key;
-			$attrs = 'number' === $type ? ( 'exhibitors' === $key ? ' min="1" max="100000" step="1"' : ' min="0" max="1000000" step="0.01"' ) : '';
-			echo '<tr><th><label for="mp-' . esc_attr( $key ) . '">' . esc_html( $label ) . ( $optional ? ' (facultatif)' : ' *' ) . '</label></th><td><input class="regular-text" id="mp-' . esc_attr( $key ) . '" name="mp_edition[' . esc_attr( $key ) . ']" type="' . esc_attr( $type ) . '" value="' . esc_attr( $data[ $key ] ) . '"' . $attrs . ( $optional ? '' : ' required' ) . '>';
+			echo '<tr><th><label for="mp-' . esc_attr( $key ) . '">' . esc_html( $label ) . ( $optional ? ' (facultatif)' : ' *' ) . '</label></th><td><input class="regular-text" id="mp-' . esc_attr( $key ) . '" name="mp_edition[' . esc_attr( $key ) . ']" type="' . esc_attr( $type ) . '" value="' . esc_attr( $data[ $key ] ) . '"' . ( 'number' === $type ? ( 'exhibitors' === $key ? ' min="1" max="100000" step="1"' : ' min="0" max="1000000" step="0.01"' ) : '' ) . ( $optional ? '' : ' required' ) . '>';
 			if ( 'venue' === $key ) { echo '<p class="description">Nom du lieu, adresse et commune.</p>'; }
 			if ( 'price' === $key ) { echo '<p class="description">Indiquez 0 pour un emplacement gratuit. Précisez les conditions ou suppléments dans la présentation ou le règlement.</p>'; }
 			if ( $optional ) { echo '<p class="description">Laissez vide si aucun tarif réduit n’est proposé. Indiquez 0 pour la gratuité.</p>'; }
@@ -200,7 +200,9 @@ final class Editions {
 		self::market_fields( $data );
 		?>
 		<h3>Période de candidature</h3>
-		<p><?php echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
+		<p><?php
+		/* translators: %s: WordPress site timezone. */
+		echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
 		<table class="form-table" role="presentation">
 			<?php foreach ( array( 'opens' => __( 'Ouverture des candidatures', 'marche-potier' ), 'closes' => __( 'Fermeture des candidatures', 'marche-potier' ) ) as $key => $label ) : ?>
 			<tr><th><label for="mp-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><input id="mp-<?php echo esc_attr( $key ); ?>" name="mp_edition[<?php echo esc_attr( $key ); ?>]" type="datetime-local" required value="<?php echo esc_attr( $data[ $key ] ); ?>"></td></tr>
@@ -299,9 +301,11 @@ final class Editions {
 		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $id ) || ! current_user_can( 'mp_manage_editions' ) ) {
 			return;
 		}
-		if ( ! isset( $_POST['mp_edition_nonce'] ) || ! is_string( $_POST['mp_edition_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['mp_edition_nonce'] ) ), 'mp_save_edition_' . $id ) ) {
+		$nonce = Request::post( 'mp_edition_nonce' );
+		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_save_edition_' . $id ) ) {
 			return;
 		}
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validate() validates each typed field after nonce verification; do not flatten structured input.
 		$data = isset( $_POST['mp_edition'] ) && is_array( $_POST['mp_edition'] ) ? self::validate( wp_unslash( $_POST['mp_edition'] ) ) : null;
 		if ( null === $data ) {
 			add_filter( 'redirect_post_location', static function ( $location ) {
@@ -317,7 +321,7 @@ final class Editions {
 
 	public static function notice(): void {
 		$screen = get_current_screen();
-		if ( ! $screen || 'mp_edition' !== $screen->post_type || ! isset( $_GET['mp_edition_error'] ) || ! current_user_can( 'mp_manage_editions' ) ) {
+		if ( ! $screen || 'mp_edition' !== $screen->post_type || null === Request::query( 'mp_edition_error' ) || ! current_user_can( 'mp_manage_editions' ) ) {
 			return;
 		}
 		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'marche-potier' ) . '</p></div>';

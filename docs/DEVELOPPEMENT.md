@@ -34,7 +34,8 @@ Ce dépôt ne déploie rien automatiquement. Sur un autre ordinateur, son emplac
 | Blocs WordPress et liste d’éditions de l’éditeur | `class-blocks.php` |
 | Dépôt public, session, validation HTTP et confirmation | `class-public-form.php` |
 | Pièces temporaires et reprise du dépôt | `class-upload-drafts.php` |
-| Validation, stockage et téléchargement des fichiers | `class-private-files.php` |
+| Compatibilité des anciens liens et affichage des fichiers | `class-private-files.php` |
+| Médias WordPress, états provisoires, rattachement et migration | `class-media-library.php` |
 | Copies d’images 1080 × 1350, sans champs supplémentaires | `class-social-images.php` |
 | Emails après candidature | `class-notifications.php` |
 | Présentation publique et localisation | `class-gallery.php`, `class-gallery-map.php` |
@@ -52,7 +53,7 @@ Les noms des fichiers CSS/JS suivent leur écran : `review.*` sert à Gestion et
 | Candidature | Contenu `mp_candidature`, réponses dans `_mp_record` : `edition_id`, `potier_id`, `identity`, `activity`, `internal`, `decision`, `files`, consentement et date de dépôt. |
 | Index de candidature | `_mp_edition_id`, `_mp_potier_id`, `_mp_decision` servent aux requêtes. Les maintenir cohérents avec `_mp_record` à chaque écriture. |
 | Notes | Table `${prefix}mp_votes`, clé unique `(application_id, user_id)`. Une correction remplace la note ; elle ne crée pas un deuxième vote. |
-| Fichiers | Noms aléatoires dans le sous-dossier `marche-potier` de uploads ; les métadonnées des pièces restent dans le dossier. Les copies Meta sont sous `files[slot].social`. |
+| Fichiers | Pièces jointes WordPress identifiées par `files[slot].attachment_id`, copies Meta par `files[slot].social.attachment_id`. `_mp_temporary_until` et `_mp_draft_owner` identifient exclusivement les médias provisoires. Après écriture du dossier, le rattachement est établi et ces marqueurs sont retirés. Les URLs sont publiques, y compris pour les justificatifs. |
 
 Les réponses sont propres à chaque candidature : corriger une année ne doit pas réécrire les réponses d’une autre année. L’identité d’historique est rapprochée par nom, prénom et email. Une adresse email ne peut déposer deux fois pour une même édition, corbeille comprise.
 
@@ -130,7 +131,7 @@ Les fichiers secondaires partagent les fixtures du point d’entrée : ne pas le
 
 ## 7. Limites connues à distinguer des garanties du code
 
-- Les routes PHP de fichiers contrôlent les droits ou l’éligibilité publique. Le stockage dans uploads et les noms aléatoires n’interdisent pas, à eux seuls, un accès HTTP direct au fichier : cela dépend de la configuration du serveur web. Ne pas présenter la route authentifiée comme une protection du répertoire lui-même.
+- Les médias sont intentionnellement publics par URL. Les anciens liens de téléchargement redirigent vers les médias sans authentification. La galerie conserve ses règles de sélection et de consentement. La migration conserve les anciennes copies extérieures à uploads après vérification ; leur éventuel retrait relève d’une maintenance distincte.
 - Les listes et l’historique chargent tous les IDs concernés, et le rapprochement d’identité parcourt les fiches. Le fonctionnement est adapté au jeu de démonstration ; un grand volume demande un profilage avant toute promesse de performance.
 - Les sauvegardes de candidature ne détectent pas deux modifications concurrentes de leurs réponses par deux administrateurs. Le jury, lui, possède une révision de formulaire.
 - Pas de publication automatique Meta, de relance automatique des emails ni de mise à jour depuis GitHub.
@@ -140,3 +141,11 @@ Le [rapport de relecture du 16 septembre 2026](REVUE-CODE-2026-09-16.md) disting
 ## 8. Livraison locale
 
 Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier les fichiers d’exécution modifiés dans le plugin du site Local. Comparer les empreintes des fichiers copiés. Ne pas copier `tests` ni les documents de développement. Enregistrer le résultat de vérification et le commit ; générer un ZIP uniquement lors d’une demande de livraison. Changer de branche ne change ni les fichiers installés ni la base WordPress.
+
+## Cycle des médias
+
+`MediaLibrary::store` reçoit les fichiers via `wp_handle_upload`, puis crée les pièces jointes et leurs métadonnées. Le formulaire signé ou le nonce administrateur est validé par l’appelant. `UploadDrafts::files` vérifie la révision et le propriétaire ; aucun identifiant de média fourni par le navigateur n’est accepté. Un rollback de candidature ne supprime pas les médias du brouillon.
+
+La finalisation intervient après sauvegarde de `_mp_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
+
+La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_mp_media_migrated` marque les dossiers traités et `_mp_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.

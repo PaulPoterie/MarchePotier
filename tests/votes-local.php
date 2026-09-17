@@ -215,6 +215,7 @@ try {
 	require __DIR__ . '/market-administrators.php';
 	require __DIR__ . '/blocks-local.php';
 	require __DIR__ . '/application-sorting.php';
+	require __DIR__ . '/plugin-check-regressions.php';
 	$passed = true; echo "SUCCÈS : $checks vérifications. Emails interceptés.\n";
 } finally {
 	if ( ! $keep || ! $passed ) { mp_cleanup( $state ); if ( is_file( $manifest ) ) { unlink( $manifest ); } }
