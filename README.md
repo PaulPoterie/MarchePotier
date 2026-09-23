@@ -1,6 +1,6 @@
 # Marché Potier — Guide utilisateur
 
-Version de travail 0.19.1-beta.1 — 23 septembre 2026 — branche `fix/wordpress-review`.
+Version de travail 0.19.1 — 23 septembre 2026 — branche `fix/wordpress-review`.
 
 Cette version prépare les corrections demandées par WordPress.org. Le nouveau préfixe technique est `marcpo_` : les données de test de la 0.19.0 ne sont pas migrées et ne sont plus utilisées. Recréez les éditions et affectations pour les nouveaux essais. Le changement du nom public et du slug fera l’objet d’une étape distincte.
 
@@ -15,7 +15,7 @@ Dernière version soumise : **0.19.0**. Cette branche contient les corrections e
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.1-beta.1.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.1.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Un ZIP de livraison contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 

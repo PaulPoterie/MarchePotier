@@ -9,8 +9,8 @@ final class Gallery {
 			if ( $post instanceof \WP_Post && Blocks::contains( $post->post_content, Blocks::SELECTION ) ) {
 				wp_enqueue_style( 'marcpo-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.css', __FILE__ ), array(), '1.9.4' );
 				wp_enqueue_script( 'marcpo-leaflet', plugins_url( '../assets/vendor/leaflet/leaflet.js', __FILE__ ), array(), '1.9.4', true );
-				wp_enqueue_style( 'marcpo-gallery', plugins_url( '../assets/gallery.css', __FILE__ ), array( 'marcpo-leaflet' ), '0.19.1-beta.1' );
-				wp_enqueue_script( 'marcpo-gallery', plugins_url( '../assets/gallery.js', __FILE__ ), array( 'marcpo-leaflet' ), '0.19.1-beta.1', true );
+				wp_enqueue_style( 'marcpo-gallery', plugins_url( '../assets/gallery.css', __FILE__ ), array( 'marcpo-leaflet' ), '0.19.1' );
+				wp_enqueue_script( 'marcpo-gallery', plugins_url( '../assets/gallery.js', __FILE__ ), array( 'marcpo-leaflet' ), '0.19.1', true );
 			}
 		} );
 		add_action( 'admin_post_marcpo_gallery_photo', array( self::class, 'photo' ) );

@@ -1,6 +1,6 @@
 # Corrections techniques du retour WordPress.org
 
-Branche : `fix/wordpress-review`. Version de travail : `0.19.1-beta.1`.
+Branche : `fix/wordpress-review`. Version de travail : `0.19.1`.
 
 ## Modifications
 

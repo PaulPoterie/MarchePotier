@@ -10,7 +10,7 @@ final class VoteTracking {
 		} );
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( 'marcpo-suivi-votes' === ( Request::query( 'page' ) ?? '' ) ) {
-				wp_enqueue_style( 'marcpo-vote-tracking', plugins_url( '../assets/vote-tracking.css', __FILE__ ), array(), '0.19.1-beta.1' );
+				wp_enqueue_style( 'marcpo-vote-tracking', plugins_url( '../assets/vote-tracking.css', __FILE__ ), array(), '0.19.1' );
 			}
 		} );
 	}

@@ -166,7 +166,7 @@ final class Records {
 	public static function quick_edit_script(): void {
 		$screen = get_current_screen();
 		if ( ! $screen || 'edit' !== $screen->base || 'marcpo_candidature' !== $screen->post_type || ! current_user_can( 'marcpo_select_applications' ) ) { return; }
-		wp_enqueue_script( 'marcpo-quick-edit', plugins_url( '../assets/quick-edit.js', __FILE__ ), array( 'inline-edit-post' ), '0.19.1-beta.1', true );
+		wp_enqueue_script( 'marcpo-quick-edit', plugins_url( '../assets/quick-edit.js', __FILE__ ), array( 'inline-edit-post' ), '0.19.1', true );
 	}
 
 	public static function save_inline_decision( int $id ): void {

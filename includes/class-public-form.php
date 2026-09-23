@@ -11,9 +11,9 @@ final class PublicForm {
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
-				wp_enqueue_style( 'marcpo-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.19.1-beta.1' );
-				wp_enqueue_script( 'marcpo-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.19.1-beta.1', true );
-				wp_enqueue_script( 'marcpo-form', plugins_url( '../assets/form.js', __FILE__ ), array( 'marcpo-draft' ), '0.19.1-beta.1', true );
+				wp_enqueue_style( 'marcpo-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.19.1' );
+				wp_enqueue_script( 'marcpo-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.19.1', true );
+				wp_enqueue_script( 'marcpo-form', plugins_url( '../assets/form.js', __FILE__ ), array( 'marcpo-draft' ), '0.19.1', true );
 			}
 		} );
 	}

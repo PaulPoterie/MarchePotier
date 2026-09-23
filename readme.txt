@@ -4,7 +4,7 @@ Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.19.1-beta.1
+Stable tag: 0.19.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Manage pottery markets: applications, supporting documents, jury ratings, select
 
 Marché Potier helps pottery market organizers collect applications, review candidates and present selected exhibitors. The interface and outgoing messages are currently mostly in French.
 
-Version 0.19.1-beta.1 is a development build for the WordPress.org review. Its new marcpo_ identifiers do not migrate the previous test-only data. Create fresh editions and team assignments. Read the document storage information below.
+Version 0.19.1 is a development build for the WordPress.org review. Its new marcpo_ identifiers do not migrate the previous test-only data. Create fresh editions and team assignments. Read the document storage information below.
 
 = Features =
 
@@ -165,7 +165,7 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Changelog ==
 
-= 0.19.1-beta.1 =
+= 0.19.1 =
 
 * Replace short identifiers with the distinct marcpo_ prefix. Previous test data is not migrated.
 * Load quick-edit JavaScript through WordPress and restore the saved selection correctly.
@@ -182,6 +182,6 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Upgrade Notice ==
 
-= 0.19.1-beta.1 =
+= 0.19.1 =
 
 Development build for fresh test data: existing 0.19.0 records and team assignments are not migrated to the new identifiers. Photos and supporting documents use ordinary public Media Library URLs.

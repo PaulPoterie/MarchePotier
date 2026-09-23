@@ -15,8 +15,8 @@ final class Jury {
 		add_action( 'admin_enqueue_scripts', static function () {
 			$screen = get_current_screen();
 			if ( $screen && 'marcpo_edition' === $screen->post_type && 'post' === $screen->base ) {
-				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.1-beta.1', true );
-				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.1-beta.1' );
+				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.1', true );
+				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.1' );
 			}
 		} );
 	}

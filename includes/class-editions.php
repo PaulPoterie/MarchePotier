@@ -97,11 +97,11 @@ final class Editions {
 		// Inclut les candidatures en corbeille, qui peuvent être restaurées.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One grouped relation query per edition screen, including trashed applications; fresh state prevents misleading deletion warnings.
 		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = %s", '_marcpo_edition_id', 'marcpo_candidature' ) );
-		wp_enqueue_script( 'marcpo-edition-trash', plugins_url( '../assets/edition-trash.js', __FILE__ ), array(), '0.19.1-beta.1', true );
+		wp_enqueue_script( 'marcpo-edition-trash', plugins_url( '../assets/edition-trash.js', __FILE__ ), array(), '0.19.1', true );
 		wp_localize_script( 'marcpo-edition-trash', 'marcpoEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
 		if ( 'post' !== $screen->base ) { return; }
 		wp_enqueue_media();
-		wp_enqueue_script( 'marcpo-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.1-beta.1', true );
+		wp_enqueue_script( 'marcpo-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.1', true );
 	}
 
 	/** Documents publics distincts des justificatifs privés des candidats. */

@@ -37,7 +37,7 @@ final class GalleryMap {
 		$features = get_transient( $key );
 		if ( false === $features ) {
 			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Existing documented marcpo_ provider filter API; preserve site customizations.
-			$response = wp_remote_get( add_query_arg( array( 'q' => trim( $address . ' ' . $postcode . ' ' . $city ), 'index' => 'address', 'limit' => 2 ), apply_filters( 'marcpo_address_geocoder_url', 'https://data.geopf.fr/geocodage/search' ) ), array( 'timeout' => 8, 'user-agent' => 'MarchePotier/0.19.1-beta.1 (' . home_url() . ')' ) );
+			$response = wp_remote_get( add_query_arg( array( 'q' => trim( $address . ' ' . $postcode . ' ' . $city ), 'index' => 'address', 'limit' => 2 ), apply_filters( 'marcpo_address_geocoder_url', 'https://data.geopf.fr/geocodage/search' ) ), array( 'timeout' => 8, 'user-agent' => 'MarchePotier/0.19.1 (' . home_url() . ')' ) );
 			if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) { return; }
 			$json = json_decode( wp_remote_retrieve_body( $response ), true );
 			$features = $json['features'] ?? null;

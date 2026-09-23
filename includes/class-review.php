@@ -37,16 +37,16 @@ final class Review {
 		add_action( 'admin_post_marcpo_review_decision', array( self::class, 'save_decision' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( 'marcpo-historique' === ( Request::query( 'page' ) ?? '' ) ) {
-				wp_enqueue_style( 'marcpo-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.19.1-beta.1' );
+				wp_enqueue_style( 'marcpo-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.19.1' );
 				return;
 			}
 			if ( ! in_array( Request::query( 'page' ) ?? '', array( 'marcpo-gestion', 'marcpo-dossier' ), true ) ) { return; }
 			if ( 'marcpo-dossier' === ( Request::query( 'page' ) ?? '' ) ) {
-				wp_enqueue_style( 'marcpo-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.19.1-beta.1' );
-				wp_enqueue_script( 'marcpo-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.19.1-beta.1', true );
+				wp_enqueue_style( 'marcpo-viewer', plugins_url( '../assets/viewer.css', __FILE__ ), array(), '0.19.1' );
+				wp_enqueue_script( 'marcpo-viewer', plugins_url( '../assets/viewer.js', __FILE__ ), array(), '0.19.1', true );
 			}
-			wp_enqueue_style( 'marcpo-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.1-beta.1' );
-			wp_enqueue_script( 'marcpo-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.1-beta.1', true );
+			wp_enqueue_style( 'marcpo-review', plugins_url( '../assets/review.css', __FILE__ ), array(), '0.19.1' );
+			wp_enqueue_script( 'marcpo-review', plugins_url( '../assets/review.js', __FILE__ ), array(), '0.19.1', true );
 		} );
 	}
 
