@@ -1,7 +1,7 @@
-document.querySelectorAll('.mp-public form').forEach(form => {
-  const draft = window.mpCandidateDraft(form);
-  const presentation = form.querySelector('[name="mp_record[activity][presentation]"]');
-  const wordCounter = form.querySelector('#mp-presentation-count');
+document.querySelectorAll('.marcpo-public form').forEach(form => {
+  const draft = window.marcpoCandidateDraft(form);
+  const presentation = form.querySelector('[name="marcpo_record[activity][presentation]"]');
+  const wordCounter = form.querySelector('#marcpo-presentation-count');
   if (presentation && wordCounter) {
     const countWords = () => {
       const count = presentation.value.split(/[\s\u0085]+/u).filter(Boolean).length;
@@ -16,12 +16,12 @@ document.querySelectorAll('.mp-public form').forEach(form => {
   }
 
   const update = () => {
-    const professionalStatus = form.querySelector('[name="mp_record[activity][professional_status]"]')?.value || '';
+    const professionalStatus = form.querySelector('[name="marcpo_record[activity][professional_status]"]')?.value || '';
     form.querySelectorAll('[data-status-help]').forEach(help => {
       help.hidden = !help.dataset.statusHelp.split(' ').includes(professionalStatus);
     });
     form.querySelectorAll('[data-parent]').forEach(row => {
-      const name = `mp_record[activity][${row.dataset.parent}]`;
+      const name = `marcpo_record[activity][${row.dataset.parent}]`;
       const selected = Array.from(form.elements).filter(input => input.name === name || input.name === `${name}[]`).some(input => input.value === row.dataset.choice && (input.type !== 'checkbox' || input.checked));
       row.hidden = !selected;
       row.querySelectorAll('input,textarea').forEach(input => { input.required = selected; input.disabled = !selected; });
@@ -42,10 +42,10 @@ document.querySelectorAll('.mp-public form').forEach(form => {
   const submit = form.querySelector('button[type=submit]');
   const endpoint = new URL(form.action);
   endpoint.hash = '';
-  endpoint.searchParams.set('mp_async', '1');
+  endpoint.searchParams.set('marcpo_async', '1');
   const notice = document.createElement('p');
   notice.setAttribute('role', 'status');
-  notice.className = 'mp-upload-summary';
+  notice.className = 'marcpo-upload-summary';
   notice.textContent = 'Vérification des pièces déjà reçues…';
   const restore = document.createElement('button');
   restore.type = 'button'; restore.textContent = 'Réessayer la connexion'; restore.hidden = true;
@@ -60,11 +60,11 @@ document.querySelectorAll('.mp-public form').forEach(form => {
     input.setAttribute('aria-describedby', [input.getAttribute('aria-describedby'), status.id].filter(Boolean).join(' '));
     const progress = document.createElement('progress');
     progress.max = 100; progress.value = 0; progress.hidden = true;
-    progress.setAttribute('aria-label', 'Progression : ' + input.closest('.mp-field').querySelector('label').textContent);
+    progress.setAttribute('aria-label', 'Progression : ' + input.closest('.marcpo-field').querySelector('label').textContent);
     const retry = document.createElement('button');
-    retry.type = 'button'; retry.className = 'mp-upload-retry'; retry.textContent = 'Réessayer cette pièce'; retry.hidden = true;
+    retry.type = 'button'; retry.className = 'marcpo-upload-retry'; retry.textContent = 'Réessayer cette pièce'; retry.hidden = true;
     const preview = document.createElement('img');
-    preview.className = 'mp-upload-preview'; preview.alt = 'Aperçu du fichier choisi'; preview.hidden = true;
+    preview.className = 'marcpo-upload-preview'; preview.alt = 'Aperçu du fichier choisi'; preview.hidden = true;
     input.after(preview, status, progress, retry);
     const state = {input, status, progress, retry, preview, phase: 'empty', file: null, url: ''};
     retry.addEventListener('click', () => { state.phase = 'queued'; retry.hidden = true; pump(); });
@@ -92,8 +92,8 @@ document.querySelectorAll('.mp-public form').forEach(form => {
   });
   function tokens(operation) {
     const data = new FormData();
-    ['mp_edition', 'mp_issued', 'mp_random', 'mp_signature', 'mp_nonce', 'mp_fax'].forEach(name => data.append(name, form.elements.namedItem(name).value));
-    data.append('mp_upload_operation', operation);
+    ['marcpo_edition', 'marcpo_issued', 'marcpo_random', 'marcpo_signature', 'marcpo_nonce', 'marcpo_fax'].forEach(name => data.append(name, form.elements.namedItem(name).value));
+    data.append('marcpo_upload_operation', operation);
     return data;
   }
   function request(data, onProgress) {
@@ -126,7 +126,7 @@ document.querySelectorAll('.mp-public form').forEach(form => {
     if (!state) return;
     busy = true; state.phase = 'sending'; state.progress.hidden = false; state.progress.value = 0;
     state.status.textContent = 'Envoi en cours…'; refresh();
-    const data = tokens('upload'); data.append('mp_slot', state.input.name); data.append(state.input.name, state.file);
+    const data = tokens('upload'); data.append('marcpo_slot', state.input.name); data.append(state.input.name, state.file);
     try {
       const result = await request(data, percent => {
         if (percent === null) state.progress.removeAttribute('value'); else state.progress.value = percent;
@@ -168,7 +168,7 @@ document.querySelectorAll('.mp-public form').forEach(form => {
     // Retirer tous les fichiers : la validation finale ne renvoie que les réponses.
     const data = new FormData(form);
     inputs.forEach(input => data.delete(input.name));
-    data.append('mp_revision', revision);
+    data.append('marcpo_revision', revision);
     submitting = true; refresh(); notice.textContent = 'Enregistrement de votre candidature…';
     try {
       const result = await request(data);

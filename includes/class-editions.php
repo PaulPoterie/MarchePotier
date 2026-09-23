@@ -6,32 +6,32 @@ namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 final class Editions {
-	private const META = '_mp_edition_settings';
+	private const META = '_marcpo_edition_settings';
 	private const DEFAULT_THANK_YOU = 'Votre candidature a bien été enregistrée. Merci pour votre participation ; votre dossier sera étudié par l’organisateur.';
 
 	public static function hooks(): void {
-		add_action( 'add_meta_boxes_mp_edition', array( self::class, 'add_box' ) );
-		add_action( 'save_post_mp_edition', array( self::class, 'save' ) );
+		add_action( 'add_meta_boxes_marcpo_edition', array( self::class, 'add_box' ) );
+		add_action( 'save_post_marcpo_edition', array( self::class, 'save' ) );
 		add_action( 'admin_notices', array( self::class, 'notice' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ) );
-		add_filter( 'manage_mp_edition_posts_columns', array( self::class, 'columns' ) );
-		add_action( 'manage_mp_edition_posts_custom_column', array( self::class, 'column' ), 10, 2 );
+		add_filter( 'manage_marcpo_edition_posts_columns', array( self::class, 'columns' ) );
+		add_action( 'manage_marcpo_edition_posts_custom_column', array( self::class, 'column' ), 10, 2 );
 	}
 
 	/** Migration idempotente, y compris lors d'une mise à jour sans réactivation. */
 	public static function install_permissions(): void {
-		if ( '3' === get_option( 'mp_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
+		if ( '3' === get_option( 'marcpo_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$admin = get_role( 'administrator' );
 		if ( ! $admin ) {
 			return;
 		}
-		$admin->add_cap( 'mp_manage_editions' );
-		add_role( 'mp_organizer', '[MP] Administrateur marché', array( 'read' => true, 'mp_manage_editions' => true ) );
-		$organizer = get_role( 'mp_organizer' );
+		$admin->add_cap( 'marcpo_manage_editions' );
+		add_role( 'marcpo_organizer', '[MP] Administrateur marché', array( 'read' => true, 'marcpo_manage_editions' => true ) );
+		$organizer = get_role( 'marcpo_organizer' );
 		if ( $organizer ) {
-			$organizer->add_cap( 'mp_manage_editions' );
+			$organizer->add_cap( 'marcpo_manage_editions' );
 			$organizer->add_cap( 'upload_files' );
 			foreach ( array( 'posts', 'pages' ) as $type ) {
 				foreach ( array( 'edit_', 'edit_others_', 'edit_private_', 'edit_published_', 'publish_', 'read_private_', 'delete_', 'delete_others_', 'delete_private_', 'delete_published_' ) as $prefix ) {
@@ -40,8 +40,8 @@ final class Editions {
 			}
 			$organizer->add_cap( 'manage_categories' );
 		}
-		self::rename_role( 'mp_organizer', '[MP] Administrateur marché' );
-		update_option( 'mp_permissions_version', '3', false );
+		self::rename_role( 'marcpo_organizer', '[MP] Administrateur marché' );
+		update_option( 'marcpo_permissions_version', '3', false );
 		wp_get_current_user()->get_role_caps();
 	}
 
@@ -57,9 +57,9 @@ final class Editions {
 	public static function register(): void {
 		$caps = array_fill_keys(
 			array( 'edit_post', 'read_post', 'delete_post', 'edit_posts', 'edit_others_posts', 'publish_posts', 'read_private_posts', 'delete_posts', 'delete_private_posts', 'delete_published_posts', 'delete_others_posts', 'edit_private_posts', 'edit_published_posts', 'create_posts', 'read' ),
-			'mp_manage_editions'
+			'marcpo_manage_editions'
 		);
-		register_post_type( 'mp_edition', array(
+		register_post_type( 'marcpo_edition', array(
 			'labels' => array(
 				'name' => __( 'Éditions', 'marche-potier' ),
 				'singular_name' => __( 'Édition', 'marche-potier' ),
@@ -92,22 +92,22 @@ final class Editions {
 
 	public static function assets(): void {
 		$screen = get_current_screen();
-		if ( ! $screen || 'mp_edition' !== $screen->post_type || ! in_array( $screen->base, array( 'post', 'edit' ), true ) || ! current_user_can( 'mp_manage_editions' ) ) { return; }
+		if ( ! $screen || 'marcpo_edition' !== $screen->post_type || ! in_array( $screen->base, array( 'post', 'edit' ), true ) || ! current_user_can( 'marcpo_manage_editions' ) ) { return; }
 		global $wpdb;
 		// Inclut les candidatures en corbeille, qui peuvent être restaurées.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One grouped relation query per edition screen, including trashed applications; fresh state prevents misleading deletion warnings.
-		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = %s", '_mp_edition_id', 'mp_candidature' ) );
-		wp_enqueue_script( 'mp-edition-trash', plugins_url( '../assets/edition-trash.js', __FILE__ ), array(), '0.15.1', true );
-		wp_localize_script( 'mp-edition-trash', 'mpEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
+		$linked = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT pm.meta_value FROM {$wpdb->postmeta} pm INNER JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE pm.meta_key = %s AND p.post_type = %s", '_marcpo_edition_id', 'marcpo_candidature' ) );
+		wp_enqueue_script( 'marcpo-edition-trash', plugins_url( '../assets/edition-trash.js', __FILE__ ), array(), '0.19.1-beta.1', true );
+		wp_localize_script( 'marcpo-edition-trash', 'marcpoEditionTrash', array( 'linked' => array_map( 'strval', $linked ), 'message' => 'Attention, vous avez des candidatures rattachées à cette édition.' . "\n" . 'Êtes-vous sûr de vouloir mettre cette édition à la corbeille ?', 'bulkMessage' => 'Attention, des candidatures sont rattachées à une ou plusieurs des éditions sélectionnées.' . "\n" . 'Êtes-vous sûr de vouloir mettre ces éditions à la corbeille ?' ) );
 		if ( 'post' !== $screen->base ) { return; }
 		wp_enqueue_media();
-		wp_enqueue_script( 'mp-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.0', true );
+		wp_enqueue_script( 'marcpo-edition', plugins_url( '../assets/edition.js', __FILE__ ), array( 'media-views' ), '0.19.1-beta.1', true );
 	}
 
 	/** Documents publics distincts des justificatifs privés des candidats. */
 	public static function introduction( int $edition ): string {
 		$data = self::settings( $edition );
-		$html = '<div class="mp-edition-introduction">';
+		$html = '<div class="marcpo-edition-introduction">';
 		$details = array();
 		if ( $data['market_start'] && $data['market_end'] ) {
 			$start = self::parse_date( $data['market_start'] . 'T00:00' ); $end = self::parse_date( $data['market_end'] . 'T00:00' );
@@ -118,14 +118,14 @@ final class Editions {
 		if ( '' !== $data['price'] ) { $details['Prix de l’emplacement'] = 0.0 === (float) $data['price'] ? 'Gratuit' : number_format_i18n( (float) $data['price'], 2 ) . ' €'; }
 		if ( '' !== $data['reduced_price'] ) { $details['Tarif réduit'] = ( 0.0 === (float) $data['reduced_price'] ? 'Gratuit' : number_format_i18n( (float) $data['reduced_price'], 2 ) . ' €' ) . ' — ' . $data['reduced_description']; }
 		if ( $details ) {
-			$html .= '<dl class="mp-market-details">';
+			$html .= '<dl class="marcpo-market-details">';
 			foreach ( $details as $label => $value ) { $html .= '<div><dt>' . esc_html( $label ) . '</dt><dd>' . nl2br( esc_html( $value ) ) . '</dd></div>'; }
 			$html .= '</dl>';
 		}
 		$opens = self::parse_date( $data['opens'] );
 		$closes = self::parse_date( $data['closes'] );
 		if ( $opens && $closes ) {
-			$html .= '<p class="mp-application-period"><strong>Période de candidature</strong><span>' . esc_html( 'Du ' . wp_date( 'j F Y', $opens->getTimestamp() ) . ' au ' . wp_date( 'j F Y', $closes->getTimestamp() ) ) . '</span></p>';
+			$html .= '<p class="marcpo-application-period"><strong>Période de candidature</strong><span>' . esc_html( 'Du ' . wp_date( 'j F Y', $opens->getTimestamp() ) . ' au ' . wp_date( 'j F Y', $closes->getTimestamp() ) ) . '</span></p>';
 		}
 		if ( '' !== $data['presentation'] ) { $html .= wpautop( wp_kses_post( $data['presentation'] ) ); }
 		foreach ( array( 'rules' => 'Règlement intérieur' ) as $key => $label ) {
@@ -137,17 +137,17 @@ final class Editions {
 
 	public static function market_fields( array $data ): void {
 		echo '<h3>Informations pratiques du marché</h3><p>Affichées au-dessus du formulaire public. Les dates du marché sont distinctes de la période de candidature. Les prix sont en euros, pour un emplacement sur l’ensemble du marché.</p><table class="form-table" role="presentation">';
-		echo '<tr><th><label for="mp-year">Édition de l’année *</label></th><td><input class="regular-text" id="mp-year" name="mp_edition[year]" type="number" min="2000" max="9999" required value="' . esc_attr( $data['year'] ) . '"></td></tr>';
+		echo '<tr><th><label for="marcpo-year">Édition de l’année *</label></th><td><input class="regular-text" id="marcpo-year" name="marcpo_edition[year]" type="number" min="2000" max="9999" required value="' . esc_attr( $data['year'] ) . '"></td></tr>';
 		$fields = array( 'market_start' => array( 'Date de début du marché', 'date' ), 'market_end' => array( 'Date de fin du marché', 'date' ), 'venue' => array( 'Lieu d’exposition', 'text' ), 'exhibitors' => array( 'Nombre d’exposants', 'number' ), 'price' => array( 'Prix de l’emplacement (€)', 'number' ), 'reduced_price' => array( 'Prix de l’emplacement — tarif réduit (€)', 'number' ) );
 		foreach ( $fields as $key => [ $label, $type ] ) {
 			$optional = 'reduced_price' === $key;
-			echo '<tr><th><label for="mp-' . esc_attr( $key ) . '">' . esc_html( $label ) . ( $optional ? ' (facultatif)' : ' *' ) . '</label></th><td><input class="regular-text" id="mp-' . esc_attr( $key ) . '" name="mp_edition[' . esc_attr( $key ) . ']" type="' . esc_attr( $type ) . '" value="' . esc_attr( $data[ $key ] ) . '"' . ( 'number' === $type ? ( 'exhibitors' === $key ? ' min="1" max="100000" step="1"' : ' min="0" max="1000000" step="0.01"' ) : '' ) . ( $optional ? '' : ' required' ) . '>';
+			echo '<tr><th><label for="marcpo-' . esc_attr( $key ) . '">' . esc_html( $label ) . ( $optional ? ' (facultatif)' : ' *' ) . '</label></th><td><input class="regular-text" id="marcpo-' . esc_attr( $key ) . '" name="marcpo_edition[' . esc_attr( $key ) . ']" type="' . esc_attr( $type ) . '" value="' . esc_attr( $data[ $key ] ) . '"' . ( 'number' === $type ? ( 'exhibitors' === $key ? ' min="1" max="100000" step="1"' : ' min="0" max="1000000" step="0.01"' ) : '' ) . ( $optional ? '' : ' required' ) . '>';
 			if ( 'venue' === $key ) { echo '<p class="description">Nom du lieu, adresse et commune.</p>'; }
 			if ( 'price' === $key ) { echo '<p class="description">Indiquez 0 pour un emplacement gratuit. Précisez les conditions ou suppléments dans la présentation ou le règlement.</p>'; }
 			if ( $optional ) { echo '<p class="description">Laissez vide si aucun tarif réduit n’est proposé. Indiquez 0 pour la gratuité.</p>'; }
 			echo '</td></tr>';
 		}
-		echo '<tr><th><label for="mp-reduced_description">Conditions du tarif réduit</label></th><td><textarea class="large-text" rows="3" maxlength="2000" id="mp-reduced_description" name="mp_edition[reduced_description]">' . esc_textarea( $data['reduced_description'] ) . '</textarea><p class="description">Obligatoire si un tarif réduit est renseigné. Exemple : réservé aux adhérents de l’association XXX.</p></td></tr></table>';
+		echo '<tr><th><label for="marcpo-reduced_description">Conditions du tarif réduit</label></th><td><textarea class="large-text" rows="3" maxlength="2000" id="marcpo-reduced_description" name="marcpo_edition[reduced_description]">' . esc_textarea( $data['reduced_description'] ) . '</textarea><p class="description">Obligatoire si un tarif réduit est renseigné. Exemple : réservé aux adhérents de l’association XXX.</p></td></tr></table>';
 	}
 
 	public static function validate_market( array $data ): ?array {
@@ -181,8 +181,8 @@ final class Editions {
 	}
 
 	public static function add_box(): void {
-		add_meta_box( 'mp-edition-settings', __( 'Paramètres de l’édition', 'marche-potier' ), array( self::class, 'render_box' ), 'mp_edition', 'normal', 'high' );
-		add_meta_box( 'mp-edition-publication', 'Affichage sur le site', array( self::class, 'publication_box' ), 'mp_edition', 'normal', 'low' );
+		add_meta_box( 'marcpo-edition-settings', __( 'Paramètres de l’édition', 'marche-potier' ), array( self::class, 'render_box' ), 'marcpo_edition', 'normal', 'high' );
+		add_meta_box( 'marcpo-edition-publication', 'Affichage sur le site', array( self::class, 'publication_box' ), 'marcpo_edition', 'normal', 'low' );
 	}
 
 	public static function publication_box( \WP_Post $post ): void {
@@ -190,13 +190,13 @@ final class Editions {
 		echo '<h3>Afficher le formulaire de candidature</h3><ol><li>Enregistrez et publiez cette édition.</li><li>Ouvrez ou créez une page WordPress, cliquez sur « + » puis ajoutez le bloc <strong>Formulaire de candidature</strong>.</li><li>Dans le bloc, choisissez <strong>' . esc_html( Blocks::edition_label( $post->ID ) ) . '</strong> dans la liste des éditions, puis publiez ou mettez à jour la page.</li></ol>';
 		echo '<p>Le formulaire respecte les dates d’ouverture et de fermeture des inscriptions. Vous pouvez noter les candidatures à tout moment en mode votes multiples, indépendamment de ces dates.</p>';
 		echo '<h3>Afficher la sélection</h3><ol><li>Ajoutez le bloc <strong>Présentation de la sélection</strong> dans la page de votre choix.</li><li>Choisissez cette édition dans le bloc et publiez la page.</li><li>Lorsque la sélection est prête, cochez l’autorisation ci-dessous et enregistrez l’édition.</li></ol>';
-		echo '<p><label><input name="mp_edition[selection_public]" type="checkbox" value="1" ' . checked( $data['selection_public'], true, false ) . '> <strong>Autoriser l’affichage public de la sélection</strong></label></p>';
+		echo '<p><label><input name="marcpo_edition[selection_public]" type="checkbox" value="1" ' . checked( $data['selection_public'], true, false ) . '> <strong>Autoriser l’affichage public de la sélection</strong></label></p>';
 		echo '<p class="description">Désactivé par défaut. Seuls les candidats sélectionnés ayant autorisé leur présentation sont affichés. Publier l’édition ne publie pas automatiquement la sélection.</p>';
 	}
 
 	public static function render_box( \WP_Post $post ): void {
 		$data = self::settings( $post->ID );
-		wp_nonce_field( 'mp_save_edition_' . $post->ID, 'mp_edition_nonce' );
+		wp_nonce_field( 'marcpo_save_edition_' . $post->ID, 'marcpo_edition_nonce' );
 		self::market_fields( $data );
 		?>
 		<h3>Période de candidature</h3>
@@ -205,13 +205,13 @@ final class Editions {
 		echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
 		<table class="form-table" role="presentation">
 			<?php foreach ( array( 'opens' => __( 'Ouverture des candidatures', 'marche-potier' ), 'closes' => __( 'Fermeture des candidatures', 'marche-potier' ) ) as $key => $label ) : ?>
-			<tr><th><label for="mp-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><input id="mp-<?php echo esc_attr( $key ); ?>" name="mp_edition[<?php echo esc_attr( $key ); ?>]" type="datetime-local" required value="<?php echo esc_attr( $data[ $key ] ); ?>"></td></tr>
+			<tr><th><label for="marcpo-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><input id="marcpo-<?php echo esc_attr( $key ); ?>" name="marcpo_edition[<?php echo esc_attr( $key ); ?>]" type="datetime-local" required value="<?php echo esc_attr( $data[ $key ] ); ?>"></td></tr>
 			<?php endforeach; ?>
 		</table>
 		<h3>Informations complémentaires</h3>
 		<p><label for="mppresentation">Texte de présentation complémentaire</label></p>
 		<?php wp_editor( $data['presentation'], 'mppresentation', array(
-			'textarea_name' => 'mp_edition[presentation]',
+			'textarea_name' => 'marcpo_edition[presentation]',
 			'textarea_rows' => 10,
 			'media_buttons' => false,
 			'drag_drop_upload' => false,
@@ -224,22 +224,22 @@ final class Editions {
 		) ); ?>
 		<p class="description">Les informations du marché, cette présentation et le règlement sont publics et affichés avant le formulaire, même lorsque les candidatures sont fermées.</p>
 		<?php foreach ( array( 'rules' => 'Règlement intérieur' ) as $key => $label ) : ?>
-		<div class="mp-media-field">
+		<div class="marcpo-media-field">
 			<p><strong><?php echo esc_html( $label ); ?></strong></p>
-			<input type="hidden" name="mp_edition[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $data[ $key ] ); ?>">
-			<p class="mp-media-name"><?php echo esc_html( $data[ $key ] ? get_the_title( $data[ $key ] ) : 'Aucun fichier sélectionné' ); ?></p>
-			<button type="button" class="button mp-media-select" data-type="application/pdf">Choisir / téléverser un PDF</button>
-			<button type="button" class="button mp-media-remove">Retirer</button>
+			<input type="hidden" name="marcpo_edition[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $data[ $key ] ); ?>">
+			<p class="marcpo-media-name"><?php echo esc_html( $data[ $key ] ? get_the_title( $data[ $key ] ) : 'Aucun fichier sélectionné' ); ?></p>
+			<button type="button" class="button marcpo-media-select" data-type="application/pdf">Choisir / téléverser un PDF</button>
+			<button type="button" class="button marcpo-media-remove">Retirer</button>
 		</div>
 		<?php endforeach; ?>
 		<h3>Confirmation de candidature</h3>
-		<p><label for="mp-thank-you">Message de remerciement</label></p>
-		<textarea class="large-text" rows="5" id="mp-thank-you" name="mp_edition[thank_you]" maxlength="5000" placeholder="<?php echo esc_attr( self::DEFAULT_THANK_YOU ); ?>"><?php echo esc_textarea( $data['thank_you'] ); ?></textarea>
+		<p><label for="marcpo-thank-you">Message de remerciement</label></p>
+		<textarea class="large-text" rows="5" id="marcpo-thank-you" name="marcpo_edition[thank_you]" maxlength="5000" placeholder="<?php echo esc_attr( self::DEFAULT_THANK_YOU ); ?>"><?php echo esc_textarea( $data['thank_you'] ); ?></textarea>
 		<p class="description">Affiché après validation et repris dans l’email au candidat. Si vide, un message de confirmation standard est utilisé.</p>
 		<p class="description">Le destinataire des candidatures se définit dans « Organisateur et votes », avec le compte de l’administrateur du marché. En votes multiples, les votants actifs reçoivent aussi les dossiers.</p>
 		<h3>Stand</h3>
-		<p><label for="mp-stand-length">Taille du stand par défaut (m)</label><br><input id="mp-stand-length" type="number" min="0.01" max="1000" step="0.01" required name="mp_edition[stand_length]" value="<?php echo esc_attr( $data['stand_length'] ); ?>"></p>
-		<p><label for="mp-stand-editable">Modifiable par le potier</label><br><select id="mp-stand-editable" name="mp_edition[stand_editable]"><option value="1" <?php selected( $data['stand_editable'], true ); ?>>Oui</option><option value="0" <?php selected( $data['stand_editable'], false ); ?>>Non</option></select></p>
+		<p><label for="marcpo-stand-length">Taille du stand par défaut (m)</label><br><input id="marcpo-stand-length" type="number" min="0.01" max="1000" step="0.01" required name="marcpo_edition[stand_length]" value="<?php echo esc_attr( $data['stand_length'] ); ?>"></p>
+		<p><label for="marcpo-stand-editable">Modifiable par le potier</label><br><select id="marcpo-stand-editable" name="marcpo_edition[stand_editable]"><option value="1" <?php selected( $data['stand_editable'], true ); ?>>Oui</option><option value="0" <?php selected( $data['stand_editable'], false ); ?>>Non</option></select></p>
 		<?php
 	}
 
@@ -298,18 +298,18 @@ final class Editions {
 	}
 
 	public static function save( int $id ): void {
-		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $id ) || ! current_user_can( 'mp_manage_editions' ) ) {
+		if ( ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || wp_is_post_revision( $id ) || ! current_user_can( 'marcpo_manage_editions' ) ) {
 			return;
 		}
-		$nonce = Request::post( 'mp_edition_nonce' );
-		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_save_edition_' . $id ) ) {
+		$nonce = Request::post( 'marcpo_edition_nonce' );
+		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'marcpo_save_edition_' . $id ) ) {
 			return;
 		}
 		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- validate() validates each typed field after nonce verification; do not flatten structured input.
-		$data = isset( $_POST['mp_edition'] ) && is_array( $_POST['mp_edition'] ) ? self::validate( wp_unslash( $_POST['mp_edition'] ) ) : null;
+		$data = isset( $_POST['marcpo_edition'] ) && is_array( $_POST['marcpo_edition'] ) ? self::validate( wp_unslash( $_POST['marcpo_edition'] ) ) : null;
 		if ( null === $data ) {
 			add_filter( 'redirect_post_location', static function ( $location ) {
-				return add_query_arg( 'mp_edition_error', '1', $location );
+				return add_query_arg( 'marcpo_edition_error', '1', $location );
 			} );
 			return;
 		}
@@ -321,7 +321,7 @@ final class Editions {
 
 	public static function notice(): void {
 		$screen = get_current_screen();
-		if ( ! $screen || 'mp_edition' !== $screen->post_type || null === Request::query( 'mp_edition_error' ) || ! current_user_can( 'mp_manage_editions' ) ) {
+		if ( ! $screen || 'marcpo_edition' !== $screen->post_type || null === Request::query( 'marcpo_edition_error' ) || ! current_user_can( 'marcpo_manage_editions' ) ) {
 			return;
 		}
 		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'marche-potier' ) . '</p></div>';
@@ -329,7 +329,7 @@ final class Editions {
 
 	/** À réutiliser côté serveur lors du dépôt, sans dépendre de WP-Cron. */
 	public static function is_open( int $id, ?int $now = null ): bool {
-		if ( 'mp_edition' !== get_post_type( $id ) || 'publish' !== get_post_status( $id ) ) {
+		if ( 'marcpo_edition' !== get_post_type( $id ) || 'publish' !== get_post_status( $id ) ) {
 			return false;
 		}
 		$data = self::settings( $id );
@@ -340,24 +340,24 @@ final class Editions {
 	}
 
 	public static function selection_is_public( int $id ): bool {
-		return 'mp_edition' === get_post_type( $id ) && 'publish' === get_post_status( $id ) && true === self::settings( $id )['selection_public'];
+		return 'marcpo_edition' === get_post_type( $id ) && 'publish' === get_post_status( $id ) && true === self::settings( $id )['selection_public'];
 	}
 
 	public static function columns( array $columns ): array {
-		return array_merge( $columns, array( 'mp_year' => __( 'Année', 'marche-potier' ), 'mp_period' => __( 'Période de candidature', 'marche-potier' ), 'mp_selection' => __( 'Sélection publique', 'marche-potier' ) ) );
+		return array_merge( $columns, array( 'marcpo_year' => __( 'Année', 'marche-potier' ), 'marcpo_period' => __( 'Période de candidature', 'marche-potier' ), 'marcpo_selection' => __( 'Sélection publique', 'marche-potier' ) ) );
 	}
 
 	public static function column( string $column, int $id ): void {
 		$data = self::settings( $id );
-		if ( 'mp_year' === $column ) {
+		if ( 'marcpo_year' === $column ) {
 			echo esc_html( $data['year'] );
-		} elseif ( 'mp_period' === $column ) {
+		} elseif ( 'marcpo_period' === $column ) {
 			foreach ( array( 'opens', 'closes' ) as $key ) {
 				$date = self::parse_date( $data[ $key ] );
 				echo esc_html( $date ? wp_date( 'd/m/Y H:i', $date->getTimestamp() ) : '—' ) . '<br>';
 			}
 			echo esc_html( self::is_open( $id ) ? __( 'Ouverte', 'marche-potier' ) : __( 'Fermée', 'marche-potier' ) );
-		} elseif ( 'mp_selection' === $column ) {
+		} elseif ( 'marcpo_selection' === $column ) {
 			echo esc_html( self::selection_is_public( $id ) ? __( 'Autorisée', 'marche-potier' ) : __( 'Masquée', 'marche-potier' ) );
 		}
 	}

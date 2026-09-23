@@ -34,7 +34,7 @@ final class Plugin {
 		add_menu_page(
 			__( 'Marché Potier', 'marche-potier' ),
 			__( 'Marché Potier', 'marche-potier' ),
-			'mp_access_market',
+			'marcpo_access_market',
 			'marche-potier',
 			array( self::class, 'render_dashboard' ),
 			'dashicons-store'
@@ -42,23 +42,23 @@ final class Plugin {
 	}
 
 	public static function render_dashboard(): void {
-		if ( ! current_user_can( 'mp_access_market' ) ) {
+		if ( ! current_user_can( 'marcpo_access_market' ) ) {
 			wp_die( esc_html__( 'Vous ne pouvez pas accéder à cette page.', 'marche-potier' ) );
 		}
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Marché Potier', 'marche-potier' ); ?></h1>
 			<p><?php esc_html_e( 'Retrouvez ici les outils pour organiser votre marché, de l’ouverture des candidatures à la publication des potiers sélectionnés.', 'marche-potier' ); ?></p>
-			<?php foreach ( array( 'mp_edition' => array( 'mp_manage_editions', 'Gérer les éditions' ), 'mp_candidature' => array( 'mp_review_applications', 'Examiner les candidatures' ) ) as $type => $item ) : ?>
+			<?php foreach ( array( 'marcpo_edition' => array( 'marcpo_manage_editions', 'Gérer les éditions' ), 'marcpo_candidature' => array( 'marcpo_review_applications', 'Examiner les candidatures' ) ) as $type => $item ) : ?>
 				<?php if ( current_user_can( $item[0] ) ) : ?>
-					<p><a class="button" href="<?php echo esc_url( admin_url( 'mp_candidature' === $type ? 'admin.php?page=mp-gestion' : 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $item[1] ); ?></a></p>
+					<p><a class="button" href="<?php echo esc_url( admin_url( 'marcpo_candidature' === $type ? 'admin.php?page=marcpo-gestion' : 'edit.php?post_type=' . $type ) ); ?>"><?php echo esc_html( $item[1] ); ?></a></p>
 				<?php endif; ?>
 			<?php endforeach; ?>
 			<?php if ( Jury::can_review() ) : ?>
 				<p><a class="button" href="<?php echo esc_url( VoteTracking::url() ); ?>"><?php esc_html_e( 'Suivi des votes', 'marche-potier' ); ?></a></p>
-				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=mp-historique' ) ); ?>"><?php esc_html_e( 'Historique des sélections', 'marche-potier' ); ?></a></p>
+				<p><a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=marcpo-historique' ) ); ?>"><?php esc_html_e( 'Historique des sélections', 'marche-potier' ); ?></a></p>
 			<?php endif; ?>
-			<?php if ( current_user_can( 'mp_manage_editions' ) ) : ?>
+			<?php if ( current_user_can( 'marcpo_manage_editions' ) ) : ?>
 			<h2><?php esc_html_e( 'Comment organiser une édition ?', 'marche-potier' ); ?></h2>
 			<ol>
 				<li>

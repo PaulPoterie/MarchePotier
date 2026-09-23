@@ -27,16 +27,25 @@ final class PrivateFiles {
 	public static function hooks(): void {
 		MediaLibrary::hooks();
 		add_action( 'admin_init', static function () {
-			if ( ! current_user_can( 'manage_options' ) || get_option( '_mp_media_library_migrated' ) ) { return; }
+			if ( ! current_user_can( 'manage_options' ) || get_option( '_marcpo_media_library_migrated' ) ) { return; }
 			$result = self::migrate();
-			if ( ! is_wp_error( $result ) && ! $result['remaining'] ) { update_option( '_mp_media_library_migrated', 1, false ); }
-			else { add_action( 'admin_notices', static function () use ( $result ) { echo '<div class="notice notice-warning"><p>' . esc_html( is_wp_error( $result ) ? $result->get_error_message() : 'Import des fichiers dans la médiathèque en cours ; elle continuera à la prochaine page d’administration.' ) . '</p></div>'; } ); }
+			if ( ! is_wp_error( $result ) && ! $result['remaining'] ) { update_option( '_marcpo_media_library_migrated', 1, false ); }
+			else { add_action( 'admin_notices', static function () use ( $result ) { self::migration_notice( $result ); } ); }
 		} );
 		add_action( 'post_edit_form_tag', static function () {
-			if ( 'mp_candidature' === get_post_type() ) { echo ' enctype="multipart/form-data"'; }
+			if ( 'marcpo_candidature' === get_post_type() ) { echo ' enctype="multipart/form-data"'; }
 		} );
-		add_action( 'admin_post_mp_private_file', array( self::class, 'download' ) );
-		add_action( 'admin_post_nopriv_mp_private_file', array( self::class, 'download' ) );
+		add_action( 'admin_post_marcpo_private_file', array( self::class, 'download' ) );
+		add_action( 'admin_post_nopriv_marcpo_private_file', array( self::class, 'download' ) );
+	}
+	/** Keep operational messages on plugin screens, never on the general dashboard. */
+	public static function migration_notice( array|\WP_Error $result ): void {
+		$screen = get_current_screen();
+		if ( ! $screen || ! current_user_can( 'manage_options' ) ) { return; }
+		$plugin_screen = in_array( $screen->post_type, array( 'marcpo_edition', 'marcpo_potier', 'marcpo_candidature' ), true ) || 'toplevel_page_marche-potier' === $screen->id || str_starts_with( $screen->id, 'marche-potier_page_marcpo-' );
+		if ( ! $plugin_screen ) { return; }
+		$message = is_wp_error( $result ) ? $result->get_error_message() . ' Vérifiez les fichiers et les droits d’écriture du dossier uploads, puis rechargez cette page pour réessayer.' : 'Import des fichiers dans la médiathèque en cours. Rechargez cette page pour poursuivre ; ce message disparaîtra à la fin de l’import.';
+		echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 	}
 	/** Suit le répertoire uploads configuré par WordPress, y compris en multisite. */
 	public static function root(): string|\WP_Error {
@@ -48,7 +57,7 @@ final class PrivateFiles {
 	}
 	/** Ancien emplacement : utilisé uniquement pour la migration et son repli de lecture. */
 	public static function legacy_root(): string|false {
-		$path = defined( 'MP_PRIVATE_DIR' ) ? MP_PRIVATE_DIR : dirname( untrailingslashit( ABSPATH ) ) . '/marche-potier-private';
+		$path = defined( 'MARCPO_PRIVATE_DIR' ) ? MARCPO_PRIVATE_DIR : dirname( untrailingslashit( ABSPATH ) ) . '/marche-potier-private';
 		if ( ! is_string( $path ) || ! path_is_absolute( $path ) ) { return false; }
 		$resolved = realpath( $path );
 		return $resolved ? wp_normalize_path( $resolved ) : false;
@@ -81,35 +90,35 @@ final class PrivateFiles {
 		echo $documents_only ? '<h3>Justificatifs</h3>' : '<h3>Photos et justificatifs</h3>';
 		$files = Records::data( $id )['files'] ?? array();
 		if ( ! $files ) { echo '<p>Aucun fichier joint à ce dossier.</p>'; return; }
-		echo '<div class="mp-files' . ( $documents_only ? ' mp-review-documents' : '' ) . '">';
+		echo '<div class="marcpo-files' . ( $documents_only ? ' marcpo-review-documents' : '' ) . '">';
 		foreach ( self::slots() as $slot => $label ) {
 			if ( ! isset( $files[ $slot ] ) ) { continue; }
 			if ( $documents_only && ! in_array( $slot, array( 'status', 'insurance' ), true ) ) { continue; }
 			$url = self::url( $id, $slot );
 			$pdf = 'application/pdf' === ( $files[ $slot ]['mime'] ?? '' );
-			echo '<p><a' . ( $documents_only ? ' data-mp-viewer="' . ( $pdf ? 'pdf' : 'image' ) . '" data-label="' . esc_attr( $label ) . '" data-preview="' . esc_url( add_query_arg( 'mp_inline', '1', $url ) ) . '"' : '' ) . ' href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">';
+			echo '<p><a' . ( $documents_only ? ' data-marcpo-viewer="' . ( $pdf ? 'pdf' : 'image' ) . '" data-label="' . esc_attr( $label ) . '" data-preview="' . esc_url( add_query_arg( 'marcpo_inline', '1', $url ) ) . '"' : '' ) . ' href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer">';
 			if ( ! $pdf ) { echo '<img src="' . esc_url( $url ) . '" alt="' . esc_attr( $label ) . '" style="max-width:220px;max-height:180px;object-fit:contain" loading="lazy"><br>'; }
-			elseif ( $documents_only ) { echo '<span class="mp-document-cover" aria-hidden="true"><svg viewBox="0 0 48 56" width="48" height="56" fill="none"><path d="M9 2h20l10 10v42H9zM29 2v12h10M16 24h16M16 31h16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><strong>PDF</strong></span>'; }
+			elseif ( $documents_only ) { echo '<span class="marcpo-document-cover" aria-hidden="true"><svg viewBox="0 0 48 56" width="48" height="56" fill="none"><path d="M9 2h20l10 10v42H9zM29 2v12h10M16 24h16M16 31h16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><strong>PDF</strong></span>'; }
 			echo esc_html( $label ) . '</a></p>';
 		}
 		echo '</div>';
 	}
 
 	public static function edit( int $id ): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { return; }
+		if ( ! current_user_can( 'marcpo_manage_applications' ) ) { return; }
 		self::render( $id );
 		echo '<p>Ajouter ou remplacer les fichiers ci-dessous, puis cliquer sur « Mettre à jour » (ou « Publier »). Un champ laissé vide conserve le fichier actuel. Les fichiers sont enregistrés dans la médiathèque WordPress. Un remplacement conserve l’ancien média. Maximum ' . esc_html( self::size_label() ) . ' par fichier.</p>';
 		foreach ( self::slots() as $slot => $label ) {
 			$pdf = in_array( $slot, array( 'status', 'insurance' ), true );
-			echo '<p><label for="mp-upload-' . esc_attr( $slot ) . '"><strong>' . esc_html( $label ) . '</strong> — ' . ( $pdf ? 'PDF, JPEG, PNG ou WebP' : 'JPEG, PNG ou WebP' ) . '</label><br><input type="file" id="mp-upload-' . esc_attr( $slot ) . '" name="mp_admin_' . esc_attr( $slot ) . '" accept="' . ( $pdf ? '.pdf,.jpg,.jpeg,.png,.webp' : '.jpg,.jpeg,.png,.webp' ) . '"></p>';
+			echo '<p><label for="marcpo-upload-' . esc_attr( $slot ) . '"><strong>' . esc_html( $label ) . '</strong> — ' . ( $pdf ? 'PDF, JPEG, PNG ou WebP' : 'JPEG, PNG ou WebP' ) . '</label><br><input type="file" id="marcpo-upload-' . esc_attr( $slot ) . '" name="marcpo_admin_' . esc_attr( $slot ) . '" accept="' . ( $pdf ? '.pdf,.jpg,.jpeg,.png,.webp' : '.jpg,.jpeg,.png,.webp' ) . '"></p>';
 		}
 	}
 	/** Preserve old links without requiring a session or an expiring nonce. */
 	public static function download(): void {
 		$id = (int) ( Request::query( 'application' ) ?? 0 ); $slot = Request::query( 'slot' ) ?? '';
-		if ( ! isset( self::slots()[ $slot ] ) || 'mp_candidature' !== get_post_type( $id ) ) { wp_die( 'Fichier introuvable.', '', array( 'response' => 404 ) ); }
+		if ( ! isset( self::slots()[ $slot ] ) || 'marcpo_candidature' !== get_post_type( $id ) ) { wp_die( 'Fichier introuvable.', '', array( 'response' => 404 ) ); }
 		$file = Records::data( $id )['files'][ $slot ] ?? array();
-		if ( '1' === Request::query( 'mp_social' ) ) { $file = $file['social'] ?? array(); }
+		if ( '1' === Request::query( 'marcpo_social' ) ) { $file = $file['social'] ?? array(); }
 		$url = self::file_url( $file );
 		if ( ! $url ) { wp_die( 'Fichier introuvable.', '', array( 'response' => 404 ) ); }
 		nocache_headers();

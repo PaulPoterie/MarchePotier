@@ -1,5 +1,5 @@
-.mp-edition-block { border:1px solid #c3c4c7; border-radius:4px; }
-.mp-edition-block .components-placeholder { min-height:0; box-shadow:none; }
-.mp-edition-block-content { width:100%; }
-.mp-edition-block-content .components-notice { margin:12px 0; }
-.mp-edition-block-summary { margin:16px 0 8px; }
+.marcpo-edition-block { border:1px solid #c3c4c7; border-radius:4px; }
+.marcpo-edition-block .components-placeholder { min-height:0; box-shadow:none; }
+.marcpo-edition-block-content { width:100%; }
+.marcpo-edition-block-content .components-notice { margin:12px 0; }
+.marcpo-edition-block-summary { margin:16px 0 8px; }

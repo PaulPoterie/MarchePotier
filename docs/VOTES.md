@@ -31,7 +31,7 @@ Les shortcodes ont été supprimés : enregistrement des balises, recherche par 
 ## Affectations et conservation
 
 - Le votant consulte seulement ses éditions, leurs candidatures et leurs pièces. Les listes, filtres, navigation et historique respectent cette restriction, y compris en accès direct par URL.
-- Les rôles sont `mp_organizer` (**[MP] Administrateur marché**) et `mp_juror` (**[MP] Votant sélection**). L’administrateur du marché a les droits de création, publication, modification et suppression des éditions, candidatures, pages et articles, y compris privés ou créés par d’autres comptes. Il ne gère pas les extensions, utilisateurs ou réglages techniques de WordPress.
+- Les rôles sont `marcpo_organizer` (**[MP] Administrateur marché**) et `marcpo_juror` (**[MP] Votant sélection**). L’administrateur du marché a les droits de création, publication, modification et suppression des éditions, candidatures, pages et articles, y compris privés ou créés par d’autres comptes. Il ne gère pas les extensions, utilisateurs ou réglages techniques de WordPress.
 - Le votant ne dispose pas des actions Modifier, Corbeille, Exporter CSV ni de la sélection finale. Les contrôles existent aussi côté serveur.
 - Décocher **Actif** retire un votant des notifications, de la participation et du total de cette édition. Un votant limité perd aussi l’accès à ses dossiers. Les notes restent affichées avec la mention **Inactif · note exclue du total** ; une réactivation les réintègre.
 - Pour remplacer l’administrateur, modifier son nom et son email. Si le remplaçant est déjà votant, décocher sa case **Actif** avant d’enregistrer : il devient l’administrateur unique avec sa note existante. L’ancien administrateur devient votant inactif. Ses droits globaux WordPress restent attachés à son compte ; seul un administrateur du site peut les retirer dans la gestion des comptes.
@@ -41,8 +41,8 @@ Les shortcodes ont été supprimés : enregistrement des balises, recherche par 
 
 ## Technique et validation
 
-- Réglages du jury stockés dans `_mp_jury_settings`, avec une fonction `administrator` ou `voter` par membre et une version de formulaire pour détecter les modifications concurrentes. Les administrateurs et votants utilisent la même table de notes, sans doublon. L’enregistrement valide les paramètres de l’édition avant de créer des comptes ; une équipe invalide empêche aussi la sauvegarde de ces paramètres. Le titre et le statut natifs WordPress restent enregistrés séparément.
-- Table `${prefix}mp_votes` : candidature, édition, utilisateur, note et date UTC. La contrainte unique candidature/utilisateur et l’écriture atomique évitent les doubles votes.
+- Réglages du jury stockés dans `_marcpo_jury_settings`, avec une fonction `administrator` ou `voter` par membre et une version de formulaire pour détecter les modifications concurrentes. Les administrateurs et votants utilisent la même table de notes, sans doublon. L’enregistrement valide les paramètres de l’édition avant de créer des comptes ; une équipe invalide empêche aussi la sauvegarde de ces paramètres. Le titre et le statut natifs WordPress restent enregistrés séparément.
+- Table `${prefix}marcpo_votes` : candidature, édition, utilisateur, note et date UTC. La contrainte unique candidature/utilisateur et l’écriture atomique évitent les doubles votes.
 - Vérification du compte connecté, de l’affectation active, du mode et de la note côté serveur ; nonce spécifique au dossier pour les envois du formulaire. Aucun contrôle de date ni de clôture ne limite la notation.
 - Verrou MySQL commun aux votes et changements d’affectation. Les emails sont réservés par destinataire sous verrou puis envoyés hors verrou.
 - Mise à jour du schéma et des droits à la visite de l’administration par un administrateur, sans réactivation du plugin.

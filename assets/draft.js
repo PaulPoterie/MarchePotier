@@ -1,14 +1,14 @@
 /* Réponses uniquement : aucun fichier ni jeton de session dans localStorage. */
-window.mpCandidateDraft = function (form) {
-  const key = 'mp-candidate-draft:' + form.elements.namedItem('mp_edition').value;
+window.marcpoCandidateDraft = function (form) {
+  const key = 'marcpo-candidate-draft:' + form.elements.namedItem('marcpo_edition').value;
   const duration = 24 * 60 * 60 * 1000;
   const fields = Array.from(form.elements).filter(input =>
     /^(INPUT|TEXTAREA|SELECT)$/.test(input.tagName) &&
     !['hidden', 'file', 'submit', 'button'].includes(input.type) && !input.readOnly &&
-    (/^mp_record\[(identity|activity)\]\[/.test(input.name) || input.name === 'mp_photo_consent'));
+    (/^marcpo_record\[(identity|activity)\]\[/.test(input.name) || input.name === 'marcpo_photo_consent'));
   const notice = document.createElement('p');
   notice.setAttribute('role', 'status');
-  notice.className = 'mp-draft-status';
+  notice.className = 'marcpo-draft-status';
   form.prepend(notice);
   let expires = 0, stopped = false, timer;
   const normal = 'Vos textes et choix sont sauvegardés dans ce navigateur pendant 24 heures. Utilisez le même appareil pour reprendre votre candidature.';
@@ -32,7 +32,7 @@ window.mpCandidateDraft = function (form) {
     // Supprime aussi les brouillons expirés des autres éditions de ce site.
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const itemKey = localStorage.key(i);
-      if (!itemKey || !itemKey.startsWith('mp-candidate-draft:')) continue;
+      if (!itemKey || !itemKey.startsWith('marcpo-candidate-draft:')) continue;
       try { const item = JSON.parse(localStorage.getItem(itemKey)); if (!item || !Number.isFinite(item.expires) || item.expires <= Date.now()) localStorage.removeItem(itemKey); }
       catch (_) { localStorage.removeItem(itemKey); }
     }
@@ -63,6 +63,6 @@ window.mpCandidateDraft = function (form) {
   };
 };
 // Confirmation rendue par le serveur : couvre aussi un retour après interruption.
-document.querySelectorAll('.mp-success[data-mp-edition]').forEach(element => {
-  try { localStorage.removeItem('mp-candidate-draft:' + element.dataset.mpEdition); } catch (_) {}
+document.querySelectorAll('.marcpo-success[data-marcpo-edition]').forEach(element => {
+  try { localStorage.removeItem('marcpo-candidate-draft:' + element.dataset.marcpoEdition); } catch (_) {}
 });

@@ -4,9 +4,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class CsvExport {
 	public static function hooks(): void {
-		add_action( 'admin_post_mp_export_csv', array( self::class, 'download' ) );
-		add_action( 'admin_post_mp_export_file', array( self::class, 'file' ) );
-		add_action( 'admin_post_nopriv_mp_export_file', array( self::class, 'file' ) );
+		add_action( 'admin_post_marcpo_export_csv', array( self::class, 'download' ) );
+		add_action( 'admin_post_marcpo_export_file', array( self::class, 'file' ) );
+		add_action( 'admin_post_nopriv_marcpo_export_file', array( self::class, 'file' ) );
 	}
 	public static function file_url( int $id, string $slot ): string {
 		return PrivateFiles::url( $id, $slot );
@@ -49,8 +49,8 @@ final class CsvExport {
 		foreach ( $ids as $id ) { fputcsv( $stream, array_map( array( self::class, 'cell' ), self::row( $id ) ), ';', '"', '', "\r\n" ); }
 	}
 	public static function download(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		check_admin_referer( 'mp_export_csv' );
+		if ( ! current_user_can( 'marcpo_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		check_admin_referer( 'marcpo_export_csv' );
 		$ids = Records::navigation_ids( Records::list_context() );
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=UTF-8' );

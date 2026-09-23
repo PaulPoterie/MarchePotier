@@ -66,7 +66,7 @@ final class Fields {
 		$result = array();
 		foreach ( $schema as $key => $field ) {
 			$value = $raw[ $key ] ?? ( 'multiple' === $field[1] ? array() : '' );
-			$error = new \WP_Error( 'mp_field', sprintf( 'Valeur invalide : %s.', $field[0] ) );
+			$error = new \WP_Error( 'marcpo_field', sprintf( 'Valeur invalide : %s.', $field[0] ) );
 			if ( 'multiple' === $field[1] ) {
 				if ( ! is_array( $value ) ) { return $error; }
 				foreach ( $value as $choice ) {
@@ -75,11 +75,11 @@ final class Fields {
 				$result[ $key ] = array_values( array_unique( $value ) );
 			} else {
 				if ( ! is_string( $value ) ) { return $error; }
-				if ( strlen( $value ) > ( 'textarea' === $field[1] ? 40000 : 4000 ) ) { return new \WP_Error( 'mp_length', sprintf( 'Texte trop long : %s.', $field[0] ) ); }
+				if ( strlen( $value ) > ( 'textarea' === $field[1] ? 40000 : 4000 ) ) { return new \WP_Error( 'marcpo_length', sprintf( 'Texte trop long : %s.', $field[0] ) ); }
 				$value = trim( $value );
 				if ( 'instagram' === $key && '' !== $value && ! preg_match( '~^https?://~i', $value ) ) {
 					$handle = preg_replace( '/^@/', '', $value );
-					if ( ! preg_match( '/^[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?$/D', $handle ) || str_contains( $handle, '..' ) ) { return new \WP_Error( 'mp_instagram', 'Instagram : indiquez votre nom de compte, par exemple @monatelier, ou le lien complet de votre profil.' ); }
+					if ( ! preg_match( '/^[A-Za-z0-9_](?:[A-Za-z0-9_.]{0,28}[A-Za-z0-9_])?$/D', $handle ) || str_contains( $handle, '..' ) ) { return new \WP_Error( 'marcpo_instagram', 'Instagram : indiquez votre nom de compte, par exemple @monatelier, ou le lien complet de votre profil.' ); }
 					$value = 'https://www.instagram.com/' . $handle . '/';
 				}
 				if ( '' !== $value ) {
@@ -93,10 +93,10 @@ final class Fields {
 					if ( 'date' === $field[1] && ! Editions::parse_date( $value . 'T12:00' ) ) { return $error; }
 				}
 				$result[ $key ] = 'textarea' === $field[1] ? sanitize_textarea_field( $value ) : sanitize_text_field( $value );
-				if ( 'presentation' === $key && count( preg_split( '/[\s\x{FEFF}]+/u', $result[ $key ], -1, PREG_SPLIT_NO_EMPTY ) ) > 300 ) { return new \WP_Error( 'mp_presentation_length', 'Présentation : limitez votre texte à 300 mots maximum.' ); }
+				if ( 'presentation' === $key && count( preg_split( '/[\s\x{FEFF}]+/u', $result[ $key ], -1, PREG_SPLIT_NO_EMPTY ) ) > 300 ) { return new \WP_Error( 'marcpo_presentation_length', 'Présentation : limitez votre texte à 300 mots maximum.' ); }
 			}
 			if ( $complete && $field[2] && ( '' === $result[ $key ] || array() === $result[ $key ] ) ) {
-				return new \WP_Error( 'mp_required', sprintf( 'Champ obligatoire : %s.', $field[0] ) );
+				return new \WP_Error( 'marcpo_required', sprintf( 'Champ obligatoire : %s.', $field[0] ) );
 			}
 		}
 		foreach ( $schema as $key => $field ) {
@@ -105,7 +105,7 @@ final class Fields {
 			$active = in_array( $expected, (array) ( $result[ $parent ] ?? array() ), true );
 			if ( ! $active ) { $result[ $key ] = ''; }
 			if ( $complete && $active && '' === $result[ $key ] ) {
-				return new \WP_Error( 'mp_required', sprintf( 'Précision obligatoire : %s.', $field[0] ) );
+				return new \WP_Error( 'marcpo_required', sprintf( 'Précision obligatoire : %s.', $field[0] ) );
 			}
 		}
 		return $result;
@@ -116,8 +116,8 @@ final class Fields {
 		echo '<table class="form-table" role="presentation">';
 		foreach ( $schema as $key => $field ) {
 			$value = $data[ $key ] ?? ( 'multiple' === $field[1] ? array() : ( 'stand_length' === $key ? '5' : '' ) );
-			$name = 'mp_record[' . $group . '][' . $key . ']';
-			$id = 'mp-' . $group . '-' . $key;
+			$name = 'marcpo_record[' . $group . '][' . $key . ']';
+			$id = 'marcpo-' . $group . '-' . $key;
 			echo '<tr><th><label for="' . esc_attr( $id ) . '">' . esc_html( $field[0] . ( $field[2] ? ' *' : '' ) ) . '</label></th><td>';
 			if ( 'association_details' === $key ) { echo '<p class="description">(Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</p>'; }
 			if ( 'textarea' === $field[1] ) {

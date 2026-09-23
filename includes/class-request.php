@@ -23,7 +23,7 @@ final class Request {
 		if ( ! isset( $source[ $key ] ) || ! is_string( $source[ $key ] ) ) { return null; }
 		$value = wp_unslash( $source[ $key ] );
 		if ( 's' === $key ) { return sanitize_text_field( $value ); }
-		if ( in_array( $key, array( 'application', 'candidature', 'post', 'mp_edition', 'paged', 'm', 'author' ), true ) ) { return '' === $value || ctype_digit( $value ) ? $value : null; }
+		if ( in_array( $key, array( 'application', 'candidature', 'post', 'marcpo_edition', 'paged', 'm', 'author' ), true ) ) { return '' === $value || ctype_digit( $value ) ? $value : null; }
 		return preg_match( '/^[a-zA-Z0-9_.:\-]*$/D', $value ) ? $value : null;
 	}
 	/** Missing or invalid IPs share a conservative rate-limit bucket; never trust forwarded headers. */

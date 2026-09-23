@@ -47,20 +47,20 @@ Les noms des fichiers CSS/JS suivent leur écran : `review.*` sert à Gestion et
 
 | Donnée | Stockage et responsabilité |
 | --- | --- |
-| Édition | Contenu `mp_edition`, paramètres dans `_mp_edition_settings`. L’ID est la référence ; l’année est un libellé, pas une clé unique. |
-| Équipe | `_mp_jury_settings` : `mode`, `revision`, `members[ID compte]`. Chaque membre possède `name`, `kind`, `active` et éventuellement `invitation`. |
-| Identité d’historique | Contenu `mp_potier`, `_mp_record.identity` minimal (nom, prénom, email). Ce n’est pas un compte WordPress de candidat. |
-| Candidature | Contenu `mp_candidature`, réponses dans `_mp_record` : `edition_id`, `potier_id`, `identity`, `activity`, `internal`, `decision`, `files`, consentement et date de dépôt. |
-| Index de candidature | `_mp_edition_id`, `_mp_potier_id`, `_mp_decision` servent aux requêtes. Les maintenir cohérents avec `_mp_record` à chaque écriture. |
-| Notes | Table `${prefix}mp_votes`, clé unique `(application_id, user_id)`. Une correction remplace la note ; elle ne crée pas un deuxième vote. |
-| Fichiers | Pièces jointes WordPress identifiées par `files[slot].attachment_id`, copies Meta par `files[slot].social.attachment_id`. `_mp_temporary_until` et `_mp_draft_owner` identifient exclusivement les médias provisoires. Après écriture du dossier, le rattachement est établi et ces marqueurs sont retirés. Les URLs sont publiques, y compris pour les justificatifs. |
+| Édition | Contenu `marcpo_edition`, paramètres dans `_marcpo_edition_settings`. L’ID est la référence ; l’année est un libellé, pas une clé unique. |
+| Équipe | `_marcpo_jury_settings` : `mode`, `revision`, `members[ID compte]`. Chaque membre possède `name`, `kind`, `active` et éventuellement `invitation`. |
+| Identité d’historique | Contenu `marcpo_potier`, `_marcpo_record.identity` minimal (nom, prénom, email). Ce n’est pas un compte WordPress de candidat. |
+| Candidature | Contenu `marcpo_candidature`, réponses dans `_marcpo_record` : `edition_id`, `potier_id`, `identity`, `activity`, `internal`, `decision`, `files`, consentement et date de dépôt. |
+| Index de candidature | `_marcpo_edition_id`, `_marcpo_potier_id`, `_marcpo_decision` servent aux requêtes. Les maintenir cohérents avec `_marcpo_record` à chaque écriture. |
+| Notes | Table `${prefix}marcpo_votes`, clé unique `(application_id, user_id)`. Une correction remplace la note ; elle ne crée pas un deuxième vote. |
+| Fichiers | Pièces jointes WordPress identifiées par `files[slot].attachment_id`, copies Meta par `files[slot].social.attachment_id`. `_marcpo_temporary_until` et `_marcpo_draft_owner` identifient exclusivement les médias provisoires. Après écriture du dossier, le rattachement est établi et ces marqueurs sont retirés. Les URLs sont publiques, y compris pour les justificatifs. |
 
 Les réponses sont propres à chaque candidature : corriger une année ne doit pas réécrire les réponses d’une autre année. L’identité d’historique est rapprochée par nom, prénom et email. Une adresse email ne peut déposer deux fois pour une même édition, corbeille comprise.
 
 ### Droits : rôle du compte et affectation ne sont pas synonymes
 
-- `mp_organizer` est le rôle global **[MP] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
-- `mp_juror` est **[MP] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
+- `marcpo_organizer` est le rôle global **[MP] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
+- `marcpo_juror` est **[MP] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
 - `kind=administrator` dans une édition désigne son unique administrateur et contact. Le remplacer désactive son ancienne affectation ; cela ne révoque pas son rôle global WordPress.
 - Pour voter, même un administrateur doit être membre actif de cette édition. `Votes::record()` prend exclusivement le compte de la session ; aucun ID d’auteur envoyé par le navigateur n’est accepté.
 - `Jury::settings()` conserve les membres inactifs. `Jury::members()` ne renvoie que les actifs dont le compte existe : c’est cette liste qui sert aux totaux et aux destinataires.
@@ -79,11 +79,11 @@ Les types de contenus des dossiers ne sont pas publics. Le statut WordPress `pub
 
 ### Gestion, filtres, tris et navigation
 
-`Records::list_context()` ne conserve que les paramètres GET autorisés. Le select `mp_sort` devient `orderby` + `order` dans les liens. `Records::navigation_ids()` applique accès, filtres, recherche et tri à la liste entière. Cette liste est partagée par la gestion, l’export, les boutons précédent/suivant et le suivi.
+`Records::list_context()` ne conserve que les paramètres GET autorisés. Le select `marcpo_sort` devient `orderby` + `order` dans les liens. `Records::navigation_ids()` applique accès, filtres, recherche et tri à la liste entière. Cette liste est partagée par la gestion, l’export, les boutons précédent/suivant et le suivi.
 
 `Review::table()` prépare la pagination puis appelle les fonctions `management_header`, `management_filters`, `management_toolbar`, `management_rows` et `management_pagination`. Ces fonctions rendent les zones de l’écran ; elles ne doivent pas inventer une autre liste de candidatures.
 
-Le select de tri est visuellement hors du formulaire, mais associé par `form="mp-application-filters"`. Le formulaire omet `paged` volontairement : changer un filtre ou un tri revient à la première page. Les liens de pagination et d’examen conservent le contexte. Le tri par soumission utilise `submitted_at`, pas la création WordPress ; le tri par nom utilise les coordonnées, pas le titre généré.
+Le select de tri est visuellement hors du formulaire, mais associé par `form="marcpo-application-filters"`. Le formulaire omet `paged` volontairement : changer un filtre ou un tri revient à la première page. Les liens de pagination et d’examen conservent le contexte. Le tri par soumission utilise `submitted_at`, pas la création WordPress ; le tri par nom utilise les coordonnées, pas le titre généré.
 
 ### Écritures et concurrence
 
@@ -146,6 +146,6 @@ Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier
 
 `MediaLibrary::store` reçoit les fichiers via `wp_handle_upload`, puis crée les pièces jointes et leurs métadonnées. Le formulaire signé ou le nonce administrateur est validé par l’appelant. `UploadDrafts::files` vérifie la révision et le propriétaire ; aucun identifiant de média fourni par le navigateur n’est accepté. Un rollback de candidature ne supprime pas les médias du brouillon.
 
-La finalisation intervient après sauvegarde de `_mp_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
+La finalisation intervient après sauvegarde de `_marcpo_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
 
-La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_mp_media_migrated` marque les dossiers traités et `_mp_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.
+La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_marcpo_media_migrated` marque les dossiers traités et `_marcpo_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.

@@ -4,7 +4,7 @@ Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.19.0
+Stable tag: 0.19.1-beta.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Manage pottery markets: applications, supporting documents, jury ratings, select
 
 Marché Potier helps pottery market organizers collect applications, review candidates and present selected exhibitors. The interface and outgoing messages are currently mostly in French.
 
-Version 0.19.0 brings edition administrators, assigned jurors and WordPress Media Library storage together. Read the document storage information below.
+Version 0.19.1-beta.1 is a development build for the WordPress.org review. Its new marcpo_ identifiers do not migrate the previous test-only data. Create fresh editions and team assignments. Read the document storage information below.
 
 = Features =
 
@@ -54,7 +54,7 @@ Photos and supporting documents are WordPress Media Library attachments with ord
 
 Supporting documents have no special access protection. Their URLs can be opened without signing in. This does not display them in the selection gallery: that gallery only shows the selected product photographs and public presentation. Access to application management and CSV export still requires the appropriate WordPress permissions.
 
-The technical mp_form_session cookie links browser sessions to transfers and is renewed for 24 hours. Answers and choices may be saved in browser localStorage under mp-candidate-draft: followed by the edition ID, with a maximum logical lifetime of 24 hours. Expired drafts are removed when the code next runs; a closed browser may retain them physically until another visit or manual deletion.
+The technical marcpo_form_session cookie links browser sessions to transfers and is renewed for 24 hours. Answers and choices may be saved in browser localStorage under marcpo-candidate-draft: followed by the edition ID, with a maximum logical lifetime of 24 hours. Expired drafts are removed when the code next runs; a closed browser may retain them physically until another visit or manual deletion.
 
 Temporary uploads expire after 24 hours. Physical cleanup depends on subsequent reads and an hourly WordPress task; delayed WP-Cron execution can prolong storage. On confirmation, the existing attachments are assigned to the application without copying them; only the draft metadata is removed. Cleanup only deletes explicitly marked provisional media with no application reference. Ordinary unattached media are never collected.
 
@@ -68,7 +68,7 @@ Organizers must define retention periods and update their site's privacy policy 
 
 1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. MySQL/MariaDB must support named locks.
 2. On staging, upload the ZIP containing the marche-potier folder through Plugins > Add New > Upload Plugin, then activate it.
-3. Sign in as a WordPress administrator and open Marché Potier. Verify document storage protection and email delivery before collecting real applications.
+3. Sign in as a WordPress administrator and open Marché Potier. Review the documented public file storage behavior and verify email delivery before collecting real applications.
 4. Create an edition, complete its settings and required administrator, then publish it.
 5. Add the "Formulaire de candidature" block to a page and choose the edition. Use one form per page.
 6. Exclude the application page from page/CDN caching, ensure WP-Cron works and test a complete application.
@@ -131,7 +131,7 @@ The service is subject to its usage policy and has no availability guarantee. Pr
 
 = Custom providers =
 
-Developers can override provider URLs through mp_address_geocoder_url and mp_map_tile_url. The information above describes default providers. Sites using replacements must document the actual services and update their privacy policy accordingly.
+Developers can override provider URLs through marcpo_address_geocoder_url and marcpo_map_tile_url. The information above describes default providers. Sites using replacements must document the actual services and update their privacy policy accordingly.
 
 = Email and external links =
 
@@ -165,6 +165,12 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Changelog ==
 
+= 0.19.1-beta.1 =
+
+* Replace short identifiers with the distinct marcpo_ prefix. Previous test data is not migrated.
+* Load quick-edit JavaScript through WordPress and restore the saved selection correctly.
+* Sanitize public nonces and restrict operational notices to relevant plugin screens.
+
 = 0.19.0 =
 
 * Edition administrators and assigned jurors in one plugin.
@@ -176,6 +182,6 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Upgrade Notice ==
 
-= 0.19.0 =
+= 0.19.1-beta.1 =
 
-Back up the database and uploads before upgrading and test on staging. Photos and supporting documents use ordinary public Media Library URLs.
+Development build for fresh test data: existing 0.19.0 records and team assignments are not migrated to the new identifiers. Photos and supporting documents use ordinary public Media Library URLs.

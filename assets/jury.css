@@ -1,7 +1,7 @@
-.mp-jury-scroll { width:100%; overflow:auto; }
-.mp-jury-members { min-width:650px; table-layout:fixed; }
-.mp-jury-members th:nth-child(1) { width:22%; }
-.mp-jury-members th:nth-child(2) { width:30%; }
-.mp-jury-members th:nth-child(3) { width:14%; }
-.mp-jury-members input[type="text"],.mp-jury-members input[type="email"] { width:100%; min-width:0; }
-.mp-jury-members th,.mp-jury-members td { overflow-wrap:anywhere; vertical-align:middle; }
+.marcpo-jury-scroll { width:100%; overflow:auto; }
+.marcpo-jury-members { min-width:650px; table-layout:fixed; }
+.marcpo-jury-members th:nth-child(1) { width:22%; }
+.marcpo-jury-members th:nth-child(2) { width:30%; }
+.marcpo-jury-members th:nth-child(3) { width:14%; }
+.marcpo-jury-members input[type="text"],.marcpo-jury-members input[type="email"] { width:100%; min-width:0; }
+.marcpo-jury-members th,.marcpo-jury-members td { overflow-wrap:anywhere; vertical-align:middle; }

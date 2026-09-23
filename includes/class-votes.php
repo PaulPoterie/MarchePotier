@@ -4,17 +4,17 @@ namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 final class Votes {
-	public static function table(): string { global $wpdb; return $wpdb->prefix . 'mp_votes'; }
+	public static function table(): string { global $wpdb; return $wpdb->prefix . 'marcpo_votes'; }
 	public static function hooks(): void {
 		add_action( 'admin_init', array( self::class, 'install' ) );
-		add_action( 'admin_post_mp_vote', array( self::class, 'save' ) );
+		add_action( 'admin_post_marcpo_vote', array( self::class, 'save' ) );
 		add_action( 'before_delete_post', static function ( $id, $post ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table deletion on permanent application removal; no read cache to invalidate.
-			if ( 'mp_candidature' === $post->post_type && '1' === get_option( 'mp_votes_schema_version' ) ) { global $wpdb; $wpdb->delete( self::table(), array( 'application_id' => $id ), array( '%d' ) ); }
+			if ( 'marcpo_candidature' === $post->post_type && '1' === get_option( 'marcpo_votes_schema_version' ) ) { global $wpdb; $wpdb->delete( self::table(), array( 'application_id' => $id ), array( '%d' ) ); }
 		}, 10, 2 );
 	}
 	public static function install(): void {
-		if ( ! current_user_can( 'manage_options' ) || '1' === get_option( 'mp_votes_schema_version' ) ) { return; }
+		if ( ! current_user_can( 'manage_options' ) || '1' === get_option( 'marcpo_votes_schema_version' ) ) { return; }
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		$table = self::table(); $collation = $wpdb->get_charset_collate();
@@ -30,7 +30,7 @@ final class Votes {
 			KEY edition_id (edition_id)
 		) $collation;" );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Confirm dbDelta created the real custom table before marking the schema available.
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) { update_option( 'mp_votes_schema_version', '1', false ); }
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $table ) ) ) === $table ) { update_option( 'marcpo_votes_schema_version', '1', false ); }
 	}
 	/**
 	 * Lecture groupée : [ID candidature => [ID compte => ligne SQL]].
@@ -38,7 +38,7 @@ final class Votes {
 	 */
 	public static function all( array $ids ): array {
 		$ids = array_values( array_filter( array_map( 'absint', $ids ) ) );
-		if ( ! $ids || '1' !== get_option( 'mp_votes_schema_version' ) ) { return array(); }
+		if ( ! $ids || '1' !== get_option( 'marcpo_votes_schema_version' ) ) { return array(); }
 		global $wpdb;
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
 		// Only generated %d placeholders are interpolated; every ID and the table identifier are prepared.
@@ -94,7 +94,7 @@ final class Votes {
 			// La période d’inscription limite le dépôt public, jamais la notation du jury.
 			$settings = Jury::settings( $edition );
 			if ( 'multiple' !== $settings['mode'] ) { return new \WP_Error( 'mode', 'La notation nécessite le mode votes multiples.', array( 'status' => 403 ) ); }
-			if ( '1' !== get_option( 'mp_votes_schema_version' ) ) { return new \WP_Error( 'storage', 'Les votes ne sont pas encore disponibles. Contactez le responsable.', array( 'status' => 503 ) ); }
+			if ( '1' !== get_option( 'marcpo_votes_schema_version' ) ) { return new \WP_Error( 'storage', 'Les votes ne sont pas encore disponibles. Contactez le responsable.', array( 'status' => 503 ) ); }
 			global $wpdb;
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Atomic custom-table UPSERT under lock; fresh grouped reads reflect concurrent jury writes.
 			$result = $wpdb->query( $wpdb->prepare( 'INSERT INTO %i (application_id,edition_id,user_id,score,updated_at) VALUES (%d,%d,%d,%d,%s) ON DUPLICATE KEY UPDATE score=VALUES(score), updated_at=VALUES(updated_at)', self::table(), $id, $edition, $uid, (int) $score, gmdate( 'Y-m-d H:i:s' ) ) );
@@ -103,10 +103,10 @@ final class Votes {
 	}
 	public static function save(): void {
 		$id = (int) ( Request::post( 'candidature' ) ?? 0 );
-		check_admin_referer( 'mp_vote_' . $id );
+		check_admin_referer( 'marcpo_vote_' . $id );
 		$result = self::record( $id, Request::post( 'score' ) );
 		if ( is_wp_error( $result ) ) { $status = (int) ( $result->get_error_data()['status'] ?? 400 ); wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) $status, 'back_link' => true ) ); }
-		wp_safe_redirect( add_query_arg( 'mp_vote_saved', '1', Records::view_url( $id, Records::list_context() ) ), 303 );
+		wp_safe_redirect( add_query_arg( 'marcpo_vote_saved', '1', Records::view_url( $id, Records::list_context() ) ), 303 );
 		exit;
 	}
 	public static function render( int $id ): void {
@@ -115,19 +115,19 @@ final class Votes {
 		$data = Jury::settings( $edition ); $members = Jury::members( $edition ); $votes = self::all( array( $id ) )[ $id ] ?? array();
 		$mine = self::mine( $id, $votes );
 		$summary = self::summary( $id, $votes );
-		echo '<section class="mp-votes" aria-labelledby="mp-votes-title"><h2 id="mp-votes-title">' . ( $mine ? 'Ma note' : 'Votes pour la sélection' ) . '</h2>';
-		if ( null !== Request::query( 'mp_vote_saved' ) ) { echo '<div class="notice notice-success inline" role="status"><p>Votre note a été enregistrée.</p></div>'; }
+		echo '<section class="marcpo-votes" aria-labelledby="marcpo-votes-title"><h2 id="marcpo-votes-title">' . ( $mine ? 'Ma note' : 'Votes pour la sélection' ) . '</h2>';
+		if ( null !== Request::query( 'marcpo_vote_saved' ) ) { echo '<div class="notice notice-success inline" role="status"><p>Votre note a été enregistrée.</p></div>'; }
 		if ( $mine ) {
 			$score_value = null === $mine['score'] ? '' : (string) $mine['score'];
-			echo '<p class="mp-vote-member">' . esc_html( $mine['name'] ) . '</p><p class="mp-vote-state' . ( '' === $score_value ? ' mp-vote-state-pending' : '' ) . '" id="mp-vote-state" aria-live="polite">' . ( '' === $score_value ? 'À noter par moi' : 'Note enregistrée : ' . esc_html( $score_value ) . '/5' ) . '</p>';
-			echo '<form class="mp-vote-form" method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '"><input type="hidden" name="action" value="mp_vote"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
-			wp_nonce_field( 'mp_vote_' . $id );
-			echo '<label for="mp-my-score">Votre note de 0 à 5</label><div class="mp-vote-controls"><select required id="mp-my-score" name="score" aria-describedby="mp-vote-state mp-vote-help" data-saved-score="' . esc_attr( $score_value ) . '"><option value="">— Choisir —</option>';
+			echo '<p class="marcpo-vote-member">' . esc_html( $mine['name'] ) . '</p><p class="marcpo-vote-state' . ( '' === $score_value ? ' marcpo-vote-state-pending' : '' ) . '" id="marcpo-vote-state" aria-live="polite">' . ( '' === $score_value ? 'À noter par moi' : 'Note enregistrée : ' . esc_html( $score_value ) . '/5' ) . '</p>';
+			echo '<form class="marcpo-vote-form" method="post" action="' . esc_url( add_query_arg( Records::list_context(), admin_url( 'admin-post.php' ) ) ) . '"><input type="hidden" name="action" value="marcpo_vote"><input type="hidden" name="candidature" value="' . esc_attr( $id ) . '">';
+			wp_nonce_field( 'marcpo_vote_' . $id );
+			echo '<label for="marcpo-my-score">Votre note de 0 à 5</label><div class="marcpo-vote-controls"><select required id="marcpo-my-score" name="score" aria-describedby="marcpo-vote-state marcpo-vote-help" data-saved-score="' . esc_attr( $score_value ) . '"><option value="">— Choisir —</option>';
 			for ( $score = 0; $score <= 5; ++$score ) { echo '<option value="' . esc_attr( $score ) . '"' . selected( $score_value, (string) $score, false ) . '>' . esc_html( $score ) . '</option>'; }
-			echo '</select> <button class="button button-primary">Valider ma note</button></div></form><p class="description" id="mp-vote-help">0 est une note. Vous pouvez modifier votre note puis la valider à nouveau.</p>';
+			echo '</select> <button class="button button-primary">Valider ma note</button></div></form><p class="description" id="marcpo-vote-help">0 est une note. Vous pouvez modifier votre note puis la valider à nouveau.</p>';
 		}
-		echo '<p class="mp-vote-totals"><strong>' . esc_html( $summary['total'] ) . ' points</strong><span>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</span></p>';
-		echo '<details class="mp-jury-details" open><summary>Notes du jury</summary>';
+		echo '<p class="marcpo-vote-totals"><strong>' . esc_html( $summary['total'] ) . ' points</strong><span>' . esc_html( $summary['count'] . ' vote(s) sur ' . $summary['expected'] ) . '</span></p>';
+		echo '<details class="marcpo-jury-details" open><summary>Notes du jury</summary>';
 		if ( ! $members ) { echo '<p>Aucun membre actif. Un administrateur du marché peut en ajouter dans l’édition.</p>'; }
 		echo '<table class="widefat striped"><thead><tr><th scope="col">Membre</th><th scope="col">Note / 5</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) {

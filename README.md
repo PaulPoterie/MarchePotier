@@ -1,6 +1,8 @@
 # Marché Potier — Guide utilisateur
 
-Version 0.19.0 — 17 septembre 2026 — branche `main`.
+Version de travail 0.19.1-beta.1 — 23 septembre 2026 — branche `fix/wordpress-review`.
+
+Cette version prépare les corrections demandées par WordPress.org. Le nouveau préfixe technique est `marcpo_` : les données de test de la 0.19.0 ne sont pas migrées et ne sont plus utilisées. Recréez les éditions et affectations pour les nouveaux essais. Le changement du nom public et du slug fera l’objet d’une étape distincte.
 
 Ce dépôt contient le code actif du plugin : administration du marché, candidatures, notes de 0 à 5, invitations, suivi des votes et blocs publics.
 
@@ -9,11 +11,11 @@ Ce dépôt contient le code actif du plugin : administration du marché, candida
 
 Les blocs **Formulaire de candidature** et **Présentation de la sélection** utilisent l’ID de l’édition choisie. Il n’y a plus de shortcodes. Chaque édition demande **un seul administrateur**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
 
-Version stable actuelle : **0.19.0**. Archive d’installation : `marche-potier-0.19.0.zip`.
+Dernière version soumise : **0.19.0**. Cette branche contient les corrections en cours, non encore soumises.
 
 ## 1. Installer le plugin
 
-Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.0.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
+Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser une extension**, choisissez `marche-potier-0.19.1-beta.1.zip`, puis cliquez sur **Installer maintenant** et **Activer**.
 
 Un ZIP de livraison contient le dossier `marche-potier`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
