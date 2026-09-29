@@ -23,7 +23,7 @@
 			editions(revision > 0).then(data => {
 				if (active) setRows(data);
 			}).catch(() => {
-				if (active) setError('Impossible de charger les éditions. Vérifiez votre connexion et votre accès à Marché Potier.');
+				if (active) setError('Impossible de charger les éditions. Vérifiez votre connexion et votre accès à Poterie Navarraise.');
 			});
 			return () => { active = false; };
 		}, [revision]);
@@ -40,7 +40,7 @@
 			});
 		}
 		let notice = '';
-		if (rows && !rows.length) notice = 'Créez et enregistrez une édition dans Marché Potier → Éditions, puis actualisez la liste.';
+		if (rows && !rows.length) notice = 'Créez et enregistrez une édition dans Poterie Navarraise → Éditions, puis actualisez la liste.';
 		else if (rows && props.attributes.editionId && !selected) notice = 'L’édition choisie n’est plus disponible. Sélectionnez une autre édition.';
 		else if (selected && !selected.published) notice = 'Publiez cette édition pour que son contenu soit accessible sur le site.';
 		else if (selected && !form && !selected.selectionPublic) notice = 'La sélection est masquée. Dans l’édition, rubrique « Affichage sur le site », autorisez son affichage lorsque vous êtes prêt.';
@@ -64,7 +64,7 @@
 		['marche-potier/presentation-selection', 'Présentation de la sélection', 'groups']
 	].forEach(([name, title, icon]) => wp.blocks.registerBlockType(name, {
 		apiVersion: 3, title, icon, category: 'widgets',
-		description: 'Affiche le contenu de l’édition choisie du Marché Potier.',
+		description: 'Affiche le contenu de l’édition choisie dans Poterie Navarraise.',
 		keywords: ['marché', 'potier', 'édition'],
 		attributes: {editionId: {type: 'integer', default: 0}},
 		supports: {html: false, multiple: false, reusable: false},

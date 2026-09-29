@@ -60,6 +60,10 @@ try {
 	$invalid = $tokens; unset( $invalid['marcpo_nonce'] ); $invalid['marcpo_nonce[unexpected]'] = 'invalid';
 	[$code,, $body] = request_media( $endpoint, $invalid + array( 'marcpo_upload_operation'=>'status' ) );
 	mc( 400 === $code && ! get_option( $key ), 'Nonce de type tableau refusé sans erreur fatale' );
+	foreach ( array( array( 'marcpo_upload_operation'=>'unexpected' ), array( 'marcpo_upload_operation[nested]'=>'upload' ), array( 'marcpo_upload_operation'=>'upload', 'marcpo_slot'=>'unexpected' ) ) as $invalid ) {
+		[$code,, $body] = request_media( $endpoint, $tokens + $invalid );
+		mc( 400 === $code && ! get_option( $key ), 'Opération ou emplacement malformé refusé sans création de brouillon' );
+	}
 	[$code,, $body] = $send( 'product1', 'fake.jpg' ); mc( 400 === $code, 'Faux JPEG refusé' );
 	[$code,, $body] = $send( 'product1', 'document.pdf' ); mc( 400 === $code, 'PDF refusé dans un emplacement photo' );
 	$revision = ''; $before = array();
@@ -73,17 +77,29 @@ try {
 	request_media( $url ); [$code,, $body] = request_media( $endpoint, $tokens + array( 'marcpo_upload_operation'=>'status' ) );
 	mc( count( json_decode( $body, true )['data']['files'] ) === 6, 'Rechargement : six pièces retrouvées' );
 	$old = $before['product1']; $oldpath = get_attached_file( $old );
-	[$code,, $body] = $send( 'product1', 'photo.png' ); $revision = json_decode( $body, true )['data']['revision']; $before['product1'] = get_option( $key )['files']['product1']['attachment_id'];
+	[$code,, $body] = request_media( $endpoint, $tokens + array( 'marcpo_upload_operation'=>'upload', 'marcpo_slot'=>'product1', 'product1'=>new CURLFile( $temporary . '/photo.png', 'application/x-forged', '../../création <b>été</b>.png' ) ) );
+	$revision = json_decode( $body, true )['data']['revision']; $replacement = get_option( $key )['files']['product1']; $before['product1'] = $replacement['attachment_id'];
+	mc( 200 === $code && 'image/png' === $replacement['mime'] && ! str_contains( $replacement['original_name'], '/' ) && ! str_contains( $replacement['original_name'], '<' ), 'MIME calculé sur les octets reçus et nom de fichier nettoyé malgré les métadonnées client falsifiées' );
 	mc( ! get_post( $old ) && ! file_exists( $oldpath ) && $before['product1'] !== $old, 'Remplacement provisoire : ancienne pièce supprimée après réception de la nouvelle' );
 	$raw = array( 'identity'=>array( 'last_name'=>'Test ' . $run, 'first_name'=>'Média', 'address'=>'1 rue fictive', 'postcode'=>'00000', 'city'=>'Test', 'country'=>'France', 'phone'=>'0100000000', 'email'=>'media-' . $run . '@example.test' ), 'activity'=>array( 'presentation'=>'Essai de candidature et de médiathèque.', 'production'=>array('utilitaire'), 'technique'=>array('gres'), 'professional_status'=>'artisan', 'aaf_member'=>'no', 'association_member'=>'no', 'stand_length'=>'3' ) );
 	$fields = $tokens + array( 'marcpo_revision'=>$revision, 'marcpo_photo_consent'=>'1' );
 	foreach ( $raw as $group=>$values ) { foreach ( $values as $name=>$value ) { $fields['marcpo_record['.$group.']['.$name.']'.(is_array($value)?'[]':'')] = is_array($value)?$value[0]:$value; } }
+	foreach ( array( 'marcpo_record[identity][email]' => 'bad name@example.test', 'marcpo_record[activity][aaf_member]' => '<b>yes</b>', 'marcpo_record[identity][website]' => 'javascript:alert(1)' ) as $name => $bad ) {
+		[$code,, $body] = request_media( $endpoint, array_replace( $fields, array( $name => $bad ) ) );
+		mc( 400 === $code && ! UploadDrafts::receipt( $key ) && count( get_option( $key )['files'] ) === 6, 'Réponse invalide refusée sans perdre les pièces : ' . $name );
+	}
+	$invalid = $fields; unset( $invalid['marcpo_record[identity][email]'] ); $invalid['marcpo_record[identity][email][nested]'] = 'invalid';
+	[$code,, $body] = request_media( $endpoint, $invalid );
+	mc( 400 === $code && ! UploadDrafts::receipt( $key ), 'Champ email imbriqué refusé sans erreur fatale ni candidature créée' );
 	[$code,, $body] = request_media( $endpoint, array_replace( $fields, array( 'marcpo_revision'=>'obsolete' ) ) ); mc( 400 === $code, 'Révision périmée refusée sans perdre les pièces' );
 	[$code,, $body] = request_media( $endpoint, $fields + array( 'marcpo_media_test_fail'=>'metadata' ) );
 	mc( 400 === $code && get_option( $key ) && count( array_filter( $before, 'get_post' ) ) === 6, 'Échec d’enregistrement injecté : les six médias restent disponibles pour réessayer' );
+	[$code,, $body] = request_media( $endpoint, array_replace( $fields, array( 'marcpo_record[identity][phone]'=>'' ) ) );
+	mc( 400 === $code && str_contains( $body, 'phone' ), 'Le téléphone reste obligatoire sur le dépôt HTTP' );
 	[$code,, $body] = request_media( $endpoint, $fields ); $json = json_decode( $body, true );
 	mc( 200 === $code && ! empty( $json['data']['redirect'] ), 'Nouvelle tentative : candidature enregistrée sans renvoi des fichiers' );
 	$app = UploadDrafts::receipt( $key ); $posts[] = $app; $posts[] = Records::data( $app )['potier_id']; $data = Records::data( $app );
+	mc( false === $data['map_consent'] && '' === $data['map_consent_at'], 'Sans accord cartographique : candidature enregistrée avec refus explicite' );
 	mc( $app > 0 && ! get_option( $key ), 'Brouillon effacé après validation, reçu conservé' );
 	foreach ( $before as $slot=>$id ) {
 		mc( $data['files'][$slot]['attachment_id'] === $id && wp_get_post_parent_id( $id ) === $app && ! get_post_meta( $id, '_marcpo_temporary_until', true ), 'Même média, devenu définitif et rattaché : ' . $slot );
@@ -144,12 +160,15 @@ try {
 	mc(!file_exists($legacyroot.'/'.$legacydraftname), 'Ancien brouillon expiré : nettoyage du fichier historique');
 	// Synchronous HTML form keeps the non-JavaScript fallback working.
 	$fallback = $fields; unset($fallback['marcpo_revision']); $fallback['marcpo_record[identity][email]']='fallback-'.$run.'@example.test';
+	$fallback['marcpo_map_consent'] = '1';
 	[$code,, $freshhtml] = request_media($url);
 	foreach(array('marcpo_edition','marcpo_issued','marcpo_random','marcpo_signature','marcpo_nonce') as $name) { preg_match('/name="'.$name.'" value="([^"]+)"/',$freshhtml,$m); $fallback[$name]=html_entity_decode($m[1]??'',ENT_QUOTES,'UTF-8'); }
 	foreach(array('product1','product2','product3','stand','status','insurance') as $slot) { $fallback[$slot]=new CURLFile($temporary.'/photo.jpg','image/jpeg','photo.jpg'); }
 	[$code,, $body]=request_media($url,$fallback);
 	mc($code===303, 'Formulaire sans JavaScript : dépôt multipart accepté');
 	foreach(get_posts(array('post_type'=>'marcpo_candidature','post_status'=>'any','posts_per_page'=>-1,'fields'=>'ids','meta_key'=>'_marcpo_edition_id','meta_value'=>$edition)) as $id) { $posts[]=$id; if(!empty(Records::data($id)['potier_id'])) { $posts[]=Records::data($id)['potier_id']; } }
+	$with_map = array_values( array_filter( $posts, static fn($id) => ( Records::data($id)['identity']['email'] ?? '' ) === $fallback['marcpo_record[identity][email]'] && 'marcpo_candidature' === get_post_type($id) ) );
+	mc( count($with_map) === 1 && true === Records::data($with_map[0])['map_consent'] && !empty(Records::data($with_map[0])['map_consent_at']), 'Accord cartographique explicite et daté enregistré depuis le formulaire sans JavaScript' );
 	if ( ! $keep ) { wp_delete_post( $app, true ); mc( count( array_filter( $before, 'get_post' ) ) === 6, 'Suppression définitive du dossier : médias réutilisables conservés' ); }
 	file_put_contents( $workspace . '/review-media-test-state.json', wp_json_encode( array( 'page'=>$page, 'edition'=>$edition, 'application'=>$app, 'posts'=>$posts, 'drafts'=>$drafts, 'run'=>$run, 'user'=>$user, 'login'=>$login, 'password'=>$password ), JSON_PRETTY_PRINT ) );
 	$passed = true;

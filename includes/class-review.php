@@ -100,7 +100,8 @@ final class Review {
 	public static function save_decision(): void {
 		if ( ! current_user_can( 'marcpo_manage_applications' ) || ! current_user_can( 'marcpo_select_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
 		$id = (int) ( Request::post( 'candidature' ) ?? 0 );
-		check_admin_referer( 'marcpo_review_decision_' . $id );
+		$nonce = Request::post( '_wpnonce' ); // Request::post unslashes exactly once and rejects non-string values.
+		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'marcpo_review_decision_' . $id ) ) { wp_die( 'Session expirée. Rechargez la page.', '', array( 'response' => 403 ) ); }
 		$decision = Request::post( 'decision' ) ?? '';
 		if ( ! is_string( $decision ) || ! isset( Records::decisions()[ $decision ] ) || 'marcpo_candidature' !== get_post_type( $id ) || ! in_array( get_post_status( $id ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { wp_die( 'Candidature ou décision invalide.', '', array( 'response' => 400 ) ); }
 		if ( ! SubmissionLock::acquire() ) { wp_die( 'Un enregistrement est en cours. Réessayez.', '', array( 'response' => 409 ) ); }

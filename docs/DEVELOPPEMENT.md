@@ -1,16 +1,16 @@
-# Reprendre le développement de Marché Potier
+# Reprendre le développement de Poterie Navarraise Pottery Market Manager
 
 ## 1. Point de départ
 
 Le fichier `marche-potier.php` charge explicitement les classes du namespace `MarchePotier`. `Plugin::boot()` enregistre leurs hooks WordPress. Le plugin utilise PHP, CSS et JavaScript natifs ; il n’y a ni Composer, ni npm, ni compilation. Leaflet est une dépendance embarquée dans `assets/vendor/leaflet` ; ne pas y appliquer les changements du plugin.
 
-Le README est le guide utilisateur ; ce document décrit les contrats du code. Le guide `VOTES.md` détaille les affectations, invitations et changements d’administrateur.
+Le README présente le plugin en anglais ; le guide utilisateur français se trouve dans `GUIDE-UTILISATEUR-FR.md`. Ce document décrit les contrats du code. Le guide `VOTES.md` détaille les affectations, invitations et changements d’administrateur.
 
 ### Particularité de cet espace de travail
 
 | Emplacement | Usage |
 | --- | --- |
-| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif, branche `feature/votes-organisateurs`. Modifier et committer ici. |
+| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif, branche `fix/wordpress-review`. Modifier et committer ici. |
 | `C:\Users\paul\Projects\MarchePotier\marche-potier` | Ancienne version stable conservée. |
 | `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Copie exécutée par le site Local. La synchroniser après vérification. |
 | `C:\Users\paul\Projects\MarchePotier\reports` | Rapports et résultats locaux, hors du paquet installable. |
@@ -18,11 +18,20 @@ Le README est le guide utilisateur ; ce document décrit les contrats du code. L
 
 Ce dépôt ne déploie rien automatiquement. Sur un autre ordinateur, son emplacement peut être quelconque ; ces chemins décrivent uniquement l’installation de développement actuelle.
 
+### Nom, traductions et identifiants
+
+Le nom officiel est « Poterie Navarraise Pottery Market Manager », avec la description française « Poterie Navarraise — Organisation de marchés potiers ». Le slug WordPress.org, le dossier du prochain paquet et le domaine de traduction sont `poterie-navarraise-market-manager`. Les appels gettext doivent utiliser ce domaine littéral.
+
+Le préfixe `marcpo_` (six lettres), sa variante `marcpo-` et le namespace PHP `MarchePotier` restent les identifiants internes. Ils évitent les collisions et ne sont pas tenus de correspondre au slug. Le fichier principal `marche-potier.php`, les identifiants des blocs, la route REST, les clés de stockage et les chemins historiques restent stables. Ne pas faire de remplacement global de `marche-potier`.
+
+Références : [préfixes WordPress](https://developer.wordpress.org/plugins/plugin-basics/best-practices/#prefix-everything) et [domaine de traduction](https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/#text-domains).
+
 ## 2. Où intervenir ?
 
 | Besoin | Fichiers / classes dans `includes/` |
 | --- | --- |
 | Initialisation, accueil du plugin | `class-plugin.php` |
+| Autorisation des services IGN et OpenStreetMap par l’administrateur | `class-external-services.php` |
 | Paramètres, dates et droits de gestion | `class-editions.php` |
 | Administrateur unique, votants, invitations, accès par édition | `class-jury.php` |
 | Enregistrement et calcul des notes | `class-votes.php` |
@@ -59,8 +68,8 @@ Les réponses sont propres à chaque candidature : corriger une année ne doit p
 
 ### Droits : rôle du compte et affectation ne sont pas synonymes
 
-- `marcpo_organizer` est le rôle global **[MP] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
-- `marcpo_juror` est **[MP] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
+- `marcpo_organizer` est le rôle global **[Poterie Navarraise] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
+- `marcpo_juror` est **[Poterie Navarraise] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
 - `kind=administrator` dans une édition désigne son unique administrateur et contact. Le remplacer désactive son ancienne affectation ; cela ne révoque pas son rôle global WordPress.
 - Pour voter, même un administrateur doit être membre actif de cette édition. `Votes::record()` prend exclusivement le compte de la session ; aucun ID d’auteur envoyé par le navigateur n’est accepté.
 - `Jury::settings()` conserve les membres inactifs. `Jury::members()` ne renvoie que les actifs dont le compte existe : c’est cette liste qui sert aux totaux et aux destinataires.
@@ -70,6 +79,8 @@ Les réponses sont propres à chaque candidature : corriger une année ne doit p
 1. Les dates d’inscription autorisent ou refusent le **dépôt public** (`Editions::is_open`).
 2. Le mode multiple et l’affectation active autorisent la **notation**, sans contrôle de date. `null` signifie absence de note ; `0` est une note.
 3. La **publication** exige une édition publiée, l’autorisation de montrer sa sélection, une décision `selected` et le consentement du candidat (`Gallery::eligible`). Un total de points ne sélectionne personne automatiquement.
+
+La **cartographie** ajoute l’accord distinct `map_consent === true` (`GalleryMap::eligible`). Les options `marcpo_external_services[ign]` et `[osm]` sont désactivées par défaut et enregistrées via la Settings API, avec nonce et permission `manage_options`. IGN est contrôlé à la planification et à l’exécution ; OSM est contrôlé au rendu. Retirer l’accord du candidat efface ses coordonnées dérivées et sa tâche planifiée ; les caches partagés de réponses IGN expirent séparément. Aucun accord ne doit être déduit de `publication_consent`.
 
 Le mode simple conserve les notes, mais masque et interdit leur modification. Retirer un membre actif conserve ses anciennes notes tout en les excluant des totaux.
 

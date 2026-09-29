@@ -29,16 +29,16 @@ final class Jury {
 		return admin_url( 'admin.php?page=marcpo-gestion' );
 	}
 	public static function install(): void {
-		if ( ! current_user_can( 'manage_options' ) || '2' === get_option( 'marcpo_jury_permissions_version' ) ) { return; }
-		add_role( 'marcpo_juror', '[MP] Votant sélection', array( 'read' => true, 'marcpo_access_market' => true, 'marcpo_review_applications' => true ) );
-		Editions::rename_role( 'marcpo_juror', '[MP] Votant sélection' );
+		if ( ! current_user_can( 'manage_options' ) || '3' === get_option( 'marcpo_jury_permissions_version' ) ) { return; }
+		add_role( 'marcpo_juror', '[Poterie Navarraise] Votant sélection', array( 'read' => true, 'marcpo_access_market' => true, 'marcpo_review_applications' => true ) );
+		Editions::rename_role( 'marcpo_juror', '[Poterie Navarraise] Votant sélection' );
 		foreach ( array( 'administrator', 'marcpo_organizer' ) as $name ) {
 			$role = get_role( $name );
 			if ( ! $role ) { return; }
 			$role->add_cap( 'marcpo_review_applications' );
 			$role->add_cap( 'marcpo_manage_jury' );
 		}
-		update_option( 'marcpo_jury_permissions_version', '2', false );
+		update_option( 'marcpo_jury_permissions_version', '3', false );
 		wp_get_current_user()->get_role_caps();
 	}
 	/**
@@ -89,14 +89,14 @@ final class Jury {
 		echo '<p><label for="marcpo-jury-mode"><strong>Mode de sélection</strong></label> <select id="marcpo-jury-mode" name="marcpo_jury[mode]"><option value="simple" ' . selected( $data['mode'], 'simple', false ) . '>Simple — sélection directe</option><option value="multiple" ' . selected( $data['mode'], 'multiple', false ) . '>Votes multiples — notes de 0 à 5</option></select></p>';
 		echo '<p class="description">En mode votes multiples, les notes restent modifiables à tout moment, avant, pendant et après les inscriptions.</p>';
 		echo '<h3>Administrateur du marché</h3><p>Un seul administrateur est obligatoire pour cette édition. Il peut créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles du site, et gérer l’équipe. En mode simple, il décide de la sélection. En votes multiples, il donne aussi sa note de 0 à 5 et conserve la décision finale.</p>';
-		echo '<p class="description">Le rôle « [MP] Administrateur marché » donne ces droits sur l’ensemble du site. Cet administrateur reçoit les nouvelles candidatures et les réponses des candidats.</p>';
+		echo '<p class="description">Le rôle « [Poterie Navarraise] Administrateur marché » donne ces droits sur l’ensemble du site. Cet administrateur reçoit les nouvelles candidatures et les réponses des candidats.</p>';
 		$uid = self::administrator( $post->ID ); $member = $data['members'][ $uid ] ?? array(); $user = get_userdata( $uid );
 		echo '<table class="form-table" role="presentation"><tr><th><label for="marcpo-administrator-name">Nom *</label></th><td><input class="regular-text" id="marcpo-administrator-name" name="marcpo_jury[administrator][name]" type="text" maxlength="120" required value="' . esc_attr( $member['name'] ?? '' ) . '"></td></tr>';
 		echo '<tr><th><label for="marcpo-administrator-email">Email *</label></th><td><input class="regular-text" id="marcpo-administrator-email" name="marcpo_jury[administrator][email]" type="email" required value="' . esc_attr( $user ? $user->user_email : '' ) . '"><p class="description">Pour remplacer l’administrateur, renseignez le nom et l’email de son remplaçant. Si celui-ci figure parmi les votants, décochez sa case « Actif » avant d’enregistrer.</p></td></tr>';
 		echo '<tr><th>Invitation</th><td><label><input type="checkbox" name="marcpo_jury[administrator][invite]" value="1"> Envoyer une invitation</label>';
 		if ( isset( $member['invitation'] ) ) { echo '<p class="description">' . esc_html( $member['invitation'] ) . '</p>'; }
 		echo '</td></tr></table>';
-		echo '<h3>Votant pour la sélection</h3><p>Le rôle « [MP] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
+		echo '<h3>Votant pour la sélection</h3><p>Le rôle « [Poterie Navarraise] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
 		self::member_table( $data );
 		echo '<p class="description">Enregistrez l’édition pour appliquer les changements. Un nouveau compte reçoit une invitation pour choisir son mot de passe ; la connexion se fait ensuite avec son email et son mot de passe. Pour un compte existant, cochez « Envoyer une invitation » si nécessaire ; son mot de passe est conservé.</p>';
 		echo '<p class="description">Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées. Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.</p>';
@@ -145,6 +145,7 @@ final class Jury {
 				if ( $uid && ! isset( $old['members'][ $uid ] ) ) { return new \WP_Error( 'invalid', 'Compte inconnu dans cette édition. Ajoutez-le avec son email.' ); }
 				if ( $uid && ! get_userdata( $uid ) ) { continue; }
 				if ( '' === $name || strlen( $name ) > 480 || ! is_email( $email ) ) { return new \WP_Error( 'invalid', 'Indiquez un nom et un email valide pour l’administrateur et chaque votant.' ); }
+				$email = sanitize_email( $email );
 				if ( $uid && strcasecmp( get_userdata( $uid )->user_email, $email ) !== 0 ) { return new \WP_Error( 'invalid', 'L’email du compte a changé. Rechargez l’édition.' ); }
 				// Une ligne de votant désactivée peut devenir l’administrateur, sans double participation.
 				if ( 'voter' === $kind && '1' !== ( $row['active'] ?? '0' ) && strcasecmp( $email, trim( $administrator['email'] ) ) === 0 ) { continue; }
@@ -201,7 +202,7 @@ final class Jury {
 		$user = get_userdata( $uid );
 		if ( ! $user ) { return false; }
 		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $edition ), ENT_QUOTES ) );
-		if ( '' === $title ) { $title = 'Marché Potier'; }
+		if ( '' === $title ) { $title = 'Poterie Navarraise'; }
 		$member = self::settings( $edition )['members'][ $uid ] ?? array();
 		$name = $member['name'] ?? $user->display_name;
 		$administrator = 'administrator' === ( $member['kind'] ?? 'voter' );
@@ -220,7 +221,7 @@ final class Jury {
 		}
 		$message = '<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f6f3ef;color:#292524;font-family:Arial,sans-serif;font-size:16px;line-height:1.6">';
 		$message .= '<table role="presentation" style="width:100%;border-collapse:collapse"><tr><td style="padding:24px 12px"><table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e0d8;border-collapse:collapse"><tr><td style="padding:28px">';
-		$message .= '<p style="margin:0;color:#76533c;font-size:13px;font-weight:bold">MARCHÉ POTIER · INVITATION</p><h1 style="margin:8px 0 24px;font-size:24px;line-height:1.3">' . esc_html( $title ) . '</h1>';
+		$message .= '<p style="margin:0;color:#76533c;font-size:13px;font-weight:bold">POTERIE NAVARRAISE · INVITATION</p><h1 style="margin:8px 0 24px;font-size:24px;line-height:1.3">' . esc_html( $title ) . '</h1>';
 		$message .= '<p>Bonjour ' . esc_html( $name ) . ',</p><p>Vous êtes invité en tant que <strong>' . esc_html( $role_label ) . '</strong> pour cette édition.</p>';
 		$message .= '<p>' . esc_html( $instructions ) . '</p><p style="padding:16px;background:#f6f3ef">Votre identifiant de connexion est votre adresse email :<br><strong style="overflow-wrap:anywhere">' . esc_html( $user->user_email ) . '</strong></p>';
 		$message .= '<p style="margin:28px 0"><a href="' . esc_url( $action_url ) . '" style="display:inline-block;background:#76533c;color:#ffffff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:bold">' . esc_html( $action_label ) . '</a></p>';

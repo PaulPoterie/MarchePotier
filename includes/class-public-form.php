@@ -6,13 +6,14 @@ final class PublicForm {
 	private static ?\WP_Error $error = null;
 	private static array $values = array();
 	private static bool $consent = false;
+	private static bool $map_consent = false;
 	private const COOKIE = 'marcpo_form_session';
 	public static function hooks(): void {
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
 				wp_enqueue_style( 'marcpo-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.19.1' );
-				wp_enqueue_script( 'marcpo-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.19.1', true );
+				wp_enqueue_script( 'marcpo-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.19.1.1', true );
 				wp_enqueue_script( 'marcpo-form', plugins_url( '../assets/form.js', __FILE__ ), array( 'marcpo-draft' ), '0.19.1', true );
 			}
 		} );
@@ -43,27 +44,35 @@ final class PublicForm {
 		}
 		if ( Request::content_length() > 6 * PrivateFiles::MAX_SIZE + 1048576 ) { self::fail( new \WP_Error( 'size', 'L’envoi est trop volumineux. Chaque fichier est limité à ' . PrivateFiles::size_label() . '.' ) ); return; }
 		unset( $_POST['marcpo_record_nonce'], $_POST['marcpo_edition_nonce'] );
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Structured answers are type-checked and validated by Fields::validate in submit; tokens are verified below before any mutation.
-		$input = wp_unslash( $_POST );
-		self::$consent = isset( $input['marcpo_photo_consent'] ) && '1' === $input['marcpo_photo_consent'];
-		self::$values = isset( $input['marcpo_record'] ) && is_array( $input['marcpo_record'] ) ? $input['marcpo_record'] : array();
-		foreach ( array( 'marcpo_edition', 'marcpo_issued', 'marcpo_random', 'marcpo_signature', 'marcpo_nonce' ) as $key ) {
-			if ( ! isset( $input[ $key ] ) || ! is_string( $input[ $key ] ) ) { self::fail( new \WP_Error( 'session', 'L’envoi a expiré ou dépasse la limite du serveur. Rechargez la page pour retrouver les pièces déjà reçues.' ) ); return; }
+		self::$consent = '1' === Request::post( 'marcpo_photo_consent' );
+		self::$map_consent = '1' === Request::post( 'marcpo_map_consent' );
+		$edition = (int) ( Request::post( 'marcpo_edition' ) ?? 0 );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- The two schema validators immediately below sanitize allowed fields; the raw copy is never forwarded to submit or rendered.
+		$raw = isset( $_POST['marcpo_record'] ) && is_array( $_POST['marcpo_record'] ) ? wp_unslash( $_POST['marcpo_record'] ) : array();
+		self::$values = array();
+		foreach ( array( 'identity' => Fields::identity(), 'activity' => Fields::activity() ) as $group => $schema ) {
+			self::$values[ $group ] = Fields::for_display( is_array( $raw[ $group ] ?? null ) ? $raw[ $group ] : array(), $schema );
 		}
-		$input['marcpo_nonce'] = sanitize_text_field( $input['marcpo_nonce'] );
-		$edition = ctype_digit( $input['marcpo_edition'] ) ? (int) $input['marcpo_edition'] : 0;
+		$answers = self::validate_answers( $raw, $edition );
+		unset( $raw );
 		$post = get_queried_object();
 		if ( ! in_array( $edition, Blocks::edition_ids( $post->post_content, Blocks::FORM ), true ) ) {
 			self::fail( new \WP_Error( 'edition', 'L’édition affichée sur cette page a changé. Rechargez la page avant de renvoyer votre candidature.' ) ); return;
 		}
-		$issued = $input['marcpo_issued'];
-		if ( ! self::session() || ! ctype_digit( $issued ) || (int) $issued > time() || time() - (int) $issued > DAY_IN_SECONDS || ! preg_match( '/^[a-f0-9]{32}$/D', $input['marcpo_random'] ) || ! hash_equals( self::signature( $edition, $issued, $input['marcpo_random'] ), $input['marcpo_signature'] ) || ! wp_verify_nonce( $input['marcpo_nonce'], 'marcpo_public_' . $edition ) ) {
+		$issued = Request::post( 'marcpo_issued' ) ?? '';
+		$random = Request::post( 'marcpo_random' ) ?? '';
+		$signature = Request::post( 'marcpo_signature' ) ?? '';
+		if ( ! self::session() || ! preg_match( '/^[0-9]{1,12}$/D', $issued ) || (int) $issued > time() || time() - (int) $issued > DAY_IN_SECONDS || ! preg_match( '/^[a-f0-9]{32}$/D', $random ) || ! preg_match( '/^[a-f0-9]{64}$/D', $signature ) || ! hash_equals( self::signature( $edition, $issued, $random ), $signature ) ) {
 			self::fail( new \WP_Error( 'session', 'La session a expiré. Rechargez la page ; les cookies doivent être autorisés pour envoyer une candidature.' ) ); return;
 		}
-		if ( ! empty( $input['marcpo_fax'] ) ) { self::fail( new \WP_Error( 'spam', 'Envoi refusé. Rechargez le formulaire.' ) ); return; }
+		if ( ! isset( $_POST['marcpo_nonce'] ) || ! is_string( $_POST['marcpo_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['marcpo_nonce'] ) ), 'marcpo_public_' . $edition ) ) {
+			self::fail( new \WP_Error( 'session', 'La session a expiré. Rechargez la page pour retrouver les pièces déjà reçues.' ) ); return;
+		}
+		if ( isset( $_POST['marcpo_fax'] ) && '' !== Request::post( 'marcpo_fax' ) ) { self::fail( new \WP_Error( 'spam', 'Envoi refusé. Rechargez le formulaire.' ) ); return; }
 		setcookie( self::COOKIE, self::session(), array( 'expires' => time() + DAY_IN_SECONDS, 'path' => '/', 'secure' => is_ssl(), 'httponly' => true, 'samesite' => 'Lax' ) );
 		$draft = UploadDrafts::key( self::session(), $edition );
-		$operation = $input['marcpo_upload_operation'] ?? '';
+		$operation = isset( $_POST['marcpo_upload_operation'] ) ? Request::post( 'marcpo_upload_operation' ) : '';
+		if ( ! in_array( $operation, array( '', 'status', 'upload' ), true ) || ( '' !== $operation && ! self::async() ) ) { self::fail( new \WP_Error( 'operation', 'Opération invalide. Rechargez le formulaire.' ) ); return; }
 		if ( self::async() && in_array( $operation, array( 'status', 'upload' ), true ) ) {
 			if ( ! SubmissionLock::acquire() ) { self::fail( new \WP_Error( 'busy', 'Un enregistrement est en cours. Réessayez dans quelques instants.' ) ); return; }
 			try {
@@ -78,7 +87,9 @@ final class PublicForm {
 					if ( $attempts >= 90 ) { $result = new \WP_Error( 'rate', 'Trop de transferts. Réessayez dans quinze minutes.' ); }
 					else {
 						set_transient( $rate, $attempts + 1, 900 );
-						$result = UploadDrafts::upload( $draft, is_string( $input['marcpo_slot'] ?? null ) ? $input['marcpo_slot'] : '', $_FILES );
+						$slot = Request::post( 'marcpo_slot' ) ?? '';
+						$uploads = Request::uploads();
+						$result = is_wp_error( $uploads ) ? $uploads : UploadDrafts::upload( $draft, $slot, $uploads );
 					}
 				}
 			} finally { SubmissionLock::release(); }
@@ -91,7 +102,12 @@ final class PublicForm {
 		$attempts = (int) get_transient( $rate );
 		if ( $attempts >= 15 ) { self::fail( new \WP_Error( 'rate', 'Trop de tentatives. Réessayez dans quinze minutes.' ) ); return; }
 		set_transient( $rate, $attempts + 1, 900 );
-		$result = self::submit( $edition, self::$values, $_FILES, isset( $input['marcpo_photo_consent'] ) && '1' === $input['marcpo_photo_consent'], self::async() ? $draft : '', is_string( $input['marcpo_revision'] ?? null ) ? $input['marcpo_revision'] : '' );
+		if ( is_wp_error( $answers ) ) { self::fail( $answers ); return; }
+		$revision = Request::post( 'marcpo_revision' ) ?? '';
+		if ( self::async() && ! preg_match( '/^[a-f0-9]{32}$/D', $revision ) ) { self::fail( new \WP_Error( 'draft', 'Les pièces ont changé ou expiré. Rechargez la page pour retrouver les pièces disponibles.' ) ); return; }
+		$uploads = self::async() ? array() : Request::uploads();
+		if ( is_wp_error( $uploads ) ) { self::fail( $uploads ); return; }
+		$result = self::submit( $edition, $answers, $uploads, self::$consent, self::async() ? $draft : '', $revision, self::$map_consent );
 		if ( is_wp_error( $result ) ) { self::fail( $result ); return; }
 		self::success( $edition );
 	}
@@ -107,11 +123,8 @@ final class PublicForm {
 		wp_safe_redirect( $url, 303 );
 		exit;
 	}
-	/** Les coordonnées publiques ne peuvent jamais remplacer un profil existant. */
-	public static function submit( int $edition, array $raw, array $uploads, bool $consent = false, string $draft = '', string $revision = '' ): int|\WP_Error {
-		if ( $draft && ( $receipt = UploadDrafts::receipt( $draft ) ) ) { return $receipt; }
-		if ( ! $consent ) { return new \WP_Error( 'consent', 'Pour envoyer votre candidature, veuillez cocher l’autorisation de présentation publique et de localisation sur la carte.' ); }
-		if ( ! Editions::is_open( $edition ) ) { return new \WP_Error( 'closed', 'Les candidatures ne sont pas ouvertes pour cette édition.' ); }
+	/** Shared by the HTTP boundary and direct callers; invalid choices are rejected before cleaning. */
+	private static function validate_answers( array $raw, int $edition ): array|\WP_Error {
 		if ( isset( $raw['activity'] ) && is_array( $raw['activity'] ) ) {
 			$raw['activity']['stand_length'] = Editions::stand_value( $edition, $raw['activity']['stand_length'] ?? null );
 		}
@@ -121,6 +134,15 @@ final class PublicForm {
 			$clean[ $group ] = Fields::validate( $raw[ $group ], $schema, true );
 			if ( is_wp_error( $clean[ $group ] ) ) { return $clean[ $group ]; }
 		}
+		return $clean;
+	}
+	/** Les coordonnées publiques ne peuvent jamais remplacer un profil existant. */
+	public static function submit( int $edition, array $raw, array $uploads, bool $consent = false, string $draft = '', string $revision = '', bool $map_consent = false ): int|\WP_Error {
+		if ( $draft && ( $receipt = UploadDrafts::receipt( $draft ) ) ) { return $receipt; }
+		if ( ! $consent ) { return new \WP_Error( 'consent', 'Pour envoyer votre candidature, veuillez cocher l’autorisation de présentation publique. La localisation sur la carte reste facultative.' ); }
+		if ( ! Editions::is_open( $edition ) ) { return new \WP_Error( 'closed', 'Les candidatures ne sont pas ouvertes pour cette édition.' ); }
+		$clean = self::validate_answers( $raw, $edition );
+		if ( is_wp_error( $clean ) ) { return $clean; }
 		if ( ! SubmissionLock::acquire() ) { return new \WP_Error( 'busy', 'Un autre enregistrement est en cours. Réessayez dans quelques instants.' ); }
 		$files = array(); $created = array(); $ok = false;
 		try {
@@ -143,7 +165,7 @@ final class PublicForm {
 			$app = wp_insert_post( wp_slash( array( 'post_type' => 'marcpo_candidature', 'post_status' => 'publish', 'post_title' => $title . ' — ' . get_the_title( $edition ), 'post_author' => 0 ) ), true );
 			if ( is_wp_error( $app ) ) { throw new \RuntimeException( 'application' ); }
 			$created[] = $app;
-			$data = $clean + array( 'potier_id' => (int) $potier, 'edition_id' => $edition, 'decision' => 'pending', 'internal' => array( 'notes' => '', 'social_date' => '' ), 'files' => $files, 'submitted_at' => gmdate( 'c' ), 'publication_consent' => $consent, 'source' => 'public', 'email_verified' => false );
+			$data = $clean + array( 'potier_id' => (int) $potier, 'edition_id' => $edition, 'decision' => 'pending', 'internal' => array( 'notes' => '', 'social_date' => '' ), 'files' => $files, 'submitted_at' => gmdate( 'c' ), 'publication_consent' => $consent, 'map_consent' => $map_consent, 'map_consent_at' => $map_consent ? gmdate( 'c' ) : '', 'source' => 'public', 'email_verified' => false );
 			if ( ! update_post_meta( $app, Records::META, wp_slash( $data ) ) || ! update_post_meta( $app, '_marcpo_potier_id', $potier ) || ! update_post_meta( $app, '_marcpo_edition_id', $edition ) || ! update_post_meta( $app, '_marcpo_decision', 'pending' ) ) { throw new \RuntimeException( 'metadata' ); }
 			if ( $draft && ! update_post_meta( $app, '_marcpo_upload_key', $draft ) ) { throw new \RuntimeException( 'receipt' ); }
 			$ok = true;
@@ -217,7 +239,10 @@ final class PublicForm {
 			if ( 'insurance' === $slot ) { echo '<small id="marcpo-file-insurance-help">Joignez une attestation d’assurance responsabilité civile professionnelle valide au jour de l’envoi de votre dossier et comportant la mention « Marchés ou foires en extérieur ».</small>'; }
 			echo '</div>';
 		}
-		echo '</div></fieldset><div class="marcpo-consent"><p><label><input type="checkbox" name="marcpo_photo_consent" value="1" required ' . checked( self::$consent, true, false ) . '> J’autorise l’affichage de ma présentation, de mes photos de créations et la localisation publique de l’adresse fournie sur la carte si je suis sélectionné(e). (Obligatoire)</label></p><p>Votre email et votre téléphone sont destinés à l’équipe organisatrice et ne sont pas affichés dans la présentation publique. Si votre candidature est sélectionnée, votre présentation, votre nom, votre ville, vos liens et vos photos de créations pourront être présentés, et votre adresse localisée sur la carte. La localisation des adresses françaises utilise le service IGN.</p></div>';
+		echo '</div></fieldset><div class="marcpo-consent"><p><label><input type="checkbox" name="marcpo_photo_consent" value="1" required ' . checked( self::$consent, true, false ) . '> J’autorise l’affichage de ma présentation, de mon nom, de ma ville, de mes liens et de mes photos de créations si je suis sélectionné(e). (Obligatoire)</label></p>';
+		echo '<p><label><input type="checkbox" name="marcpo_map_consent" value="1" aria-describedby="marcpo-map-consent-help" ' . checked( self::$map_consent, true, false ) . '> J’autorise la transmission de mon adresse à l’IGN pour la localiser et son affichage sur la carte publique si je suis sélectionné(e). (Facultatif)</label></p>';
+		echo '<p id="marcpo-map-consent-help">Vous pouvez candidater et apparaître dans la galerie sans autoriser la carte. Si vous acceptez et que l’organisateur active la cartographie, votre rue, votre code postal et votre ville seront transmis à l’IGN ; votre adresse et sa position pourront être affichées sur une carte OpenStreetMap. Votre téléphone et votre email ne sont pas transmis à ces services. Pour retirer cet accord, contactez l’organisateur.</p>';
+		echo '<p><a href="https://cartes.gouv.fr/donnees-personnelles/" target="_blank" rel="noopener noreferrer">Données personnelles IGN</a> · <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer">Confidentialité OpenStreetMap</a></p><p>Votre email et votre téléphone servent au suivi de votre candidature par l’équipe organisatrice et ne sont pas affichés dans la présentation publique.</p></div>';
 		$privacy = get_privacy_policy_url();
 		if ( $privacy ) { echo '<p><a href="' . esc_url( $privacy ) . '">Politique de confidentialité</a></p>'; }
 		echo '<button type="submit">Envoyer ma candidature</button></form></section>';
@@ -242,7 +267,7 @@ final class PublicForm {
 				echo '</fieldset>';
 			} else {
 				echo '<label for="' . esc_attr( $id ) . '">' . esc_html( $field[0] . ( $field[2] || in_array( $key, array( 'status_other', 'association_names' ), true ) ? ' *' : '' ) ) . '</label>';
-				if ( 'address' === $key ) { echo '<small id="marcpo-address-help">Si votre candidature est sélectionnée, cette adresse sera utilisée pour situer votre atelier sur la carte publique des potiers.</small>'; }
+				if ( 'address' === $key ) { echo '<small id="marcpo-address-help">Cette adresse sert au traitement de votre candidature. Son affichage sur la carte nécessite votre accord facultatif en fin de formulaire.</small>'; }
 				if ( 'presentation' === $key ) { echo '<small id="marcpo-presentation-help">Décrivez votre parcours, votre démarche et votre travail (300 mots maximum).</small>'; }
 				if ( 'association_details' === $key ) { echo '<small id="marcpo-association-help">(Ex: organisation de marché, implication active dans boutique, CA d’asso, …)</small>'; }
 				if ( $locked ) { echo '<small id="marcpo-stand-fixed">Taille fixée par l’organisateur.</small>'; }

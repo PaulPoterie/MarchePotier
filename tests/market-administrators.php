@@ -3,7 +3,7 @@
 use MarchePotier\{Jury,Votes,Records,Editions,Review,Notifications};
 if ( ! isset( $state, $manager, $checks ) || PHP_SAPI !== 'cli' ) { exit; }
 
-marcpo_check( wp_roles()->role_names['marcpo_organizer'] === '[MP] Administrateur marché' && wp_roles()->role_names['marcpo_juror'] === '[MP] Votant sélection', 'Les deux rôles existants ont les nouveaux noms' );
+marcpo_check( wp_roles()->role_names['marcpo_organizer'] === '[Poterie Navarraise] Administrateur marché' && wp_roles()->role_names['marcpo_juror'] === '[Poterie Navarraise] Votant sélection', 'Les deux rôles existants ont les nouveaux noms' );
 wp_set_current_user( $manager );
 foreach ( array( 'post', 'page', 'marcpo_edition', 'marcpo_candidature' ) as $type ) {
 	$object = get_post_type_object( $type );

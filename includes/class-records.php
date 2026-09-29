@@ -225,6 +225,7 @@ final class Records {
 			echo '<p>Décision : ' . esc_html( self::decisions()[ $data['decision'] ?? 'pending' ] ?? 'À examiner' ) . '</p>';
 		}
 		echo '<input type="hidden" name="marcpo_record[consent_present]" value="1"><p><label><input type="checkbox" name="marcpo_record[publication_consent]" value="1" ' . checked( ! empty( $data['publication_consent'] ), true, false ) . '> Autorisation de présentation publique obtenue du candidat</label></p>';
+		echo '<input type="hidden" name="marcpo_record[map_consent_present]" value="1"><p><label><input type="checkbox" name="marcpo_record[map_consent]" value="1" ' . checked( true === ( $data['map_consent'] ?? false ), true, false ) . '> Autorisation distincte du candidat pour transmettre son adresse à l’IGN et l’afficher sur la carte publique</label></p><p class="description">Ne cochez cette case qu’après accord explicite du candidat. Décochez-la pour retirer son adresse de la carte et arrêter les nouvelles localisations.</p>';
 		$map_error = get_post_meta( $post->ID, '_marcpo_map_error', true );
 		if ( $map_error ) { echo '<p class="description">Carte : ' . esc_html( $map_error ) . ' Enregistrez le dossier corrigé pour relancer la localisation.</p>'; }
 		PrivateFiles::edit( $post->ID );
@@ -256,6 +257,10 @@ final class Records {
 		if ( $application ) {
 			$result['decision'] = $old['decision'] ?? 'pending';
 			if ( '1' === ( $raw['consent_present'] ?? '' ) ) { $result['publication_consent'] = '1' === ( $raw['publication_consent'] ?? '' ); }
+			if ( '1' === ( $raw['map_consent_present'] ?? '' ) ) {
+				$result['map_consent'] = '1' === ( $raw['map_consent'] ?? '' );
+				$result['map_consent_at'] = $result['map_consent'] ? ( true === ( $old['map_consent'] ?? false ) && ! empty( $old['map_consent_at'] ) ? $old['map_consent_at'] : gmdate( 'c' ) ) : '';
+			}
 			if ( current_user_can( 'marcpo_select_applications' ) ) {
 				$decision = $raw['decision'] ?? $result['decision'];
 				if ( ! is_string( $decision ) || ! isset( self::decisions()[ $decision ] ) ) { return new \WP_Error( 'marcpo_decision', 'Décision invalide.' ); }
@@ -296,12 +301,8 @@ final class Records {
 		if ( $application ) {
 			// Relire sous verrou : un formulaire ouvert avant un remplacement ne doit pas le perdre.
 			$current_files = self::data( $id )['files'] ?? array();
-			$uploads = array();
-			foreach ( PrivateFiles::slots() as $slot => $label ) {
-				// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Upload metadata is checked by PrivateFiles::store; never unslash uploaded bytes or PHP temporary paths.
-				if ( isset( $_FILES[ 'marcpo_admin_' . $slot ] ) ) { $uploads[ $slot ] = $_FILES[ 'marcpo_admin_' . $slot ]; }
-			}
-			if ( $uploads ) { $new_files = PrivateFiles::store( $uploads, true ); }
+			$uploads = Request::uploads( 'marcpo_admin_' );
+			$new_files = is_wp_error( $uploads ) ? $uploads : PrivateFiles::store( $uploads, true );
 			if ( is_wp_error( $new_files ) ) {
 				set_transient( 'marcpo_record_error_' . get_current_user_id() . '_' . $id, $new_files->get_error_message(), 120 );
 				return;
@@ -550,6 +551,8 @@ final class Records {
 		echo '</div></details><details class="marcpo-examiner-card marcpo-examiner-details" open><summary>Justificatifs et autorisation de présentation</summary><div class="marcpo-examiner-details-body">';
 		PrivateFiles::render( $id, true );
 		if ( 'public' === ( $data['source'] ?? '' ) ) { echo '<p>Déposé depuis le formulaire public. Adresse email déclarée, non vérifiée. Autorisation de présentation publique : ' . esc_html( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' ) . '.</p>'; }
+		echo '<p>Autorisation de localisation sur la carte : ' . esc_html( true === ( $data['map_consent'] ?? false ) ? 'Oui' : 'Non' ) . '.</p>';
+		if ( true === ( $data['map_consent'] ?? false ) && is_string( $data['map_consent_at'] ?? null ) && ( $consent_time = strtotime( $data['map_consent_at'] ) ) ) { echo '<p>Accord cartographique enregistré le ' . esc_html( wp_date( 'd/m/Y à H:i', $consent_time ) ) . '.</p>'; }
 		echo '</div></details><details class="marcpo-examiner-card marcpo-examiner-details" open><summary>Suivi interne</summary><div class="marcpo-examiner-details-body">';
 		Review::details_summary( Fields::internal(), $data['internal'] ?? array() );
 		echo '</div></details><details class="marcpo-examiner-card marcpo-examiner-details" open><summary>Autres candidatures de ce potier</summary><div class="marcpo-examiner-details-body">';

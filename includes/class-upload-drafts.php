@@ -44,7 +44,7 @@ final class UploadDrafts {
 		$stored = PrivateFiles::store( array( $slot => $uploads[ $slot ] ), true, $key );
 		if ( is_wp_error( $stored ) ) { return $stored; }
 		if ( empty( $stored[ $slot ] ) ) { return new \WP_Error( 'upload', 'Le fichier n’a pas été reçu.' ); }
-		$stored[ $slot ]['label'] = sanitize_file_name( $uploads[ $slot ]['name'] );
+		$stored[ $slot ]['label'] = $stored[ $slot ]['original_name'];
 		$old = $data['files'][ $slot ] ?? null;
 		$data['files'][ $slot ] = $stored[ $slot ];
 		$data['expires'] = $data['expires'] ?? time() + DAY_IN_SECONDS;

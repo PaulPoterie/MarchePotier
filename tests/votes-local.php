@@ -141,7 +141,7 @@ try {
 	marcpo_check( ! current_user_can( 'marcpo_manage_applications' ) && ! current_user_can( 'marcpo_manage_editions' ) && ! current_user_can( 'marcpo_select_applications' ), 'Votant sans droits de gestion ni sélection' );
 	marcpo_check( ! current_user_can( 'edit_post', $app ) && ! current_user_can( 'delete_post', $app ), 'Modification native et suppression refusées' );
 	marcpo_check( is_wp_error( marcpo_config( $edition, marcpo_raw( $edition ) ) ), 'Votant incapable de modifier les affectations ou le mode' );
-	$_POST = array( 'candidature' => (string) $app, 'decision' => 'selected' ); $_REQUEST = array( '_wpnonce' => wp_create_nonce( 'marcpo_review_decision_' . $app ) );
+	$_POST = array( 'candidature' => (string) $app, 'decision' => 'selected', '_wpnonce' => wp_create_nonce( 'marcpo_review_decision_' . $app ) ); $_REQUEST = $_POST;
 	marcpo_denied( array( Review::class, 'save_decision' ), 'Décision finale refusée au votant même avec nonce valide' ); $_POST = array(); $_REQUEST = array();
 	marcpo_check( Votes::summary( $app )['count'] === 0, 'Absence de vote distincte de zéro' );
 	marcpo_check( true === Votes::record( $app, '0' ) && Votes::summary( $app )['count'] === 1 && Votes::summary( $app )['total'] === 0, 'La note zéro est comptabilisée' );
@@ -165,7 +165,7 @@ try {
 	marcpo_check( Records::navigation_ids( array( 'marcpo_edition' => $other ) ) === array(), 'Filtre d’édition forgé sans fuite de dossiers' );
 	$_POST = array( 'candidature' => (string) $app, 'score' => '4' ); $_REQUEST = $_POST;
 	marcpo_denied( array( Votes::class, 'save' ), 'Vote HTTP sans nonce refusé' );
-	$_POST['user_id'] = (string) $a; $_REQUEST = $_POST + array( '_wpnonce' => wp_create_nonce( 'marcpo_vote_' . $app ) );
+	$_POST['user_id'] = (string) $a; $_POST['_wpnonce'] = wp_create_nonce( 'marcpo_vote_' . $app ); $_REQUEST = $_POST;
 	$redirect = static function () { throw new MPTestRedirect(); }; add_filter( 'wp_redirect', $redirect );
 	try { Votes::save(); } catch ( MPTestRedirect $e ) {} finally { remove_filter( 'wp_redirect', $redirect ); }
 	$stored = Votes::all( array( $app ) )[ $app ];

@@ -24,7 +24,8 @@ final class Notifications {
 				$lines[] = $field[0] . ' : ' . ( '' === $value ? 'Non renseigné' : $value );
 			}
 		}
-		$lines[] = 'Autorisation de présentation publique et de localisation : ' . ( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' );
+		$lines[] = 'Autorisation de présentation publique : ' . ( ! empty( $data['publication_consent'] ) ? 'Oui' : 'Non' );
+		$lines[] = 'Autorisation de localisation sur la carte : ' . ( true === ( $data['map_consent'] ?? false ) ? 'Oui' : 'Non' );
 		$lines[] = "\nPièces reçues :";
 		foreach ( PrivateFiles::slots() as $slot => $label ) {
 			$file = $data['files'][ $slot ] ?? null;

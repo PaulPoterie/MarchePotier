@@ -20,7 +20,7 @@ final class Editions {
 
 	/** Migration idempotente, y compris lors d'une mise à jour sans réactivation. */
 	public static function install_permissions(): void {
-		if ( '3' === get_option( 'marcpo_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
+		if ( '4' === get_option( 'marcpo_permissions_version' ) || ! current_user_can( 'manage_options' ) ) {
 			return;
 		}
 		$admin = get_role( 'administrator' );
@@ -28,7 +28,7 @@ final class Editions {
 			return;
 		}
 		$admin->add_cap( 'marcpo_manage_editions' );
-		add_role( 'marcpo_organizer', '[MP] Administrateur marché', array( 'read' => true, 'marcpo_manage_editions' => true ) );
+		add_role( 'marcpo_organizer', '[Poterie Navarraise] Administrateur marché', array( 'read' => true, 'marcpo_manage_editions' => true ) );
 		$organizer = get_role( 'marcpo_organizer' );
 		if ( $organizer ) {
 			$organizer->add_cap( 'marcpo_manage_editions' );
@@ -40,8 +40,8 @@ final class Editions {
 			}
 			$organizer->add_cap( 'manage_categories' );
 		}
-		self::rename_role( 'marcpo_organizer', '[MP] Administrateur marché' );
-		update_option( 'marcpo_permissions_version', '3', false );
+		self::rename_role( 'marcpo_organizer', '[Poterie Navarraise] Administrateur marché' );
+		update_option( 'marcpo_permissions_version', '4', false );
 		wp_get_current_user()->get_role_caps();
 	}
 
@@ -61,12 +61,12 @@ final class Editions {
 		);
 		register_post_type( 'marcpo_edition', array(
 			'labels' => array(
-				'name' => __( 'Éditions', 'marche-potier' ),
-				'singular_name' => __( 'Édition', 'marche-potier' ),
-				'add_new' => __( 'Ajouter une édition', 'marche-potier' ),
-				'add_new_item' => __( 'Ajouter une édition', 'marche-potier' ),
-				'edit_item' => __( 'Modifier l’édition', 'marche-potier' ),
-				'not_found' => __( 'Aucune édition.', 'marche-potier' ),
+				'name' => __( 'Éditions', 'poterie-navarraise-market-manager' ),
+				'singular_name' => __( 'Édition', 'poterie-navarraise-market-manager' ),
+				'add_new' => __( 'Ajouter une édition', 'poterie-navarraise-market-manager' ),
+				'add_new_item' => __( 'Ajouter une édition', 'poterie-navarraise-market-manager' ),
+				'edit_item' => __( 'Modifier l’édition', 'poterie-navarraise-market-manager' ),
+				'not_found' => __( 'Aucune édition.', 'poterie-navarraise-market-manager' ),
 			),
 			'public' => false,
 			'publicly_queryable' => false,
@@ -181,7 +181,7 @@ final class Editions {
 	}
 
 	public static function add_box(): void {
-		add_meta_box( 'marcpo-edition-settings', __( 'Paramètres de l’édition', 'marche-potier' ), array( self::class, 'render_box' ), 'marcpo_edition', 'normal', 'high' );
+		add_meta_box( 'marcpo-edition-settings', __( 'Paramètres de l’édition', 'poterie-navarraise-market-manager' ), array( self::class, 'render_box' ), 'marcpo_edition', 'normal', 'high' );
 		add_meta_box( 'marcpo-edition-publication', 'Affichage sur le site', array( self::class, 'publication_box' ), 'marcpo_edition', 'normal', 'low' );
 	}
 
@@ -202,9 +202,9 @@ final class Editions {
 		<h3>Période de candidature</h3>
 		<p><?php
 		/* translators: %s: WordPress site timezone. */
-		echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'marche-potier' ), wp_timezone_string() ) ); ?></p>
+		echo esc_html( sprintf( __( 'Fuseau horaire du site : %s. La fermeture prend effet à l’heure exacte indiquée.', 'poterie-navarraise-market-manager' ), wp_timezone_string() ) ); ?></p>
 		<table class="form-table" role="presentation">
-			<?php foreach ( array( 'opens' => __( 'Ouverture des candidatures', 'marche-potier' ), 'closes' => __( 'Fermeture des candidatures', 'marche-potier' ) ) as $key => $label ) : ?>
+			<?php foreach ( array( 'opens' => __( 'Ouverture des candidatures', 'poterie-navarraise-market-manager' ), 'closes' => __( 'Fermeture des candidatures', 'poterie-navarraise-market-manager' ) ) as $key => $label ) : ?>
 			<tr><th><label for="marcpo-<?php echo esc_attr( $key ); ?>"><?php echo esc_html( $label ); ?></label></th><td><input id="marcpo-<?php echo esc_attr( $key ); ?>" name="marcpo_edition[<?php echo esc_attr( $key ); ?>]" type="datetime-local" required value="<?php echo esc_attr( $data[ $key ] ); ?>"></td></tr>
 			<?php endforeach; ?>
 		</table>
@@ -324,7 +324,7 @@ final class Editions {
 		if ( ! $screen || 'marcpo_edition' !== $screen->post_type || null === Request::query( 'marcpo_edition_error' ) || ! current_user_can( 'marcpo_manage_editions' ) ) {
 			return;
 		}
-		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'marche-potier' ) . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'poterie-navarraise-market-manager' ) . '</p></div>';
 	}
 
 	/** À réutiliser côté serveur lors du dépôt, sans dépendre de WP-Cron. */
@@ -344,7 +344,7 @@ final class Editions {
 	}
 
 	public static function columns( array $columns ): array {
-		return array_merge( $columns, array( 'marcpo_year' => __( 'Année', 'marche-potier' ), 'marcpo_period' => __( 'Période de candidature', 'marche-potier' ), 'marcpo_selection' => __( 'Sélection publique', 'marche-potier' ) ) );
+		return array_merge( $columns, array( 'marcpo_year' => __( 'Année', 'poterie-navarraise-market-manager' ), 'marcpo_period' => __( 'Période de candidature', 'poterie-navarraise-market-manager' ), 'marcpo_selection' => __( 'Sélection publique', 'poterie-navarraise-market-manager' ) ) );
 	}
 
 	public static function column( string $column, int $id ): void {
@@ -356,9 +356,9 @@ final class Editions {
 				$date = self::parse_date( $data[ $key ] );
 				echo esc_html( $date ? wp_date( 'd/m/Y H:i', $date->getTimestamp() ) : '—' ) . '<br>';
 			}
-			echo esc_html( self::is_open( $id ) ? __( 'Ouverte', 'marche-potier' ) : __( 'Fermée', 'marche-potier' ) );
+			echo esc_html( self::is_open( $id ) ? __( 'Ouverte', 'poterie-navarraise-market-manager' ) : __( 'Fermée', 'poterie-navarraise-market-manager' ) );
 		} elseif ( 'marcpo_selection' === $column ) {
-			echo esc_html( self::selection_is_public( $id ) ? __( 'Autorisée', 'marche-potier' ) : __( 'Masquée', 'marche-potier' ) );
+			echo esc_html( self::selection_is_public( $id ) ? __( 'Autorisée', 'poterie-navarraise-market-manager' ) : __( 'Masquée', 'poterie-navarraise-market-manager' ) );
 		}
 	}
 }

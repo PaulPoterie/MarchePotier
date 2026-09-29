@@ -5,7 +5,7 @@ defined( 'ABSPATH' ) || exit;
 /** WordPress attachments. Only explicitly temporary, unreferenced media may be collected. */
 final class MediaLibrary {
 	public static function hooks(): void {
-		add_filter( 'manage_media_columns', static function ( $columns ) { $columns['marcpo_media_state'] = 'Marché Potier'; return $columns; } );
+		add_filter( 'manage_media_columns', static function ( $columns ) { $columns['marcpo_media_state'] = 'Poterie Navarraise'; return $columns; } );
 		add_action( 'manage_media_custom_column', static function ( $column, $id ) {
 			if ( 'marcpo_media_state' !== $column ) { return; }
 			if ( get_post_meta( $id, '_marcpo_temporary_until', true ) ) { echo 'Envoi provisoire'; }
@@ -30,7 +30,32 @@ final class MediaLibrary {
 		return $id;
 	}
 
+	/** Only flat, expected HTTP uploads are accepted; never clean or unslash a server temporary path. */
+	public static function validate_uploads( array $uploads ): array|\WP_Error {
+		$clean = array();
+		foreach ( PrivateFiles::slots() as $slot => $label ) {
+			if ( ! array_key_exists( $slot, $uploads ) ) { continue; }
+			$file = $uploads[ $slot ];
+			$error = new \WP_Error( 'upload', $label . ' : fichier manquant ou transfert interrompu.' );
+			if ( ! is_array( $file ) || ! is_int( $file['error'] ?? null ) || ! is_int( $file['size'] ?? null ) || $file['size'] < 0 ) { return $error; }
+			foreach ( array( 'name', 'tmp_name', 'type' ) as $key ) {
+				if ( ! isset( $file[ $key ] ) || ! is_string( $file[ $key ] ) || str_contains( $file[ $key ], "\0" ) ) { return $error; }
+			}
+			if ( UPLOAD_ERR_NO_FILE === $file['error'] ) { continue; }
+			if ( UPLOAD_ERR_OK !== $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) { return $error; }
+			$name = sanitize_file_name( wp_basename( $file['name'] ) );
+			if ( '' === $name || strlen( $name ) > 255 ) { return $error; }
+			$size = filesize( $file['tmp_name'] );
+			if ( ! $size || $size > PrivateFiles::max_size() ) { return new \WP_Error( 'upload', $label . ' : taille maximale ' . PrivateFiles::size_label() . '.' ); }
+			// Client MIME and size are untrusted: size comes from disk, MIME is detected in store().
+			$clean[ $slot ] = array( 'name' => $name, 'tmp_name' => $file['tmp_name'], 'error' => UPLOAD_ERR_OK, 'size' => $size, 'type' => '' );
+		}
+		return $clean;
+	}
+
 	public static function store( array $uploads, bool $partial = false, string $owner = '' ): array|\WP_Error {
+		$uploads = self::validate_uploads( $uploads );
+		if ( is_wp_error( $uploads ) ) { return $uploads; }
 		self::load(); $stored = array();
 		try {
 			foreach ( PrivateFiles::slots() as $slot => $label ) {
@@ -44,6 +69,7 @@ final class MediaLibrary {
 				$checked = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $mimes );
 				$mime = ( new \finfo( FILEINFO_MIME_TYPE ) )->file( $file['tmp_name'] );
 				if ( ! $checked['ext'] || ! $checked['type'] || $mime !== $checked['type'] || ! in_array( $mime, $mimes, true ) ) { throw new \RuntimeException( $label . ' : format non autorisé.' ); }
+				$file['type'] = $mime;
 				if ( 'application/pdf' === $mime ) {
 					if ( '%PDF-' !== file_get_contents( $file['tmp_name'], false, null, 0, 5 ) ) { throw new \RuntimeException( $label . ' : PDF invalide.' ); }
 				} else {

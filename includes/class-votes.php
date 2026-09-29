@@ -103,7 +103,8 @@ final class Votes {
 	}
 	public static function save(): void {
 		$id = (int) ( Request::post( 'candidature' ) ?? 0 );
-		check_admin_referer( 'marcpo_vote_' . $id );
+		$nonce = Request::post( '_wpnonce' ); // Request::post unslashes exactly once and rejects non-string values.
+		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'marcpo_vote_' . $id ) ) { wp_die( 'Session expirée. Rechargez la page.', '', array( 'response' => 403 ) ); }
 		$result = self::record( $id, Request::post( 'score' ) );
 		if ( is_wp_error( $result ) ) { $status = (int) ( $result->get_error_data()['status'] ?? 400 ); wp_die( esc_html( $result->get_error_message() ), '', array( 'response' => (int) $status, 'back_link' => true ) ); }
 		wp_safe_redirect( add_query_arg( 'marcpo_vote_saved', '1', Records::view_url( $id, Records::list_context() ) ), 303 );

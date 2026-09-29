@@ -1,6 +1,6 @@
 <?php
 /** Runs inside votes-local.php, with its isolated fixtures and intercepted emails. */
-use MarchePotier\{Request,PublicForm,Fields,Gallery,VoteTracking,Records,Votes};
+use MarchePotier\{Request,PublicForm,Fields,Gallery,VoteTracking,Records,Votes,MediaLibrary,CsvExport,Review};
 
 $saved_get = $_GET; $saved_post = $_POST; $saved_server = $_SERVER;
 try {
@@ -17,6 +17,29 @@ try {
 		marcpo_check( is_wp_error( Votes::record( $app, Request::post( 'score' ) ) ), 'Note HTTP malformée refusée sans conversion' );
 	}
 	marcpo_check( Votes::all( array() ) === array(), 'Lecture SQL de votes vide sans requête IN invalide' );
+	foreach ( array( 'email' => array( 'bad name@example.test', array( 'candidate@example.test' ) ), 'website' => array( 'javascript:alert(1)', 'https://example.test/ bad' ) ) as $field => $bad_values ) {
+		foreach ( $bad_values as $bad ) { marcpo_check( is_wp_error( Fields::validate( array( $field => $bad ), Fields::identity() ) ), 'Coordonnée invalide refusée avant nettoyage : ' . $field ); }
+	}
+	$clean = Fields::validate( array( 'last_name' => "O'Neil \\ atelier", 'email' => "o'neil+atelier@example.test", 'website' => 'https://example.test/?a=1&b=2', 'address' => "<b>12 rue du Four</b>\nBayonne" ), Fields::identity() );
+	marcpo_check( ! is_wp_error( $clean ) && "O'Neil \\ atelier" === $clean['last_name'] && "o'neil+atelier@example.test" === $clean['email'] && 'https://example.test/?a=1&b=2' === $clean['website'] && "12 rue du Four\nBayonne" === $clean['address'], 'Nettoyage adapté : apostrophe, antislash, email, URL et retours à la ligne préservés' );
+	marcpo_check( $clean === Fields::validate( $clean, Fields::identity() ), 'Validation des coordonnées idempotente entre la réception HTTP et la sauvegarde' );
+	$display = Fields::for_display( array( 'last_name' => '<b>Atelier</b>', 'email' => array( 'bad' ), 'unknown' => 'secret' ), Fields::identity() );
+	marcpo_check( 'Atelier' === $display['last_name'] && '' === $display['email'] && ! isset( $display['unknown'] ), 'Réaffichage limité aux champs connus et valides, malgré un champ voisin malformé' );
+	foreach ( array( array( 'aaf_member' => '<b>yes</b>' ), array( 'production' => array( array( 'bijoux' ) ) ), array( 'stand_length' => 'dog' ) ) as $bad ) {
+		marcpo_check( is_wp_error( Fields::validate( $bad, Fields::activity() ) ), 'Choix, tableaux imbriqués et longueur numérique refusés sans conversion implicite' );
+	}
+	$file = array( 'name' => 'local.php', 'type' => 'image/jpeg', 'size' => 1, 'error' => UPLOAD_ERR_OK, 'tmp_name' => __FILE__ );
+	foreach ( array( $file, array_replace( $file, array( 'name' => array( 'photo.jpg' ) ) ), array_replace( $file, array( 'error' => '0' ) ), array_replace( $file, array( 'size' => -1 ) ) ) as $bad ) {
+		marcpo_check( is_wp_error( MediaLibrary::store( array( 'product1' => $bad ), true ) ), 'Fichier local ou descripteur malformé refusé avant stockage' );
+	}
+	marcpo_check( array() === MediaLibrary::validate_uploads( array( 'unexpected' => $file ) ), 'Emplacement de fichier inconnu ignoré' );
+	wp_set_current_user( 1 );
+	foreach ( array( array( 'nested' ), 'invalid' ) as $bad_nonce ) {
+		$_POST = array( 'candidature' => (string) $app, '_wpnonce' => $bad_nonce, 'decision' => 'selected', 'score' => '5' ); $_GET = array( '_wpnonce' => $bad_nonce );
+		marcpo_denied( array( Votes::class, 'save' ), 'Nonce malformé refusé par le traitement des votes' );
+		marcpo_denied( array( Review::class, 'save_decision' ), 'Nonce malformé refusé par le traitement des décisions' );
+		marcpo_denied( array( CsvExport::class, 'download' ), 'Nonce malformé refusé par le téléchargement CSV' );
+	}
 	$_SERVER['REMOTE_ADDR'] = '2001:db8::1';
 	marcpo_check( Request::remote_address() === '2001:db8::1', 'IPv6 acceptée pour la limitation des tentatives' );
 	$_SERVER['REMOTE_ADDR'] = array( '127.0.0.1' ); $_SERVER['CONTENT_LENGTH'] = array( '12' ); $_SERVER['REQUEST_METHOD'] = 'DELETE';

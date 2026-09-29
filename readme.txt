@@ -1,4 +1,4 @@
-=== Marché Potier ===
+=== Poterie Navarraise Pottery Market Manager ===
 Contributors: pauligno
 Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
@@ -8,11 +8,11 @@ Stable tag: 0.19.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Manage pottery markets: applications, supporting documents, jury ratings, selection, CSV exports and an exhibitor gallery with a map.
+Manage pottery markets: applications, supporting documents, jury ratings, selection, CSV exports and an exhibitor gallery with an optional map.
 
 == Description ==
 
-Marché Potier helps pottery market organizers collect applications, review candidates and present selected exhibitors. The interface and outgoing messages are currently mostly in French.
+Poterie Navarraise Pottery Market Manager helps pottery market organizers collect applications, review candidates and present selected exhibitors. The French description is "Poterie Navarraise — Organisation de marchés potiers". The interface and outgoing messages are currently mostly in French.
 
 Version 0.19.1 is a development build for the WordPress.org review. Its new marcpo_ identifiers do not migrate the previous test-only data. Create fresh editions and team assignments. Read the document storage information below.
 
@@ -26,15 +26,15 @@ Version 0.19.1 is a development build for the WordPress.org review. Its new marc
 * Direct selection or ratings from 0 to 5 by active jury members.
 * Voting progress table, selection history and filtered CSV exports.
 * Invitations and submission confirmations through WordPress email delivery.
-* Public exhibitor photographs, techniques, links and a map of geocoded addresses.
+* Public exhibitor photographs, techniques, links and optional mapping with separate site and applicant consent.
 
 No ACF or form builder is required. Blocks use the WordPress editor. Scripts and styles, including Leaflet, are bundled. Mapping providers are documented under External services.
 
 = Team and permissions =
 
-Each edition has one administrator identified by name and email. The "[MP] Administrateur marché" role can manage editions, applications, pages and posts across the site, including other accounts' content. It cannot access technical settings, plugins or native user management.
+Each edition has one administrator identified by name and email. The "[Poterie Navarraise] Administrateur marché" role can manage editions, applications, pages and posts across the site, including other accounts' content. It cannot access technical settings, plugins or native user management.
 
-The "[MP] Votant sélection" role can review applications in assigned editions. In multiple voting mode, active jurors can see jury ratings and update their own rating at any time. Application closing dates do not close voting. Point totals never select a candidate automatically.
+The "[Poterie Navarraise] Votant sélection" role can review applications in assigned editions. In multiple voting mode, active jurors can see jury ratings and update their own rating at any time. Application closing dates do not close voting. Point totals never select a candidate automatically.
 
 Replacing an edition administrator does not revoke their site-wide WordPress permissions. A site administrator must remove those permissions when necessary.
 
@@ -44,11 +44,13 @@ The gallery requires a published edition, its "Autoriser l'affichage public de l
 
 The gallery displays names, town, postal code, techniques, website links and product photographs. The map exposes geocoded addresses. Email, telephone, supporting documents and stand photographs are not displayed in the gallery.
 
-The application form requires authorization for public presentation and address mapping if selected and identifies IGN as the geocoding provider. There is no separate choice for each mapping provider and no visitor consent button before the map loads.
+The application form requires authorization for public presentation if selected. A separate, optional checkbox authorizes sending the address to IGN and displaying it on the public map. It is unchecked by default. Refusing mapping does not prevent applying or appearing in the gallery. Telephone collection is unchanged; telephone numbers and email addresses are not sent to mapping providers.
+
+Mapping also requires explicit site-administrator authorization under Poterie Navarraise > Services externes. IGN geocoding and OpenStreetMap tiles have separate switches, both off by default. Enabling the plugin, publishing the selection or accepting photo publication does not enable either service or imply the applicant's mapping consent. Existing applications without the new mapping agreement are not mapped. Visitors do not have a separate map consent button.
 
 = Data and privacy =
 
-Contact details, answers, decisions, authorizations, team assignments, ratings and email status are stored in the WordPress database. Organizers and jurors use WordPress accounts; applicants do not receive accounts.
+Contact details, answers, decisions, authorizations, team assignments, ratings and email status are stored in the WordPress database. Mapping authorization is recorded separately with the date of agreement. Applicants can contact the organizer to withdraw it; the organizer can uncheck the mapping agreement in the application. This removes its saved map position and cancels its queued geocoding task. Previously transmitted requests cannot be recalled from the provider. Organizers and jurors use WordPress accounts; applicants do not receive accounts.
 
 Photos and supporting documents are WordPress Media Library attachments with ordinary public file URLs. Files follow the configured WordPress uploads directory. JPEG copies at 1080 by 1350 pixels are generated locally after an application is saved and are also available in the Media Library. Nothing is posted automatically to Instagram or Facebook.
 
@@ -67,12 +69,15 @@ Organizers must define retention periods and update their site's privacy policy 
 == Installation ==
 
 1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. MySQL/MariaDB must support named locks.
-2. On staging, upload the ZIP containing the marche-potier folder through Plugins > Add New > Upload Plugin, then activate it.
-3. Sign in as a WordPress administrator and open Marché Potier. Review the documented public file storage behavior and verify email delivery before collecting real applications.
+2. On staging, upload the ZIP containing the poterie-navarraise-market-manager folder through Plugins > Add New > Upload Plugin, then activate it.
+3. Sign in as a WordPress administrator and open Poterie Navarraise. Review the documented public file storage behavior and verify email delivery before collecting real applications.
 4. Create an edition, complete its settings and required administrator, then publish it.
 5. Add the "Formulaire de candidature" block to a page and choose the edition. Use one form per page.
 6. Exclude the application page from page/CDN caching, ensure WP-Cron works and test a complete application.
 7. Add the "Présentation de la sélection" block, choose the edition and enable public selection when ready.
+8. To offer a map, a WordPress site administrator must read and enable the desired providers under Poterie Navarraise > Services externes. Applicants must separately opt in to address mapping. Purge page/CDN caches after changing provider settings or withdrawing mapping consent so cached pages reflect the change.
+
+When switching from the former marche-potier package, deactivate the old plugin before activating this renamed package. WordPress may list them separately; do not activate both together.
 
 Documented local tests use WordPress 7.1 and PHP 8.3. Declared minimum versions do not represent a fully tested compatibility matrix.
 
@@ -84,7 +89,7 @@ Three product photographs, one stand photograph, proof of professional status an
 
 = Can applications work without mapping services? =
 
-Applications, reviews, ratings and exports do not depend on geocoding. An address that cannot be geocoded does not prevent an eligible exhibitor appearing in the gallery. Markers require successful geocoding; the background requires the tile provider. There is no separate setting to enable the gallery while disabling its map.
+Yes. Both mapping services are disabled by default. Applications, reviews, ratings, exports and the gallery remain available without them. Refusing mapping or an address that cannot be geocoded does not prevent an eligible exhibitor appearing in the gallery. Markers require the applicant's mapping agreement and saved coordinates; displaying the map also requires the OpenStreetMap setting. Turning off IGN stops new geocoding requests, including queued tasks; turning off OpenStreetMap stops the plugin rendering the map on subsequent page loads. Already loaded or cached pages need refreshing or purging.
 
 = Is an API key required? =
 
@@ -107,7 +112,7 @@ Purpose: convert a French address into coordinates for the public workshop map.
 
 The WordPress server requests https://data.geopf.fr/geocodage/search over HTTPS with q (street, postal code and town), index=address and limit=2. The User-Agent includes the plugin name and site's home URL. IGN also receives the server IP. The plugin does not attach email, telephone, photographs, documents, ratings or the applicant's name as a separate field; address text is transmitted as stored.
 
-Scheduled WordPress tasks make requests only for selected applications with publication authorization in editions allowing public selection. Addresses must pass French format checks. Coordinates already recorded for the same address avoid another call. Responses may be cached locally for 180 days; accepted coordinates remain in application metadata without automatic expiry.
+Scheduled WordPress tasks make requests only after a site administrator explicitly enables IGN and only for selected applications with separate mapping consent and publication authorization in editions allowing public selection. Authorization is checked again when the task runs. Addresses must pass French format checks. Coordinates already recorded for the same address avoid another call. Responses may be cached locally for 180 days; accepted coordinates remain in application metadata until mapping consent is withdrawn or the application is deleted. Shared geocoding response caches expire separately.
 
 * Documentation: https://ignf.github.io/cartes.gouv.fr-documentation/fr/guides-utilisateur/utiliser-les-services-de-la-geoplateforme/geocodage/
 * Terms: https://cartes.gouv.fr/cgu/
@@ -118,7 +123,7 @@ Scheduled WordPress tasks make requests only for selected applications with publ
 Provider: OpenStreetMap Foundation (OSMF).
 Purpose: display the gallery map background using https://tile.openstreetmap.org/{z}/{x}/{y}.png tiles.
 
-The visitor's browser requests tiles directly when the map enters the visible area, or during initialization if IntersectionObserver is unavailable. Panning and zooming may trigger more requests. No separate acceptance click is requested beforehand.
+Only after a site administrator explicitly enables OpenStreetMap does the plugin render a map of eligible applicants who authorized address mapping. The visitor's browser requests tiles directly when that map enters the visible area, or during initialization if IntersectionObserver is unavailable. Panning and zooming may trigger more requests. No separate visitor acceptance click is requested beforehand.
 
 OSMF receives the visitor's IP address, browser HTTP information, tile coordinates and zoom level. The code sets strict-origin-when-cross-origin referrer policy: the site's origin may be transmitted on external HTTPS requests according to browser rules. Marker names and addresses are rendered locally and are not included as fields in tile requests, but those requests reveal the viewed geographical area.
 
@@ -167,6 +172,13 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 = 0.19.1 =
 
+* Adopt the Poterie Navarraise Pottery Market Manager name and the poterie-navarraise-market-manager text domain.
+* Add separate site-administrator opt-ins for IGN geocoding and OpenStreetMap tiles, both disabled by default.
+* Add optional, unchecked applicant consent for address mapping, with a recorded date and withdrawal controls.
+* Validate public answers and upload descriptors before submission; use context-specific email, URL and filename sanitization.
+* Validate and sanitize public, voting, selection and export nonces before verification.
+* Validate IGN responses and retain only sanitized, relevant properties in the local cache.
+* Update English documentation for external services, data handling and bundled Leaflet sources.
 * Replace short identifiers with the distinct marcpo_ prefix. Previous test data is not migrated.
 * Load quick-edit JavaScript through WordPress and restore the saved selection correctly.
 * Sanitize public nonces and restrict operational notices to relevant plugin screens.
@@ -184,4 +196,4 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 = 0.19.1 =
 
-Development build for fresh test data: existing 0.19.0 records and team assignments are not migrated to the new identifiers. Photos and supporting documents use ordinary public Media Library URLs.
+Review build with new name and identifiers; previous 0.19.0 test data is not migrated. Deactivate the old marche-potier package first. Mapping is off by default. Uploaded files retain public Media Library URLs.

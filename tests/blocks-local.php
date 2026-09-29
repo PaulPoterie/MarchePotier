@@ -1,6 +1,6 @@
 <?php
 /** Scénarios des blocs, exécutés avec les fixtures de votes-local.php. */
-use MarchePotier\{Blocks,Editions,Jury,Records,PublicForm,Gallery};
+use MarchePotier\{Blocks,Editions,Jury,Records,PublicForm,Gallery,ExternalServices};
 if ( ! isset( $state, $manager, $checks ) || PHP_SAPI !== 'cli' ) { exit; }
 
 $registry = WP_Block_Type_Registry::get_instance();
@@ -68,8 +68,16 @@ $GLOBALS['wp_query'] = new WP_Query( array( 'page_id' => $page_form ) ); $GLOBAL
 do_action( 'wp_enqueue_scripts' );
 marcpo_check( wp_script_is( 'marcpo-form', 'enqueued' ) && wp_script_is( 'marcpo-draft', 'enqueued' ) && wp_style_is( 'marcpo-form', 'enqueued' ), 'Le bloc charge les styles, la sauvegarde des réponses et les transferts de pièces' );
 $GLOBALS['wp_query'] = new WP_Query( array( 'page_id' => $page_selection ) ); $GLOBALS['post'] = get_post( $page_selection );
+$map_options = static fn() => array( 'ign' => false, 'osm' => false );
+add_filter( 'pre_option_' . ExternalServices::OPTION, $map_options );
 do_action( 'wp_enqueue_scripts' );
-marcpo_check( wp_script_is( 'marcpo-gallery', 'enqueued' ) && wp_style_is( 'marcpo-gallery', 'enqueued' ) && wp_script_is( 'marcpo-leaflet', 'enqueued' ), 'Le bloc sélection charge la galerie et la carte' );
+marcpo_check( wp_script_is( 'marcpo-gallery', 'enqueued' ) && wp_style_is( 'marcpo-gallery', 'enqueued' ) && ! wp_script_is( 'marcpo-leaflet', 'enqueued' ), 'Le bloc sélection charge la galerie sans Leaflet lorsque le service est désactivé' );
+remove_filter( 'pre_option_' . ExternalServices::OPTION, $map_options );
+$map_options = static fn() => array( 'ign' => false, 'osm' => true );
+add_filter( 'pre_option_' . ExternalServices::OPTION, $map_options );
+do_action( 'wp_enqueue_scripts' );
+marcpo_check( wp_script_is( 'marcpo-leaflet', 'enqueued' ) && wp_style_is( 'marcpo-leaflet', 'enqueued' ), 'Leaflet chargé lorsque le service cartographique est autorisé' );
+remove_filter( 'pre_option_' . ExternalServices::OPTION, $map_options );
 $GLOBALS['wp_query'] = $saved_query; $GLOBALS['post'] = $saved_post;
 wp_set_current_user( $manager );
 ob_start(); Editions::render_box( get_post( $block_edition_a ) ); $html = ob_get_clean();

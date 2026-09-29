@@ -5,7 +5,7 @@ window.marcpoCandidateDraft = function (form) {
   const fields = Array.from(form.elements).filter(input =>
     /^(INPUT|TEXTAREA|SELECT)$/.test(input.tagName) &&
     !['hidden', 'file', 'submit', 'button'].includes(input.type) && !input.readOnly &&
-    (/^marcpo_record\[(identity|activity)\]\[/.test(input.name) || input.name === 'marcpo_photo_consent'));
+    (/^marcpo_record\[(identity|activity)\]\[/.test(input.name) || ['marcpo_photo_consent', 'marcpo_map_consent'].includes(input.name)));
   const notice = document.createElement('p');
   notice.setAttribute('role', 'status');
   notice.className = 'marcpo-draft-status';

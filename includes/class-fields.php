@@ -92,7 +92,12 @@ final class Fields {
 					}
 					if ( 'date' === $field[1] && ! Editions::parse_date( $value . 'T12:00' ) ) { return $error; }
 				}
-				$result[ $key ] = 'textarea' === $field[1] ? sanitize_textarea_field( $value ) : sanitize_text_field( $value );
+				$result[ $key ] = match ( $field[1] ) {
+					'email' => sanitize_email( $value ),
+					'url' => sanitize_url( $value, array( 'http', 'https' ) ),
+					'textarea' => sanitize_textarea_field( $value ),
+					default => sanitize_text_field( $value ),
+				};
 				if ( 'presentation' === $key && count( preg_split( '/[\s\x{FEFF}]+/u', $result[ $key ], -1, PREG_SPLIT_NO_EMPTY ) ) > 300 ) { return new \WP_Error( 'marcpo_presentation_length', 'Présentation : limitez votre texte à 300 mots maximum.' ); }
 			}
 			if ( $complete && $field[2] && ( '' === $result[ $key ] || array() === $result[ $key ] ) ) {
@@ -107,6 +112,17 @@ final class Fields {
 			if ( $complete && $active && '' === $result[ $key ] ) {
 				return new \WP_Error( 'marcpo_required', sprintf( 'Précision obligatoire : %s.', $field[0] ) );
 			}
+		}
+		return $result;
+	}
+
+	/** Keep only independently valid fields for redisplay; never use this copy to accept a submission. */
+	public static function for_display( array $raw, array $schema ): array {
+		$result = array();
+		foreach ( $schema as $key => $field ) {
+			unset( $field[4] );
+			$clean = self::validate( $raw, array( $key => $field ) );
+			$result[ $key ] = is_wp_error( $clean ) ? ( 'multiple' === $field[1] ? array() : '' ) : $clean[ $key ];
 		}
 		return $result;
 	}

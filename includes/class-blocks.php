@@ -17,7 +17,7 @@ final class Blocks {
 		} );
 	}
 	public static function register(): void {
-		wp_register_script( 'marcpo-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.1', true );
+		wp_register_script( 'marcpo-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.1.1', true );
 		wp_register_style( 'marcpo-blocks-editor', plugins_url( '../assets/blocks-editor.css', __FILE__ ), array(), '0.19.1' );
 		foreach ( array( self::FORM => 'Formulaire de candidature', self::SELECTION => 'Présentation de la sélection' ) as $name => $title ) {
 			register_block_type( $name, array(
