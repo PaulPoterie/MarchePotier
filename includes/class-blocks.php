@@ -11,14 +11,14 @@ final class Blocks {
 		add_action( 'rest_api_init', static function () {
 			register_rest_route( 'marche-potier/v1', '/editions', array(
 				'methods' => 'GET',
-				'permission_callback' => static fn() => current_user_can( 'mp_manage_editions' ),
+				'permission_callback' => static fn() => current_user_can( 'marcpo_manage_editions' ),
 				'callback' => array( self::class, 'edition_options' ),
 			) );
 		} );
 	}
 	public static function register(): void {
-		wp_register_script( 'mp-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.0', true );
-		wp_register_style( 'mp-blocks-editor', plugins_url( '../assets/blocks-editor.css', __FILE__ ), array(), '0.19.0' );
+		wp_register_script( 'marcpo-blocks', plugins_url( '../assets/blocks.js', __FILE__ ), array( 'wp-blocks', 'wp-element', 'wp-block-editor', 'wp-components', 'wp-api-fetch' ), '0.19.1.1', true );
+		wp_register_style( 'marcpo-blocks-editor', plugins_url( '../assets/blocks-editor.css', __FILE__ ), array(), '0.19.1' );
 		foreach ( array( self::FORM => 'Formulaire de candidature', self::SELECTION => 'Présentation de la sélection' ) as $name => $title ) {
 			register_block_type( $name, array(
 				'api_version' => 3,
@@ -27,8 +27,8 @@ final class Blocks {
 				'icon' => self::FORM === $name ? 'feedback' : 'groups',
 				'attributes' => array( 'editionId' => array( 'type' => 'integer', 'default' => 0 ) ),
 				'supports' => array( 'html' => false, 'multiple' => false, 'reusable' => false ),
-				'editor_script_handles' => array( 'mp-blocks' ),
-				'editor_style_handles' => array( 'mp-blocks-editor' ),
+				'editor_script_handles' => array( 'marcpo-blocks' ),
+				'editor_style_handles' => array( 'marcpo-blocks-editor' ),
 				'render_callback' => static function ( array $attributes ) use ( $name ): string {
 					$id = (int) ( $attributes['editionId'] ?? 0 );
 					return self::FORM === $name ? PublicForm::render( $id ) : Gallery::render_edition( $id );
@@ -44,7 +44,7 @@ final class Blocks {
 	/** Seuls les responsables authentifiés obtiennent la liste des éditions privées. */
 	public static function edition_options(): array {
 		$rows = array();
-		foreach ( get_posts( array( 'post_type' => 'mp_edition', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'orderby' => array( 'title' => 'ASC', 'ID' => 'ASC' ) ) ) as $edition ) {
+		foreach ( get_posts( array( 'post_type' => 'marcpo_edition', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'orderby' => array( 'title' => 'ASC', 'ID' => 'ASC' ) ) ) as $edition ) {
 			$rows[] = array( 'id' => $edition->ID, 'label' => self::edition_label( $edition->ID ), 'published' => 'publish' === $edition->post_status, 'selectionPublic' => Editions::selection_is_public( $edition->ID ) );
 		}
 		return $rows;

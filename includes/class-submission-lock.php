@@ -9,7 +9,7 @@ defined( 'ABSPATH' ) || exit;
  */
 final class SubmissionLock {
 	private static bool $held = false;
-	private static function name(): string { global $wpdb; return 'mp_' . hash( 'sha256', DB_NAME . $wpdb->prefix ); }
+	private static function name(): string { global $wpdb; return 'marcpo_' . hash( 'sha256', DB_NAME . $wpdb->prefix ); }
 	public static function acquire(): bool {
 		global $wpdb;
 		if ( self::$held ) { return false; }

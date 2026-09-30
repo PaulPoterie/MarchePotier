@@ -4,41 +4,41 @@ namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 final class Jury {
-	public const META = '_mp_jury_settings';
+	public const META = '_marcpo_jury_settings';
 	public static function hooks(): void {
 		add_filter( 'login_redirect', array( self::class, 'login_redirect' ), 10, 3 );
 		add_action( 'admin_init', array( self::class, 'install' ) );
-		add_action( 'add_meta_boxes_mp_edition', static function () {
-			add_meta_box( 'mp-jury', 'Organisateur et votes', array( self::class, 'box' ), 'mp_edition', 'normal', 'high' );
+		add_action( 'add_meta_boxes_marcpo_edition', static function () {
+			add_meta_box( 'marcpo-jury', 'Organisateur et votes', array( self::class, 'box' ), 'marcpo_edition', 'normal', 'high' );
 		} );
 		add_action( 'admin_notices', array( self::class, 'notice' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
 			$screen = get_current_screen();
-			if ( $screen && 'mp_edition' === $screen->post_type && 'post' === $screen->base ) {
-				wp_enqueue_script( 'mp-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.0', true );
-				wp_enqueue_style( 'mp-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.0' );
+			if ( $screen && 'marcpo_edition' === $screen->post_type && 'post' === $screen->base ) {
+				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array( 'post' ), '0.19.1.3', true );
+				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.1' );
 			}
 		} );
 	}
 	/** Utiliser le compte authentifié : la session courante peut encore être anonyme. */
 	public static function login_redirect( string $redirect_to, string $requested_redirect_to, $user ): string {
-		if ( ! $user instanceof \WP_User || ! in_array( 'mp_juror', $user->roles, true ) || ! user_can( $user, 'mp_access_market' ) || ! user_can( $user, 'mp_review_applications' ) ) { return $redirect_to; }
+		if ( ! $user instanceof \WP_User || ! in_array( 'marcpo_juror', $user->roles, true ) || ! user_can( $user, 'marcpo_access_market' ) || ! user_can( $user, 'marcpo_review_applications' ) ) { return $redirect_to; }
 		// Le formulaire WordPress transmet aussi son URL d’administration par défaut.
 		$defaults = array( '', 'wp-admin/', admin_url() );
 		if ( ! in_array( $requested_redirect_to, $defaults, true ) || ! in_array( $redirect_to, $defaults, true ) ) { return $redirect_to; }
-		return admin_url( 'admin.php?page=mp-gestion' );
+		return admin_url( 'admin.php?page=marcpo-gestion' );
 	}
 	public static function install(): void {
-		if ( ! current_user_can( 'manage_options' ) || '2' === get_option( 'mp_jury_permissions_version' ) ) { return; }
-		add_role( 'mp_juror', '[MP] Votant sélection', array( 'read' => true, 'mp_access_market' => true, 'mp_review_applications' => true ) );
-		Editions::rename_role( 'mp_juror', '[MP] Votant sélection' );
-		foreach ( array( 'administrator', 'mp_organizer' ) as $name ) {
+		if ( ! current_user_can( 'manage_options' ) || '3' === get_option( 'marcpo_jury_permissions_version' ) ) { return; }
+		add_role( 'marcpo_juror', '[Poterie Navarraise] Votant sélection', array( 'read' => true, 'marcpo_access_market' => true, 'marcpo_review_applications' => true ) );
+		Editions::rename_role( 'marcpo_juror', '[Poterie Navarraise] Votant sélection' );
+		foreach ( array( 'administrator', 'marcpo_organizer' ) as $name ) {
 			$role = get_role( $name );
 			if ( ! $role ) { return; }
-			$role->add_cap( 'mp_review_applications' );
-			$role->add_cap( 'mp_manage_jury' );
+			$role->add_cap( 'marcpo_review_applications' );
+			$role->add_cap( 'marcpo_manage_jury' );
 		}
-		update_option( 'mp_jury_permissions_version', '2', false );
+		update_option( 'marcpo_jury_permissions_version', '3', false );
 		wp_get_current_user()->get_role_caps();
 	}
 	/**
@@ -51,12 +51,12 @@ final class Jury {
 		$data = array_merge( array( 'mode' => 'simple', 'members' => array(), 'revision' => '' ), is_array( $data ) ? $data : array() );
 		// Les anciennes affectations restent liées aux mêmes comptes et aux mêmes notes.
 		foreach ( $data['members'] as $uid => &$member ) {
-			$member['kind'] = $member['kind'] ?? ( user_can( $uid, 'mp_manage_editions' ) ? 'administrator' : 'voter' );
+			$member['kind'] = $member['kind'] ?? ( user_can( $uid, 'marcpo_manage_editions' ) ? 'administrator' : 'voter' );
 		} unset( $member );
 		return $data;
 	}
 	public static function multiple( int $edition ): bool { return 'multiple' === self::settings( $edition )['mode']; }
-	public static function can_review(): bool { return current_user_can( 'mp_manage_applications' ) || current_user_can( 'mp_review_applications' ); }
+	public static function can_review(): bool { return current_user_can( 'marcpo_manage_applications' ) || current_user_can( 'marcpo_review_applications' ); }
 	public static function members( int $edition ): array {
 		return array_filter( self::settings( $edition )['members'], static fn( $member, $id ) => ! empty( $member['active'] ) && (bool) get_userdata( $id ), ARRAY_FILTER_USE_BOTH );
 	}
@@ -70,55 +70,59 @@ final class Jury {
 	}
 	/** Les gestionnaires ont une portée site ; les votants doivent être affectés à l’édition. */
 	public static function can_view_edition( int $edition ): bool {
-		if ( 'mp_edition' !== get_post_type( $edition ) || ! in_array( get_post_status( $edition ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
-		return current_user_can( 'mp_manage_applications' ) || ( self::can_review() && isset( self::members( $edition )[ get_current_user_id() ] ) );
+		if ( 'marcpo_edition' !== get_post_type( $edition ) || ! in_array( get_post_status( $edition ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
+		return current_user_can( 'marcpo_manage_applications' ) || ( self::can_review() && isset( self::members( $edition )[ get_current_user_id() ] ) );
 	}
 	public static function can_view_application( int $id ): bool {
-		if ( 'mp_candidature' !== get_post_type( $id ) || ! in_array( get_post_status( $id ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
-		return current_user_can( 'mp_manage_applications' ) || self::can_view_edition( (int) ( Records::data( $id )['edition_id'] ?? 0 ) );
+		if ( 'marcpo_candidature' !== get_post_type( $id ) || ! in_array( get_post_status( $id ), array( 'publish', 'private', 'draft', 'pending', 'future' ), true ) ) { return false; }
+		return current_user_can( 'marcpo_manage_applications' ) || self::can_view_edition( (int) ( Records::data( $id )['edition_id'] ?? 0 ) );
 	}
 	public static function edition_ids(): array {
-		$ids = get_posts( array( 'post_type' => 'mp_edition', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'fields' => 'ids' ) );
+		$ids = get_posts( array( 'post_type' => 'marcpo_edition', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future' ), 'posts_per_page' => -1, 'fields' => 'ids' ) );
 		return array_values( array_filter( array_map( 'intval', $ids ), array( self::class, 'can_view_edition' ) ) );
 	}
 	public static function box( \WP_Post $post ): void {
-		if ( ! current_user_can( 'mp_manage_jury' ) ) { echo '<p>La gestion de l’équipe est réservée aux administrateurs du marché.</p>'; return; }
+		if ( ! current_user_can( 'marcpo_manage_jury' ) ) { echo '<p>La gestion de l’équipe est réservée aux administrateurs du marché.</p>'; return; }
 		$data = self::settings( $post->ID );
-		wp_nonce_field( 'mp_jury_' . $post->ID, 'mp_jury_nonce' );
-		echo '<input type="hidden" name="mp_jury[revision]" value="' . esc_attr( $data['revision'] ) . '">';
-		echo '<p><label for="mp-jury-mode"><strong>Mode de sélection</strong></label> <select id="mp-jury-mode" name="mp_jury[mode]"><option value="simple" ' . selected( $data['mode'], 'simple', false ) . '>Simple — sélection directe</option><option value="multiple" ' . selected( $data['mode'], 'multiple', false ) . '>Votes multiples — notes de 0 à 5</option></select></p>';
+		wp_nonce_field( 'marcpo_jury_' . $post->ID, 'marcpo_jury_nonce' );
+		echo '<input type="hidden" name="marcpo_jury[revision]" value="' . esc_attr( $data['revision'] ) . '">';
+		echo '<p><label for="marcpo-jury-mode"><strong>Mode de sélection</strong></label> <select id="marcpo-jury-mode" name="marcpo_jury[mode]"><option value="simple" ' . selected( $data['mode'], 'simple', false ) . '>Simple — sélection directe</option><option value="multiple" ' . selected( $data['mode'], 'multiple', false ) . '>Votes multiples — notes de 0 à 5</option></select></p>';
 		echo '<p class="description">En mode votes multiples, les notes restent modifiables à tout moment, avant, pendant et après les inscriptions.</p>';
 		echo '<h3>Administrateur du marché</h3><p>Un seul administrateur est obligatoire pour cette édition. Il peut créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles du site, et gérer l’équipe. En mode simple, il décide de la sélection. En votes multiples, il donne aussi sa note de 0 à 5 et conserve la décision finale.</p>';
-		echo '<p class="description">Le rôle « [MP] Administrateur marché » donne ces droits sur l’ensemble du site. Cet administrateur reçoit les nouvelles candidatures et les réponses des candidats.</p>';
+		echo '<p class="description">Le rôle « [Poterie Navarraise] Administrateur marché » donne ces droits sur l’ensemble du site. Cet administrateur reçoit les nouvelles candidatures et les réponses des candidats.</p>';
 		$uid = self::administrator( $post->ID ); $member = $data['members'][ $uid ] ?? array(); $user = get_userdata( $uid );
-		echo '<table class="form-table" role="presentation"><tr><th><label for="mp-administrator-name">Nom *</label></th><td><input class="regular-text" id="mp-administrator-name" name="mp_jury[administrator][name]" type="text" maxlength="120" required value="' . esc_attr( $member['name'] ?? '' ) . '"></td></tr>';
-		echo '<tr><th><label for="mp-administrator-email">Email *</label></th><td><input class="regular-text" id="mp-administrator-email" name="mp_jury[administrator][email]" type="email" required value="' . esc_attr( $user ? $user->user_email : '' ) . '"><p class="description">Pour remplacer l’administrateur, renseignez le nom et l’email de son remplaçant. Si celui-ci figure parmi les votants, décochez sa case « Actif » avant d’enregistrer.</p></td></tr>';
-		echo '<tr><th>Invitation</th><td><label><input type="checkbox" name="mp_jury[administrator][invite]" value="1"> Envoyer une invitation</label>';
+		echo '<table class="form-table" role="presentation"><tr><th><label for="marcpo-administrator-name">Nom *</label></th><td><input class="regular-text" id="marcpo-administrator-name" name="marcpo_jury[administrator][name]" type="text" maxlength="120" required value="' . esc_attr( $member['name'] ?? '' ) . '"></td></tr>';
+		echo '<tr><th><label for="marcpo-administrator-email">Email *</label></th><td><input class="regular-text" id="marcpo-administrator-email" name="marcpo_jury[administrator][email]" type="email" required value="' . esc_attr( $user ? $user->user_email : '' ) . '"><p class="description">' . esc_html__( 'Pour remplacer l’administrateur, renseignez le nom et l’email de son remplaçant. En mode votes multiples, si celui-ci figure parmi les votants, décochez sa case « Actif » avant d’enregistrer.', 'poterie-navarraise-market-manager' ) . '</p></td></tr>';
+		echo '<tr><th>Invitation</th><td><button type="submit" id="marcpo-administrator-invite" class="button button-secondary" name="marcpo_jury[administrator][invite]" value="1" aria-describedby="marcpo-administrator-invite-help">' . esc_html__( 'Enregistrer l’édition et envoyer l’invitation', 'poterie-navarraise-market-manager' ) . '</button>';
+		echo '<p class="description" id="marcpo-administrator-invite-help">' . esc_html__( 'Ce bouton enregistre toutes les modifications de l’édition puis envoie l’invitation à l’administrateur indiqué ci-dessus. Complétez d’abord les champs obligatoires. Une nouvelle édition reste en brouillon jusqu’à sa publication.', 'poterie-navarraise-market-manager' ) . '</p>';
 		if ( isset( $member['invitation'] ) ) { echo '<p class="description">' . esc_html( $member['invitation'] ) . '</p>'; }
 		echo '</td></tr></table>';
-		echo '<h3>Votant pour la sélection</h3><p>Le rôle « [MP] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
+		echo '<p class="description">' . esc_html__( 'Un nouveau compte reçoit automatiquement une invitation au premier enregistrement pour choisir son mot de passe. Pour réinviter l’administrateur, utilisez son bouton d’envoi. Un compte existant conserve son mot de passe.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<fieldset id="marcpo-jury-voters"' . ( 'multiple' === $data['mode'] ? '' : ' hidden disabled' ) . '><legend><h3>Votant pour la sélection</h3></legend><p>Le rôle « [Poterie Navarraise] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
 		self::member_table( $data );
-		echo '<p class="description">Enregistrez l’édition pour appliquer les changements. Un nouveau compte reçoit une invitation pour choisir son mot de passe ; la connexion se fait ensuite avec son email et son mot de passe. Pour un compte existant, cochez « Envoyer une invitation » si nécessaire ; son mot de passe est conservé.</p>';
-		echo '<p class="description">Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées. Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.</p>';
+		echo '<p class="description">' . esc_html__( 'Pour réinviter un votant, cochez « Envoyer une invitation » sur sa ligne, puis enregistrez l’édition.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées.', 'poterie-navarraise-market-manager' ) . '</p></fieldset>';
+		echo '<noscript><p>' . esc_html__( 'Après avoir changé le mode de sélection, enregistrez l’édition pour actualiser l’affichage des votants.', 'poterie-navarraise-market-manager' ) . '</p></noscript>';
+		echo '<p class="description">' . esc_html__( 'Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.', 'poterie-navarraise-market-manager' ) . '</p>';
 	}
 	private static function member_table( array $data ): void {
-		echo '<div class="mp-jury-group"><div class="mp-jury-scroll" role="region" aria-label="Votants pour la sélection" tabindex="0"><table class="widefat mp-jury-members" id="mp-jury-members"><thead><tr><th>Nom</th><th>Email</th><th>Participation</th><th>Invitation</th></tr></thead><tbody>';
+		echo '<div class="marcpo-jury-group"><div class="marcpo-jury-scroll" role="region" aria-label="Votants pour la sélection" tabindex="0"><table class="widefat marcpo-jury-members" id="marcpo-jury-members"><thead><tr><th>Nom</th><th>Email</th><th>Participation</th><th>Invitation</th></tr></thead><tbody>';
 		foreach ( $data['members'] as $uid => $member ) { if ( 'voter' === $member['kind'] ) { self::member_row( (string) $uid, $member, $uid ); } }
-		echo '</tbody></table></div><p><button type="button" class="button mp-jury-add">Ajouter un votant</button></p><template>';
+		echo '</tbody></table></div><p><button type="button" class="button marcpo-jury-add">Ajouter un votant</button></p><template>';
 		self::member_row( '__INDEX__', array( 'name' => '', 'active' => true ), 0 );
 		echo '</template></div>';
 	}
 	private static function member_row( string $index, array $member, int $uid ): void {
 		$user = $uid ? get_userdata( $uid ) : false;
-		$prefix = 'mp_jury[members][' . $index . ']';
+		$prefix = 'marcpo_jury[members][' . $index . ']';
 		echo '<tr><td><input type="hidden" name="' . esc_attr( $prefix . '[user_id]' ) . '" value="' . esc_attr( $uid ) . '"><input aria-label="Nom" type="text" maxlength="120" name="' . esc_attr( $prefix . '[name]' ) . '" value="' . esc_attr( $member['name'] ) . '"></td>';
 		echo '<td><input aria-label="Email" type="email" name="' . esc_attr( $prefix . '[email]' ) . '" value="' . esc_attr( $user ? $user->user_email : '' ) . '"' . ( $uid ? ' readonly' : '' ) . '>';
-		if ( $user && user_can( $user, 'mp_manage_editions' ) ) { echo '<br><small>Ce compte conserve ses droits d’administration du marché.</small>'; }
+		if ( $user && user_can( $user, 'marcpo_manage_editions' ) ) { echo '<br><small>Ce compte conserve ses droits d’administration du marché.</small>'; }
 		echo '</td>';
 		echo '<td><label><input type="checkbox" name="' . esc_attr( $prefix . '[active]' ) . '" value="1" ' . checked( ! empty( $member['active'] ) && ( ! $uid || $user ), true, false ) . '> Actif</label>' . ( $uid && ! $user ? ' — compte supprimé' : '' ) . '</td>';
 		echo '<td><label><input type="checkbox" name="' . esc_attr( $prefix . '[invite]' ) . '" value="1"> Envoyer une invitation</label>';
 		if ( isset( $member['invitation'] ) ) { echo '<br><small>' . esc_html( $member['invitation'] ) . '</small>'; }
-		if ( ! $uid ) { echo ' <button type="button" class="button-link mp-jury-remove">Retirer</button>'; }
+		if ( ! $uid ) { echo ' <button type="button" class="button-link marcpo-jury-remove">Retirer</button>'; }
 		echo '</td></tr>';
 	}
 	/**
@@ -127,12 +131,23 @@ final class Jury {
 	 * La revision refuse un ancien formulaire ; le verrou seul ne détecte pas un onglet périmé.
 	 */
 	public static function configure( int $edition, array $raw ): true|\WP_Error {
-		if ( ! current_user_can( 'mp_manage_jury' ) || ! current_user_can( 'mp_manage_editions' ) || 'mp_edition' !== get_post_type( $edition ) ) { return new \WP_Error( 'access', 'Accès refusé.' ); }
+		if ( ! current_user_can( 'marcpo_manage_jury' ) || ! current_user_can( 'marcpo_manage_editions' ) || 'marcpo_edition' !== get_post_type( $edition ) ) { return new \WP_Error( 'access', 'Accès refusé.' ); }
 		$old = self::settings( $edition );
 		if ( ( $raw['revision'] ?? null ) !== $old['revision'] ) { return new \WP_Error( 'conflict', 'L’équipe a changé depuis l’ouverture de cette page. Rechargez l’édition avant de recommencer.' ); }
 		if ( ! in_array( $raw['mode'] ?? null, array( 'simple', 'multiple' ), true ) || ! is_array( $raw['members'] ?? array() ) || count( $raw['members'] ?? array() ) > 99 ) { return new \WP_Error( 'invalid', 'Réglages invalides (99 votants maximum).' ); }
 		$administrator = $raw['administrator'] ?? null;
 		if ( isset( $raw['administrators'] ) || ! is_array( $administrator ) || array_is_list( $administrator ) || array_diff( array_keys( $administrator ), array( 'name', 'email', 'invite' ) ) ) { return new \WP_Error( 'administrator', 'Renseignez un seul administrateur du marché avec son nom et son email.' ); }
+		// Le groupe masqué/désactivé n'est pas soumis : conserver les affectations, sans invitation.
+		// Cela permet aussi un changement de mode sans JavaScript, avant le rechargement.
+		if ( ! array_key_exists( 'members', $raw ) ) {
+			$raw['members'] = array();
+			foreach ( $old['members'] as $uid => $member ) {
+				$user = get_userdata( $uid );
+				if ( 'voter' !== $member['kind'] || ! $user ) { continue; }
+				if ( is_string( $administrator['email'] ?? null ) && 0 === strcasecmp( trim( $administrator['email'] ), $user->user_email ) ) { continue; }
+				$raw['members'][] = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => $user->user_email, 'active' => ! empty( $member['active'] ) ? '1' : '0' );
+			}
+		}
 		$rows = array(); $emails = array();
 		foreach ( array( 'administrator' => array( $administrator ), 'voter' => $raw['members'] ?? array() ) as $kind => $group ) {
 			foreach ( $group as $row ) {
@@ -145,6 +160,7 @@ final class Jury {
 				if ( $uid && ! isset( $old['members'][ $uid ] ) ) { return new \WP_Error( 'invalid', 'Compte inconnu dans cette édition. Ajoutez-le avec son email.' ); }
 				if ( $uid && ! get_userdata( $uid ) ) { continue; }
 				if ( '' === $name || strlen( $name ) > 480 || ! is_email( $email ) ) { return new \WP_Error( 'invalid', 'Indiquez un nom et un email valide pour l’administrateur et chaque votant.' ); }
+				$email = sanitize_email( $email );
 				if ( $uid && strcasecmp( get_userdata( $uid )->user_email, $email ) !== 0 ) { return new \WP_Error( 'invalid', 'L’email du compte a changé. Rechargez l’édition.' ); }
 				// Une ligne de votant désactivée peut devenir l’administrateur, sans double participation.
 				if ( 'voter' === $kind && '1' !== ( $row['active'] ?? '0' ) && strcasecmp( $email, trim( $administrator['email'] ) ) === 0 ) { continue; }
@@ -161,7 +177,7 @@ final class Jury {
 			$uid = $row['user_id'] ?: (int) email_exists( $row['email'] ); $created = false;
 			if ( ! $uid ) {
 				if ( ! $row['active'] ) { continue; }
-				$uid = wp_insert_user( array( 'user_login' => 'mp_' . wp_generate_password( 16, false ), 'user_email' => $row['email'], 'display_name' => $row['name'], 'user_pass' => wp_generate_password( 32, true ), 'role' => 'administrator' === $row['kind'] ? 'mp_organizer' : 'mp_juror' ) );
+				$uid = wp_insert_user( array( 'user_login' => 'marcpo_' . wp_generate_password( 16, false ), 'user_email' => $row['email'], 'display_name' => $row['name'], 'user_pass' => wp_generate_password( 32, true ), 'role' => 'administrator' === $row['kind'] ? 'marcpo_organizer' : 'marcpo_juror' ) );
 				if ( is_wp_error( $uid ) ) { return new \WP_Error( 'account', 'Création du compte impossible : ' . $uid->get_error_message() ); }
 				$created = true;
 			}
@@ -170,11 +186,11 @@ final class Jury {
 				$user = get_userdata( $uid );
 				if ( 'administrator' === $row['kind'] && ! user_can( $user, 'manage_options' ) ) {
 					// Promotion explicite. Le remplacement ultérieur ne révoque pas ces droits globaux.
-					$user->add_role( 'mp_organizer' );
-					$user->remove_role( 'mp_juror' );
+					$user->add_role( 'marcpo_organizer' );
+					$user->remove_role( 'marcpo_juror' );
 				}
 				// Ces deux droits ouvrent les écrans ; chaque dossier vérifie ensuite l’affectation.
-				$user->add_cap( 'mp_access_market' ); $user->add_cap( 'mp_review_applications' );
+				$user->add_cap( 'marcpo_access_market' ); $user->add_cap( 'marcpo_review_applications' );
 				if ( $created || $row['invite'] ) { $invitations[ $uid ] = $created; }
 			}
 		}
@@ -182,7 +198,7 @@ final class Jury {
 		if ( self::settings( $edition ) !== $data ) { return new \WP_Error( 'storage', 'Organisateurs non enregistrés. Réessayez.' ); }
 		foreach ( $invitations as $uid => $created ) {
 			$status = 'Invitation confiée au service d’envoi';
-			$failed = static function () use ( &$status ) { $status = 'Échec de l’invitation — cochez pour réessayer'; };
+			$failed = static function () use ( &$status ) { $status = __( 'Échec de l’invitation — relancez l’envoi pour réessayer', 'poterie-navarraise-market-manager' ); };
 			$intercepted = static function ( $pre ) use ( $failed ) { if ( false === $pre ) { $failed(); } return $pre; };
 			add_action( 'wp_mail_failed', $failed );
 			add_filter( 'pre_wp_mail', $intercepted, PHP_INT_MAX );
@@ -201,12 +217,12 @@ final class Jury {
 		$user = get_userdata( $uid );
 		if ( ! $user ) { return false; }
 		$title = sanitize_text_field( wp_specialchars_decode( get_the_title( $edition ), ENT_QUOTES ) );
-		if ( '' === $title ) { $title = 'Marché Potier'; }
+		if ( '' === $title ) { $title = 'Poterie Navarraise'; }
 		$member = self::settings( $edition )['members'][ $uid ] ?? array();
 		$name = $member['name'] ?? $user->display_name;
 		$administrator = 'administrator' === ( $member['kind'] ?? 'voter' );
 		$role_label = $administrator ? 'administrateur du marché' : 'votant pour la sélection';
-		$destination = add_query_arg( array( 'page' => 'mp-gestion', 'mp_edition' => $edition ), admin_url( 'admin.php' ) );
+		$destination = add_query_arg( array( 'page' => 'marcpo-gestion', 'marcpo_edition' => $edition ), admin_url( 'admin.php' ) );
 		$login_url = wp_login_url( $destination );
 		$action_url = $login_url;
 		$action_label = 'Accéder aux candidatures';
@@ -220,7 +236,7 @@ final class Jury {
 		}
 		$message = '<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="margin:0;background:#f6f3ef;color:#292524;font-family:Arial,sans-serif;font-size:16px;line-height:1.6">';
 		$message .= '<table role="presentation" style="width:100%;border-collapse:collapse"><tr><td style="padding:24px 12px"><table role="presentation" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e7e0d8;border-collapse:collapse"><tr><td style="padding:28px">';
-		$message .= '<p style="margin:0;color:#76533c;font-size:13px;font-weight:bold">MARCHÉ POTIER · INVITATION</p><h1 style="margin:8px 0 24px;font-size:24px;line-height:1.3">' . esc_html( $title ) . '</h1>';
+		$message .= '<p style="margin:0;color:#76533c;font-size:13px;font-weight:bold">POTERIE NAVARRAISE · INVITATION</p><h1 style="margin:8px 0 24px;font-size:24px;line-height:1.3">' . esc_html( $title ) . '</h1>';
 		$message .= '<p>Bonjour ' . esc_html( $name ) . ',</p><p>Vous êtes invité en tant que <strong>' . esc_html( $role_label ) . '</strong> pour cette édition.</p>';
 		$message .= '<p>' . esc_html( $instructions ) . '</p><p style="padding:16px;background:#f6f3ef">Votre identifiant de connexion est votre adresse email :<br><strong style="overflow-wrap:anywhere">' . esc_html( $user->user_email ) . '</strong></p>';
 		$message .= '<p style="margin:28px 0"><a href="' . esc_url( $action_url ) . '" style="display:inline-block;background:#76533c;color:#ffffff;padding:12px 20px;border-radius:4px;text-decoration:none;font-weight:bold">' . esc_html( $action_label ) . '</a></p>';
@@ -232,22 +248,24 @@ final class Jury {
 		return wp_mail( $user->user_email, ( $administrator ? 'Invitation administrateur du marché — ' : 'Invitation au jury — ' ) . $title, $message, array( 'Content-Type: text/html; charset=UTF-8' ) );
 	}
 	public static function save( int $edition ): bool {
-		if ( wp_is_post_revision( $edition ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'mp_manage_jury' ) ) { return false; }
-		$nonce = Request::post( 'mp_jury_nonce' ) ?? null;
-		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'mp_jury_' . $edition ) ) {
-			set_transient( 'mp_jury_error_' . get_current_user_id(), 'Session expirée. Rechargez l’édition avant de réessayer.', 120 );
+		if ( wp_is_post_revision( $edition ) || ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) || ! current_user_can( 'marcpo_manage_jury' ) ) { return false; }
+		$nonce = Request::post( 'marcpo_jury_nonce' ) ?? null;
+		if ( ! is_string( $nonce ) || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'marcpo_jury_' . $edition ) ) {
+			set_transient( 'marcpo_jury_error_' . get_current_user_id(), 'Session expirée. Rechargez l’édition avant de réessayer.', 120 );
 			return false;
 		}
 		$locked = SubmissionLock::acquire();
 		try {
 			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- configure() validates the full member schema under lock, after nonce and capability checks.
-			$result = $locked && is_array( $_POST['mp_jury'] ?? null ) ? self::configure( $edition, wp_unslash( $_POST['mp_jury'] ) ) : new \WP_Error( 'busy', 'Enregistrement indisponible. Réessayez.' );
-			if ( is_wp_error( $result ) ) { set_transient( 'mp_jury_error_' . get_current_user_id(), $result->get_error_message(), 120 ); }
+			$result = $locked && is_array( $_POST['marcpo_jury'] ?? null ) ? self::configure( $edition, wp_unslash( $_POST['marcpo_jury'] ) ) : new \WP_Error( 'busy', 'Enregistrement indisponible. Réessayez.' );
+			if ( is_wp_error( $result ) ) { set_transient( 'marcpo_jury_error_' . get_current_user_id(), $result->get_error_message(), 120 ); }
 		} finally { if ( $locked ) { SubmissionLock::release(); } }
 		return true === $result;
 	}
 	public static function notice(): void {
-		$error = get_transient( 'mp_jury_error_' . get_current_user_id() );
-		if ( $error ) { echo '<div class="notice notice-error"><p>Organisateur et votes — paramètres non enregistrés : ' . esc_html( $error ) . '</p></div>'; delete_transient( 'mp_jury_error_' . get_current_user_id() ); }
+		$screen = get_current_screen();
+		if ( ! $screen || 'marcpo_edition' !== $screen->post_type || ! current_user_can( 'marcpo_manage_jury' ) ) { return; }
+		$error = get_transient( 'marcpo_jury_error_' . get_current_user_id() );
+		if ( $error ) { echo '<div class="notice notice-error"><p>Organisateur et votes — paramètres non enregistrés : ' . esc_html( $error ) . '</p></div>'; delete_transient( 'marcpo_jury_error_' . get_current_user_id() ); }
 	}
 }

@@ -4,9 +4,9 @@ defined( 'ABSPATH' ) || exit;
 
 final class CsvExport {
 	public static function hooks(): void {
-		add_action( 'admin_post_mp_export_csv', array( self::class, 'download' ) );
-		add_action( 'admin_post_mp_export_file', array( self::class, 'file' ) );
-		add_action( 'admin_post_nopriv_mp_export_file', array( self::class, 'file' ) );
+		add_action( 'admin_post_marcpo_export_csv', array( self::class, 'download' ) );
+		add_action( 'admin_post_marcpo_export_file', array( self::class, 'file' ) );
+		add_action( 'admin_post_nopriv_marcpo_export_file', array( self::class, 'file' ) );
 	}
 	public static function file_url( int $id, string $slot ): string {
 		return PrivateFiles::url( $id, $slot );
@@ -17,6 +17,7 @@ final class CsvExport {
 		$row = array( 'Numéro de candidature', 'Édition', 'Sélection' );
 		foreach ( array( Fields::identity(), Fields::activity(), Fields::internal() ) as $schema ) { foreach ( $schema as $field ) { $row[] = $field[0]; } }
 		$row[] = 'Date de dépôt'; $row[] = 'Autorisation de présentation publique';
+		$row[] = 'Autorisation de localisation sur la carte'; $row[] = 'Date de l’accord cartographique';
 		foreach ( PrivateFiles::slots() as $label ) { $row[] = $label . ' — nom du fichier'; $row[] = $label . ' — lien'; }
 		return $row;
 	}
@@ -30,6 +31,7 @@ final class CsvExport {
 			}
 		}
 		$row[] = $data['submitted_at'] ?? ''; $row[] = empty( $data['publication_consent'] ) ? 'Non' : 'Oui';
+		$row[] = true === ( $data['map_consent'] ?? false ) ? 'Oui' : 'Non'; $row[] = $data['map_consent_at'] ?? '';
 		foreach ( PrivateFiles::slots() as $slot => $label ) {
 			$file = $data['files'][ $slot ] ?? array();
 			$row[] = $file['original_name'] ?? $file['label'] ?? '';
@@ -49,8 +51,9 @@ final class CsvExport {
 		foreach ( $ids as $id ) { fputcsv( $stream, array_map( array( self::class, 'cell' ), self::row( $id ) ), ';', '"', '', "\r\n" ); }
 	}
 	public static function download(): void {
-		if ( ! current_user_can( 'mp_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
-		check_admin_referer( 'mp_export_csv' );
+		if ( ! current_user_can( 'marcpo_manage_applications' ) ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		$nonce = Request::query( '_wpnonce' ); // Request::query unslashes exactly once and rejects non-string values.
+		if ( null === $nonce || ! wp_verify_nonce( sanitize_text_field( $nonce ), 'marcpo_export_csv' ) ) { wp_die( 'Session expirée. Rechargez la page.', '', array( 'response' => 403 ) ); }
 		$ids = Records::navigation_ids( Records::list_context() );
 		nocache_headers();
 		header( 'Content-Type: text/csv; charset=UTF-8' );

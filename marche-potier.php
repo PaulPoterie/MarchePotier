@@ -1,11 +1,11 @@
 <?php
 /**
- * Plugin Name: Marché Potier
- * Description: Organisation des éditions, candidatures et sélections de marchés de potiers.
- * Version: 0.19.0
+ * Plugin Name: Poterie Navarraise Pottery Market Manager
+ * Description: Organize pottery markets with applications, supporting documents, jury ratings, exhibitor selection and an optional public map.
+ * Version: 0.19.1
  * Requires at least: 6.6
  * Requires PHP: 8.2
- * Text Domain: marche-potier
+ * Text Domain: poterie-navarraise-market-manager
  * License: GPL-2.0-or-later
  */
 
@@ -15,6 +15,7 @@ defined( 'ABSPATH' ) || exit;
 
 require_once __DIR__ . '/includes/class-request.php';
 require_once __DIR__ . '/includes/class-plugin.php';
+require_once __DIR__ . '/includes/class-external-services.php';
 require_once __DIR__ . '/includes/class-blocks.php';
 require_once __DIR__ . '/includes/class-editions.php';
 require_once __DIR__ . '/includes/class-jury.php';

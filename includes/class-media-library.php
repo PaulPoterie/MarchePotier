@@ -5,11 +5,11 @@ defined( 'ABSPATH' ) || exit;
 /** WordPress attachments. Only explicitly temporary, unreferenced media may be collected. */
 final class MediaLibrary {
 	public static function hooks(): void {
-		add_filter( 'manage_media_columns', static function ( $columns ) { $columns['mp_media_state'] = 'Marché Potier'; return $columns; } );
+		add_filter( 'manage_media_columns', static function ( $columns ) { $columns['marcpo_media_state'] = 'Poterie Navarraise'; return $columns; } );
 		add_action( 'manage_media_custom_column', static function ( $column, $id ) {
-			if ( 'mp_media_state' !== $column ) { return; }
-			if ( get_post_meta( $id, '_mp_temporary_until', true ) ) { echo 'Envoi provisoire'; }
-			elseif ( 'mp_candidature' === get_post_type( wp_get_post_parent_id( $id ) ) ) { echo 'Candidature enregistrée'; }
+			if ( 'marcpo_media_state' !== $column ) { return; }
+			if ( get_post_meta( $id, '_marcpo_temporary_until', true ) ) { echo 'Envoi provisoire'; }
+			elseif ( 'marcpo_candidature' === get_post_type( wp_get_post_parent_id( $id ) ) ) { echo 'Candidature enregistrée'; }
 		}, 10, 2 );
 	}
 	public static function load(): void {
@@ -22,7 +22,7 @@ final class MediaLibrary {
 		self::load(); $path = wp_normalize_path( $path );
 		$id = wp_insert_attachment( wp_slash( array(
 			'post_mime_type' => $mime, 'post_title' => sanitize_text_field( $title ), 'post_status' => 'inherit',
-			'meta_input' => array( '_mp_temporary_until' => time() + DAY_IN_SECONDS, '_mp_draft_owner' => $owner ),
+			'meta_input' => array( '_marcpo_temporary_until' => time() + DAY_IN_SECONDS, '_marcpo_draft_owner' => $owner ),
 		) ), $path, 0, true );
 		if ( is_wp_error( $id ) ) { return $id; }
 		// The marker is saved with the attachment, before potentially expensive image processing.
@@ -30,7 +30,32 @@ final class MediaLibrary {
 		return $id;
 	}
 
+	/** Only flat, expected HTTP uploads are accepted; never clean or unslash a server temporary path. */
+	public static function validate_uploads( array $uploads ): array|\WP_Error {
+		$clean = array();
+		foreach ( PrivateFiles::slots() as $slot => $label ) {
+			if ( ! array_key_exists( $slot, $uploads ) ) { continue; }
+			$file = $uploads[ $slot ];
+			$error = new \WP_Error( 'upload', $label . ' : fichier manquant ou transfert interrompu.' );
+			if ( ! is_array( $file ) || ! is_int( $file['error'] ?? null ) || ! is_int( $file['size'] ?? null ) || $file['size'] < 0 ) { return $error; }
+			foreach ( array( 'name', 'tmp_name', 'type' ) as $key ) {
+				if ( ! isset( $file[ $key ] ) || ! is_string( $file[ $key ] ) || str_contains( $file[ $key ], "\0" ) ) { return $error; }
+			}
+			if ( UPLOAD_ERR_NO_FILE === $file['error'] ) { continue; }
+			if ( UPLOAD_ERR_OK !== $file['error'] || ! is_uploaded_file( $file['tmp_name'] ) ) { return $error; }
+			$name = sanitize_file_name( wp_basename( $file['name'] ) );
+			if ( '' === $name || strlen( $name ) > 255 ) { return $error; }
+			$size = filesize( $file['tmp_name'] );
+			if ( ! $size || $size > PrivateFiles::max_size() ) { return new \WP_Error( 'upload', $label . ' : taille maximale ' . PrivateFiles::size_label() . '.' ); }
+			// Client MIME and size are untrusted: size comes from disk, MIME is detected in store().
+			$clean[ $slot ] = array( 'name' => $name, 'tmp_name' => $file['tmp_name'], 'error' => UPLOAD_ERR_OK, 'size' => $size, 'type' => '' );
+		}
+		return $clean;
+	}
+
 	public static function store( array $uploads, bool $partial = false, string $owner = '' ): array|\WP_Error {
+		$uploads = self::validate_uploads( $uploads );
+		if ( is_wp_error( $uploads ) ) { return $uploads; }
 		self::load(); $stored = array();
 		try {
 			foreach ( PrivateFiles::slots() as $slot => $label ) {
@@ -44,6 +69,7 @@ final class MediaLibrary {
 				$checked = wp_check_filetype_and_ext( $file['tmp_name'], $file['name'], $mimes );
 				$mime = ( new \finfo( FILEINFO_MIME_TYPE ) )->file( $file['tmp_name'] );
 				if ( ! $checked['ext'] || ! $checked['type'] || $mime !== $checked['type'] || ! in_array( $mime, $mimes, true ) ) { throw new \RuntimeException( $label . ' : format non autorisé.' ); }
+				$file['type'] = $mime;
 				if ( 'application/pdf' === $mime ) {
 					if ( '%PDF-' !== file_get_contents( $file['tmp_name'], false, null, 0, 5 ) ) { throw new \RuntimeException( $label . ' : PDF invalide.' ); }
 				} else {
@@ -64,7 +90,7 @@ final class MediaLibrary {
 	/** References are checked even when finalization was interrupted before clearing the temporary marker. */
 	public static function references(): array {
 		$references = array();
-		$ids = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => -1, 'fields' => 'ids' ) );
+		$ids = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => -1, 'fields' => 'ids' ) );
 		update_meta_cache( 'post', $ids );
 		foreach ( $ids as $id ) {
 			foreach ( Records::data( $id )['files'] ?? array() as $file ) {
@@ -85,7 +111,7 @@ final class MediaLibrary {
 			foreach ( array( $file, $file['social'] ?? array() ) as $item ) {
 				if ( ! empty( $item['attachment_id'] ) || empty( $item['name'] ) || isset( $references[ 'legacy:' . $item['name'] ] ) ) { continue; }
 				$path = PrivateFiles::path( $item );
-				if ( $path ) { wp_delete_file( $path ); if ( file_exists( $path ) ) { update_option( '_mp_media_cleanup_error', 'Une ancienne pièce provisoire n’a pas pu être supprimée.', false ); } }
+				if ( $path ) { wp_delete_file( $path ); if ( file_exists( $path ) ) { update_option( '_marcpo_media_cleanup_error', 'Une ancienne pièce provisoire n’a pas pu être supprimée.', false ); } }
 			}
 		}
 	}
@@ -94,8 +120,8 @@ final class MediaLibrary {
 		if ( 'attachment' !== get_post_type( $attachment ) ) { return false; }
 		$result = wp_update_post( array( 'ID' => $attachment, 'post_parent' => $application ), true );
 		if ( is_wp_error( $result ) || ! $result ) { return false; }
-		delete_post_meta( $attachment, '_mp_temporary_until' );
-		delete_post_meta( $attachment, '_mp_draft_owner' );
+		delete_post_meta( $attachment, '_marcpo_temporary_until' );
+		delete_post_meta( $attachment, '_marcpo_draft_owner' );
 		return true;
 	}
 
@@ -132,10 +158,10 @@ final class MediaLibrary {
 			if ( ! is_array( $file ) ) { continue; }
 			if ( ! empty( $file['social'] ) ) { self::remove_temporary( array( $file['social'] ), $references ); }
 			$id = (int) ( $file['attachment_id'] ?? 0 );
-			if ( ! $id || ! get_post_meta( $id, '_mp_temporary_until', true ) || isset( $references[ $id ] ) || wp_get_post_parent_id( $id ) ) { continue; }
+			if ( ! $id || ! get_post_meta( $id, '_marcpo_temporary_until', true ) || isset( $references[ $id ] ) || wp_get_post_parent_id( $id ) ) { continue; }
 			$path = get_attached_file( $id );
 			wp_delete_attachment( $id, true );
-			if ( get_post( $id ) || ( $path && file_exists( $path ) ) ) { update_option( '_mp_media_cleanup_error', 'Un média provisoire n’a pas pu être supprimé.', false ); }
+			if ( get_post( $id ) || ( $path && file_exists( $path ) ) ) { update_option( '_marcpo_media_cleanup_error', 'Un média provisoire n’a pas pu être supprimé.', false ); }
 		}
 	}
 
@@ -143,7 +169,7 @@ final class MediaLibrary {
 	public static function cleanup(): void {
 		$references = self::references();
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded scheduled cleanup of explicitly marked provisional attachments, never all unattached media.
-		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 100, 'fields' => 'ids', 'meta_query' => array( array( 'key' => '_mp_temporary_until', 'value' => time(), 'compare' => '<=', 'type' => 'NUMERIC' ) ) ) );
+		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 100, 'fields' => 'ids', 'meta_query' => array( array( 'key' => '_marcpo_temporary_until', 'value' => time(), 'compare' => '<=', 'type' => 'NUMERIC' ) ) ) );
 		foreach ( $ids as $id ) {
 			if ( isset( $references[ $id ] ) ) { self::promote( $id, $references[ $id ] ); }
 			else { self::remove_temporary( array( array( 'attachment_id' => $id ) ), $references ); }
@@ -171,11 +197,11 @@ final class MediaLibrary {
 		$path = wp_normalize_path( $path );
 		$relative = substr( $path, strlen( $base ) );
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Migration-only deduplication by exact source path, including pre-existing media attachments.
-		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 1, 'fields' => 'ids', 'meta_query' => array( 'relation' => 'OR', array( 'key' => '_wp_attached_file', 'value' => $relative ), array( 'key' => '_mp_import_source', 'value' => $relative ) ) ) );
+		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 1, 'fields' => 'ids', 'meta_query' => array( 'relation' => 'OR', array( 'key' => '_wp_attached_file', 'value' => $relative ), array( 'key' => '_marcpo_import_source', 'value' => $relative ) ) ) );
 		if ( $ids ) { $id = (int) $ids[0]; }
 		else {
 			self::load();
-			$id = wp_insert_attachment( wp_slash( array( 'post_mime_type' => $file['mime'], 'post_title' => $file['original_name'] ?? $file['label'] ?? wp_basename( $path ), 'post_status' => 'inherit', 'meta_input' => array( '_mp_import_source' => $relative ) ) ), $path, 0, true );
+			$id = wp_insert_attachment( wp_slash( array( 'post_mime_type' => $file['mime'], 'post_title' => $file['original_name'] ?? $file['label'] ?? wp_basename( $path ), 'post_status' => 'inherit', 'meta_input' => array( '_marcpo_import_source' => $relative ) ) ), $path, 0, true );
 			if ( is_wp_error( $id ) ) { return $id; }
 			wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $path ) );
 		}
@@ -187,7 +213,7 @@ final class MediaLibrary {
 		if ( ! SubmissionLock::acquire() ) { return new \WP_Error( 'media', 'Migration occupée ; réessayez.' ); }
 		try {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Resumable migration processes only a small batch of unconverted applications.
-			$ids = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 10, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC', 'meta_query' => array( array( 'key' => '_mp_media_migrated', 'compare' => 'NOT EXISTS' ) ) ) );
+			$ids = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 10, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC', 'meta_query' => array( array( 'key' => '_marcpo_media_migrated', 'compare' => 'NOT EXISTS' ) ) ) );
 			foreach ( $ids as $id ) {
 				$data = Records::data( $id );
 				foreach ( $data['files'] ?? array() as $slot => $file ) {
@@ -204,7 +230,7 @@ final class MediaLibrary {
 					self::promote( (int) $file['attachment_id'], $id );
 					if ( ! empty( $file['social']['attachment_id'] ) ) { self::promote( (int) $file['social']['attachment_id'], $id ); }
 				}
-				update_post_meta( $id, '_mp_media_migrated', 1 );
+				update_post_meta( $id, '_marcpo_media_migrated', 1 );
 			}
 			return array( 'moved' => count( $ids ), 'remaining' => count( $ids ) === 10 ? 1 : 0 );
 		} finally { SubmissionLock::release(); }

@@ -1,6 +1,6 @@
-document.querySelectorAll('.mp-gallery-slider').forEach(slider => {
+document.querySelectorAll('.marcpo-gallery-slider').forEach(slider => {
     const photos = [...slider.querySelectorAll('img')];
-    const controls = slider.querySelector('.mp-gallery-slide-controls');
+    const controls = slider.querySelector('.marcpo-gallery-slide-controls');
     if (!controls) return;
     controls.hidden = false;
     const dots = [...controls.querySelectorAll('[data-photo]')];
@@ -25,7 +25,7 @@ document.querySelectorAll('.mp-gallery-slider').forEach(slider => {
     slider.addEventListener('touchcancel', () => { start = null; }, {passive:true});
 });
 
-document.querySelectorAll('.mp-gallery-map').forEach(element => {
+document.querySelectorAll('.marcpo-gallery-map').forEach(element => {
     const init = () => {
         if (!window.L || element.dataset.ready) return;
         element.dataset.ready = '1';
@@ -37,12 +37,12 @@ document.querySelectorAll('.mp-gallery-map').forEach(element => {
         const bounds = [];
         groups.forEach(group => {
             const point = group[0]; bounds.push([point.lat, point.lon]);
-            const popup = document.createElement('div'); popup.className = 'mp-map-popup';
+            const popup = document.createElement('div'); popup.className = 'marcpo-map-popup';
             const title = document.createElement('strong'); title.textContent = point.address; popup.append(title);
             const list = document.createElement('ul');
             group.forEach(item => { const li = document.createElement('li'); const link = document.createElement('a'); link.href = `#${item.target}`; link.textContent = item.name; li.append(link); list.append(li); });
             popup.append(list);
-            L.marker([point.lat, point.lon], {title:`${point.city} — ${group.length} potier(s)`, alt:`${point.address} : ${group.length} potier(s)`, icon:L.divIcon({className:'mp-map-pin', html:`<span>${group.length > 1 ? group.length : '•'}</span>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map).bindPopup(popup);
+            L.marker([point.lat, point.lon], {title:`${point.city} — ${group.length} potier(s)`, alt:`${point.address} : ${group.length} potier(s)`, icon:L.divIcon({className:'marcpo-map-pin', html:`<span>${group.length > 1 ? group.length : '•'}</span>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(map).bindPopup(popup);
         });
         if (bounds.length) map.fitBounds(bounds, {padding:[35,35],maxZoom:13});
         else map.setView([46.6,2.4],5);

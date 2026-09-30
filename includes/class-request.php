@@ -18,12 +18,21 @@ final class Request {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Nonce verification belongs to the action-specific handler.
 		return self::scalar( $_POST, $key );
 	}
+	/** PHP upload descriptors are not slashed. Validate their shape and origin before forwarding them. */
+	public static function uploads( string $prefix = '' ): array|\WP_Error {
+		$uploads = array();
+		foreach ( PrivateFiles::slots() as $slot => $label ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Action-specific nonce verified by the caller; validate_uploads checks types, uploaded origin, size and sanitizes filenames immediately below.
+			if ( isset( $_FILES[ $prefix . $slot ] ) ) { $uploads[ $slot ] = $_FILES[ $prefix . $slot ]; }
+		}
+		return MediaLibrary::validate_uploads( $uploads );
+	}
 	/** Unslash exactly once and reject malformed tokens instead of converting them to valid values. */
 	private static function scalar( array $source, string $key ): ?string {
 		if ( ! isset( $source[ $key ] ) || ! is_string( $source[ $key ] ) ) { return null; }
 		$value = wp_unslash( $source[ $key ] );
 		if ( 's' === $key ) { return sanitize_text_field( $value ); }
-		if ( in_array( $key, array( 'application', 'candidature', 'post', 'mp_edition', 'paged', 'm', 'author' ), true ) ) { return '' === $value || ctype_digit( $value ) ? $value : null; }
+		if ( in_array( $key, array( 'application', 'candidature', 'post', 'marcpo_edition', 'paged', 'm', 'author' ), true ) ) { return '' === $value || ctype_digit( $value ) ? $value : null; }
 		return preg_match( '/^[a-zA-Z0-9_.:\-]*$/D', $value ) ? $value : null;
 	}
 	/** Missing or invalid IPs share a conservative rate-limit bucket; never trust forwarded headers. */

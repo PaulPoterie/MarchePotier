@@ -4,11 +4,11 @@ defined( 'ABSPATH' ) || exit;
 
 /** Pièces temporaires liées au cookie signé du formulaire, jamais à un chemin client. */
 final class UploadDrafts {
-	private const PREFIX = 'mp_upload_draft_';
+	private const PREFIX = 'marcpo_upload_draft_';
 	public static function hooks(): void {
-		add_action( 'mp_cleanup_upload_drafts', array( self::class, 'cleanup' ) );
+		add_action( 'marcpo_cleanup_upload_drafts', array( self::class, 'cleanup' ) );
 		add_action( 'init', static function () {
-			if ( ! wp_next_scheduled( 'mp_cleanup_upload_drafts' ) ) { wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', 'mp_cleanup_upload_drafts' ); }
+			if ( ! wp_next_scheduled( 'marcpo_cleanup_upload_drafts' ) ) { wp_schedule_event( time() + HOUR_IN_SECONDS, 'hourly', 'marcpo_cleanup_upload_drafts' ); }
 		} );
 	}
 	public static function key( string $session, int $edition ): string {
@@ -27,7 +27,7 @@ final class UploadDrafts {
 	}
 	public static function receipt( string $key ): int {
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Idempotency receipt lookup limited to one ID by the exact draft key, including trashed submissions.
-		$ids = get_posts( array( 'post_type' => 'mp_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future', 'trash' ), 'fields' => 'ids', 'posts_per_page' => 1, 'meta_key' => '_mp_upload_key', 'meta_value' => $key ) );
+		$ids = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future', 'trash' ), 'fields' => 'ids', 'posts_per_page' => 1, 'meta_key' => '_marcpo_upload_key', 'meta_value' => $key ) );
 		return $ids ? (int) $ids[0] : 0;
 	}
 	public static function state( array $data ): array {
@@ -44,7 +44,7 @@ final class UploadDrafts {
 		$stored = PrivateFiles::store( array( $slot => $uploads[ $slot ] ), true, $key );
 		if ( is_wp_error( $stored ) ) { return $stored; }
 		if ( empty( $stored[ $slot ] ) ) { return new \WP_Error( 'upload', 'Le fichier n’a pas été reçu.' ); }
-		$stored[ $slot ]['label'] = sanitize_file_name( $uploads[ $slot ]['name'] );
+		$stored[ $slot ]['label'] = $stored[ $slot ]['original_name'];
 		$old = $data['files'][ $slot ] ?? null;
 		$data['files'][ $slot ] = $stored[ $slot ];
 		$data['expires'] = $data['expires'] ?? time() + DAY_IN_SECONDS;
@@ -67,15 +67,15 @@ final class UploadDrafts {
 				if ( ! empty( $file['social'] ) && empty( $file['social']['attachment_id'] ) ) {
 					$file['social'] = MediaLibrary::import( $file['social'] );
 					if ( is_wp_error( $file['social'] ) ) { return $file['social']; }
-					update_post_meta( $file['social']['attachment_id'], '_mp_temporary_until', $data['expires'] );
-					update_post_meta( $file['social']['attachment_id'], '_mp_draft_owner', $key );
+					update_post_meta( $file['social']['attachment_id'], '_marcpo_temporary_until', $data['expires'] );
+					update_post_meta( $file['social']['attachment_id'], '_marcpo_draft_owner', $key );
 				}
-				update_post_meta( $file['attachment_id'], '_mp_temporary_until', $data['expires'] );
-				update_post_meta( $file['attachment_id'], '_mp_draft_owner', $key );
+				update_post_meta( $file['attachment_id'], '_marcpo_temporary_until', $data['expires'] );
+				update_post_meta( $file['attachment_id'], '_marcpo_draft_owner', $key );
 				$data['files'][ $slot ] = $file;
 				if ( ! update_option( $key, $data, false ) ) { return new \WP_Error( 'draft', 'Brouillon non enregistré ; réessayez.' ); }
 			}
-			if ( get_post_meta( $file['attachment_id'], '_mp_draft_owner', true ) !== $key ) { return new \WP_Error( 'draft', 'Cette pièce n’appartient pas au formulaire.' ); }
+			if ( get_post_meta( $file['attachment_id'], '_marcpo_draft_owner', true ) !== $key ) { return new \WP_Error( 'draft', 'Cette pièce n’appartient pas au formulaire.' ); }
 		}
 		return $data['files'];
 	}

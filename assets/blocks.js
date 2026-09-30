@@ -23,7 +23,7 @@
 			editions(revision > 0).then(data => {
 				if (active) setRows(data);
 			}).catch(() => {
-				if (active) setError('Impossible de charger les éditions. Vérifiez votre connexion et votre accès à Marché Potier.');
+				if (active) setError('Impossible de charger les éditions. Vérifiez votre connexion et votre accès à Poterie Navarraise.');
 			});
 			return () => { active = false; };
 		}, [revision]);
@@ -40,19 +40,19 @@
 			});
 		}
 		let notice = '';
-		if (rows && !rows.length) notice = 'Créez et enregistrez une édition dans Marché Potier → Éditions, puis actualisez la liste.';
+		if (rows && !rows.length) notice = 'Créez et enregistrez une édition dans Poterie Navarraise → Éditions, puis actualisez la liste.';
 		else if (rows && props.attributes.editionId && !selected) notice = 'L’édition choisie n’est plus disponible. Sélectionnez une autre édition.';
 		else if (selected && !selected.published) notice = 'Publiez cette édition pour que son contenu soit accessible sur le site.';
 		else if (selected && !form && !selected.selectionPublic) notice = 'La sélection est masquée. Dans l’édition, rubrique « Affichage sur le site », autorisez son affichage lorsque vous êtes prêt.';
-		return el('div', useBlockProps({className: 'mp-edition-block'}),
+		return el('div', useBlockProps({className: 'marcpo-edition-block'}),
 			el(InspectorControls, null, el(PanelBody, {title: 'Édition du marché'}, control())),
 			el(Placeholder, {icon: form ? 'feedback' : 'groups', label: title},
-				el('div', {className: 'mp-edition-block-content'},
+				el('div', {className: 'marcpo-edition-block-content'},
 					!rows && !error && el(Spinner),
 					error && el(Notice, {status: 'error', isDismissible: false}, error),
 					control(),
 					notice && el(Notice, {status: 'warning', isDismissible: false}, notice),
-					selected && el('p', {className: 'mp-edition-block-summary'}, el('strong', null, selected.label)),
+					selected && el('p', {className: 'marcpo-edition-block-summary'}, el('strong', null, selected.label)),
 					el('p', null, form ? 'Le formulaire complet apparaît sur la page publiée, pendant les dates d’inscription définies dans l’édition.' : 'La page publiée affiche les potiers sélectionnés ayant autorisé leur présentation, dès que la sélection publique est activée.'),
 					el(Button, {variant: 'secondary', onClick: () => setRevision(value => value + 1)}, 'Actualiser les éditions')
 				)
@@ -64,7 +64,7 @@
 		['marche-potier/presentation-selection', 'Présentation de la sélection', 'groups']
 	].forEach(([name, title, icon]) => wp.blocks.registerBlockType(name, {
 		apiVersion: 3, title, icon, category: 'widgets',
-		description: 'Affiche le contenu de l’édition choisie du Marché Potier.',
+		description: 'Affiche le contenu de l’édition choisie dans Poterie Navarraise.',
 		keywords: ['marché', 'potier', 'édition'],
 		attributes: {editionId: {type: 'integer', default: 0}},
 		supports: {html: false, multiple: false, reusable: false},

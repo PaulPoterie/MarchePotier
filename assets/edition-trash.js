@@ -1,12 +1,12 @@
 /* Confirmation native ; les droits et nonces restent contrôlés par WordPress. */
 (() => {
-    const linked = new Set(mpEditionTrash.linked.map(String));
+    const linked = new Set(marcpoEditionTrash.linked.map(String));
     document.addEventListener('click', event => {
         const link = event.target.closest('a[href]');
         if (!link) return;
         const url = new URL(link.href, window.location.href);
         if (url.searchParams.get('action') !== 'trash' || !linked.has(url.searchParams.get('post'))) return;
-        if (!window.confirm(mpEditionTrash.message)) {
+        if (!window.confirm(marcpoEditionTrash.message)) {
             event.preventDefault();
             event.stopImmediatePropagation();
         }
@@ -19,7 +19,7 @@
         if (!action || action.value !== 'trash') return;
         const selected = Array.from(form.querySelectorAll('input[name="post[]"]:checked'));
         if (!selected.some(input => linked.has(input.value))) return;
-        if (!window.confirm(selected.length === 1 ? mpEditionTrash.message : mpEditionTrash.bulkMessage)) {
+        if (!window.confirm(selected.length === 1 ? marcpoEditionTrash.message : marcpoEditionTrash.bulkMessage)) {
             event.preventDefault();
             event.stopImmediatePropagation();
         }

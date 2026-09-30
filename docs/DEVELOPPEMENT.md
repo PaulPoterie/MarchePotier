@@ -1,28 +1,40 @@
-# Reprendre le développement de Marché Potier
+# Reprendre le développement de Poterie Navarraise Pottery Market Manager
 
 ## 1. Point de départ
 
 Le fichier `marche-potier.php` charge explicitement les classes du namespace `MarchePotier`. `Plugin::boot()` enregistre leurs hooks WordPress. Le plugin utilise PHP, CSS et JavaScript natifs ; il n’y a ni Composer, ni npm, ni compilation. Leaflet est une dépendance embarquée dans `assets/vendor/leaflet` ; ne pas y appliquer les changements du plugin.
 
-Le README est le guide utilisateur ; ce document décrit les contrats du code. Le guide `VOTES.md` détaille les affectations, invitations et changements d’administrateur.
+Le README présente le plugin en anglais ; le guide utilisateur français se trouve dans `GUIDE-UTILISATEUR-FR.md`. Ce document décrit les contrats du code. Le guide `VOTES.md` détaille les affectations, invitations et changements d’administrateur.
 
 ### Particularité de cet espace de travail
 
 | Emplacement | Usage |
 | --- | --- |
-| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif, branche `feature/votes-organisateurs`. Modifier et committer ici. |
+| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif, branche `fix/wordpress-review`. Modifier et committer ici. |
 | `C:\Users\paul\Projects\MarchePotier\marche-potier` | Ancienne version stable conservée. |
-| `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Copie exécutée par le site Local. La synchroniser après vérification. |
+| `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Ancienne copie installée (0.19.0-beta.9). Les suites de test de revue chargent directement le dépôt actif à sa place, uniquement dans leur processus. |
+| `C:\Users\paul\Local Sites\marche-potier-migration\app\public\wp-content\plugins\poterie-navarraise-market-manager` | Copie récente du plugin utilisée dans Local. Synchroniser les fichiers vérifiés depuis le dépôt, après comparaison et sauvegarde des fichiers remplacés. |
 | `C:\Users\paul\Projects\MarchePotier\reports` | Rapports et résultats locaux, hors du paquet installable. |
 | `C:\Users\paul\Projects\MarchePotier\dist` | ZIP de livraisons ponctuelles, potentiellement antérieurs à la branche. |
 
 Ce dépôt ne déploie rien automatiquement. Sur un autre ordinateur, son emplacement peut être quelconque ; ces chemins décrivent uniquement l’installation de développement actuelle.
+
+### Nom, traductions et identifiants
+
+Le menu d'administration est **Gestion Marché Potier** et son accueil **Gestion de Marché Potier**, avec la mention « fait par Poterie Navarraise ». Le nom officiel ci-dessous reste celui de l'extension dans l'annuaire et les en-têtes. `Plugin::dashboard_assets()` limite le CSS de l'accueil à sa page et aux utilisateurs autorisés ; la version de contact vient de l'en-tête du fichier principal.
+
+Le nom officiel est « Poterie Navarraise Pottery Market Manager », avec la description française « Poterie Navarraise — Organisation de marchés potiers ». Le slug WordPress.org, le dossier du prochain paquet et le domaine de traduction sont `poterie-navarraise-market-manager`. Les appels gettext doivent utiliser ce domaine littéral.
+
+Le préfixe `marcpo_` (six lettres), sa variante `marcpo-` et le namespace PHP `MarchePotier` restent les identifiants internes. Ils évitent les collisions et ne sont pas tenus de correspondre au slug. Le fichier principal `marche-potier.php`, les identifiants des blocs, la route REST, les clés de stockage et les chemins historiques restent stables. Ne pas faire de remplacement global de `marche-potier`.
+
+Références : [préfixes WordPress](https://developer.wordpress.org/plugins/plugin-basics/best-practices/#prefix-everything) et [domaine de traduction](https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/#text-domains).
 
 ## 2. Où intervenir ?
 
 | Besoin | Fichiers / classes dans `includes/` |
 | --- | --- |
 | Initialisation, accueil du plugin | `class-plugin.php` |
+| Autorisation des services IGN et OpenStreetMap par l’administrateur | `class-external-services.php` |
 | Paramètres, dates et droits de gestion | `class-editions.php` |
 | Administrateur unique, votants, invitations, accès par édition | `class-jury.php` |
 | Enregistrement et calcul des notes | `class-votes.php` |
@@ -47,20 +59,20 @@ Les noms des fichiers CSS/JS suivent leur écran : `review.*` sert à Gestion et
 
 | Donnée | Stockage et responsabilité |
 | --- | --- |
-| Édition | Contenu `mp_edition`, paramètres dans `_mp_edition_settings`. L’ID est la référence ; l’année est un libellé, pas une clé unique. |
-| Équipe | `_mp_jury_settings` : `mode`, `revision`, `members[ID compte]`. Chaque membre possède `name`, `kind`, `active` et éventuellement `invitation`. |
-| Identité d’historique | Contenu `mp_potier`, `_mp_record.identity` minimal (nom, prénom, email). Ce n’est pas un compte WordPress de candidat. |
-| Candidature | Contenu `mp_candidature`, réponses dans `_mp_record` : `edition_id`, `potier_id`, `identity`, `activity`, `internal`, `decision`, `files`, consentement et date de dépôt. |
-| Index de candidature | `_mp_edition_id`, `_mp_potier_id`, `_mp_decision` servent aux requêtes. Les maintenir cohérents avec `_mp_record` à chaque écriture. |
-| Notes | Table `${prefix}mp_votes`, clé unique `(application_id, user_id)`. Une correction remplace la note ; elle ne crée pas un deuxième vote. |
-| Fichiers | Pièces jointes WordPress identifiées par `files[slot].attachment_id`, copies Meta par `files[slot].social.attachment_id`. `_mp_temporary_until` et `_mp_draft_owner` identifient exclusivement les médias provisoires. Après écriture du dossier, le rattachement est établi et ces marqueurs sont retirés. Les URLs sont publiques, y compris pour les justificatifs. |
+| Édition | Contenu `marcpo_edition`, paramètres dans `_marcpo_edition_settings`. L’ID est la référence ; l’année est un libellé, pas une clé unique. |
+| Équipe | `_marcpo_jury_settings` : `mode`, `revision`, `members[ID compte]`. Chaque membre possède `name`, `kind`, `active` et éventuellement `invitation`. |
+| Identité d’historique | Contenu `marcpo_potier`, `_marcpo_record.identity` minimal (nom, prénom, email). Ce n’est pas un compte WordPress de candidat. |
+| Candidature | Contenu `marcpo_candidature`, réponses dans `_marcpo_record` : `edition_id`, `potier_id`, `identity`, `activity`, `internal`, `decision`, `files`, consentement et date de dépôt. |
+| Index de candidature | `_marcpo_edition_id`, `_marcpo_potier_id`, `_marcpo_decision` servent aux requêtes. Les maintenir cohérents avec `_marcpo_record` à chaque écriture. |
+| Notes | Table `${prefix}marcpo_votes`, clé unique `(application_id, user_id)`. Une correction remplace la note ; elle ne crée pas un deuxième vote. |
+| Fichiers | Pièces jointes WordPress identifiées par `files[slot].attachment_id`, copies Meta par `files[slot].social.attachment_id`. `_marcpo_temporary_until` et `_marcpo_draft_owner` identifient exclusivement les médias provisoires. Après écriture du dossier, le rattachement est établi et ces marqueurs sont retirés. Les URLs sont publiques, y compris pour les justificatifs. |
 
 Les réponses sont propres à chaque candidature : corriger une année ne doit pas réécrire les réponses d’une autre année. L’identité d’historique est rapprochée par nom, prénom et email. Une adresse email ne peut déposer deux fois pour une même édition, corbeille comprise.
 
 ### Droits : rôle du compte et affectation ne sont pas synonymes
 
-- `mp_organizer` est le rôle global **[MP] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
-- `mp_juror` est **[MP] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
+- `marcpo_organizer` est le rôle global **[Poterie Navarraise] Administrateur marché**. Ses droits de gestion concernent tout le site, pas uniquement les éditions dont il est le contact.
+- `marcpo_juror` est **[Poterie Navarraise] Votant sélection**. `Jury::can_view_edition()` et `can_view_application()` contrôlent l’affectation active à chaque accès.
 - `kind=administrator` dans une édition désigne son unique administrateur et contact. Le remplacer désactive son ancienne affectation ; cela ne révoque pas son rôle global WordPress.
 - Pour voter, même un administrateur doit être membre actif de cette édition. `Votes::record()` prend exclusivement le compte de la session ; aucun ID d’auteur envoyé par le navigateur n’est accepté.
 - `Jury::settings()` conserve les membres inactifs. `Jury::members()` ne renvoie que les actifs dont le compte existe : c’est cette liste qui sert aux totaux et aux destinataires.
@@ -71,6 +83,8 @@ Les réponses sont propres à chaque candidature : corriger une année ne doit p
 2. Le mode multiple et l’affectation active autorisent la **notation**, sans contrôle de date. `null` signifie absence de note ; `0` est une note.
 3. La **publication** exige une édition publiée, l’autorisation de montrer sa sélection, une décision `selected` et le consentement du candidat (`Gallery::eligible`). Un total de points ne sélectionne personne automatiquement.
 
+La **cartographie** ajoute l’accord distinct `map_consent === true` (`GalleryMap::eligible`). Les options `marcpo_external_services[ign]` et `[osm]` sont désactivées par défaut et enregistrées via la Settings API, avec nonce et permission `manage_options`. IGN est contrôlé à la planification et à l’exécution ; OSM est contrôlé au rendu. Retirer l’accord du candidat efface ses coordonnées dérivées et sa tâche planifiée ; les caches partagés de réponses IGN expirent séparément. Aucun accord ne doit être déduit de `publication_consent`.
+
 Le mode simple conserve les notes, mais masque et interdit leur modification. Retirer un membre actif conserve ses anciennes notes tout en les excluant des totaux.
 
 Les types de contenus des dossiers ne sont pas publics. Le statut WordPress `publish` d’une candidature ne signifie donc pas qu’elle apparaît dans la galerie : les règles de publication ci-dessus s’appliquent séparément.
@@ -79,11 +93,11 @@ Les types de contenus des dossiers ne sont pas publics. Le statut WordPress `pub
 
 ### Gestion, filtres, tris et navigation
 
-`Records::list_context()` ne conserve que les paramètres GET autorisés. Le select `mp_sort` devient `orderby` + `order` dans les liens. `Records::navigation_ids()` applique accès, filtres, recherche et tri à la liste entière. Cette liste est partagée par la gestion, l’export, les boutons précédent/suivant et le suivi.
+`Records::list_context()` ne conserve que les paramètres GET autorisés. Le select `marcpo_sort` devient `orderby` + `order` dans les liens. `Records::navigation_ids()` applique accès, filtres, recherche et tri à la liste entière. Cette liste est partagée par la gestion, l’export, les boutons précédent/suivant et le suivi.
 
 `Review::table()` prépare la pagination puis appelle les fonctions `management_header`, `management_filters`, `management_toolbar`, `management_rows` et `management_pagination`. Ces fonctions rendent les zones de l’écran ; elles ne doivent pas inventer une autre liste de candidatures.
 
-Le select de tri est visuellement hors du formulaire, mais associé par `form="mp-application-filters"`. Le formulaire omet `paged` volontairement : changer un filtre ou un tri revient à la première page. Les liens de pagination et d’examen conservent le contexte. Le tri par soumission utilise `submitted_at`, pas la création WordPress ; le tri par nom utilise les coordonnées, pas le titre généré.
+Le select de tri est visuellement hors du formulaire, mais associé par `form="marcpo-application-filters"`. Le formulaire omet `paged` volontairement : changer un filtre ou un tri revient à la première page. Les liens de pagination et d’examen conservent le contexte. Le tri par soumission utilise `submitted_at`, pas la création WordPress ; le tri par nom utilise les coordonnées, pas le titre généré.
 
 ### Écritures et concurrence
 
@@ -93,7 +107,11 @@ Les points d’entrée HTTP vérifient les droits et le nonce avant d’appeler 
 
 Les notifications de candidature réservent chaque tentative sous verrou puis appellent `wp_mail` après libération. Les invitations de comptes sont actuellement envoyées pendant la configuration du jury, sous son verrou : ne pas confondre ces deux circuits. Un échec d’email ne supprime pas la candidature et n’est pas relancé automatiquement.
 
+L’invitation de l’administrateur utilise un bouton de soumission du formulaire natif d’édition, nommé `marcpo_jury[administrator][invite]`. Sa valeur n’est envoyée que lorsque ce bouton est utilisé. Avec JavaScript, `jury.js` transmet temporairement cette intention au bouton natif de sauvegarde pour conserver la gestion WordPress de l’autosauvegarde et du verrou ; une validation bloquante ne laisse pas l’intention active pour la sauvegarde suivante. Sans JavaScript, le bouton soumet directement le formulaire. Le circuit existant `Editions::save()` puis `Jury::save()` valide paramètres, nonces, droits et révision ; aucune nouvelle route d’envoi n’est ajoutée. Une nouvelle édition est enregistrée en brouillon. Les nouveaux comptes restent invités à leur création ; un enregistrement ordinaire ne réinvite pas un compte existant. Les cases d’invitation des votants restent liées à la sauvegarde.
+
 ## 5. Conventions à garder
+
+Les [consignes de contribution et de prévention des régressions WordPress.org](../AGENTS.md) regroupent les exigences à appliquer à chaque modification et les contrôles avant livraison. Elles s'appuient sur les retours de revue déjà corrigés.
 
 - Valider les types d’entrée avant nettoyage ; utiliser `wp_unslash` aux frontières HTTP et `wp_slash` lors de l’écriture des tableaux de métadonnées contenant du texte.
 - Échapper au rendu (`esc_html`, `esc_attr`, `esc_url`). Les valeurs retournées par les fonctions métier ne sont pas pré-échappées.
@@ -105,6 +123,10 @@ Les notifications de candidature réservent chaque tentative sous verrou puis ap
 - Commenter les invariants, les préconditions et les raisons d’un choix ; éviter les commentaires qui répètent simplement une instruction.
 
 ## 6. Vérifier une modification
+
+`jury.js` masque et désactive le fieldset des votants en mode simple. L'absence de `members` dans une sauvegarde signifie « conserver les affectations », pas « désactiver tous les votants » ; aucune invitation n'est déduite de ces données conservées. Ce contrat couvre aussi le changement de mode sans JavaScript. Un administrateur remplaçant un votant conservé reprend son compte et sa note sans doublon.
+
+L'historique applique les permissions avant la recherche. `s` est lu via `Request`, nettoyé et limité à 200 caractères ; seuls `last_name`, `first_name` et `email` de l'identité affichée participent au filtrage. Les mots sont littéraux, combinés par ET, sans distinction de casse ou d'accents. Les totaux d'édition sont calculés avant ce filtre. Les trois colonnes d'identité utilisent un `colgroup` de largeurs fixes pour ne pas s'étirer quand il y a peu d'éditions.
 
 Depuis ce dépôt, avec un PHP CLI configuré pour joindre la base Local :
 
@@ -146,6 +168,9 @@ Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier
 
 `MediaLibrary::store` reçoit les fichiers via `wp_handle_upload`, puis crée les pièces jointes et leurs métadonnées. Le formulaire signé ou le nonce administrateur est validé par l’appelant. `UploadDrafts::files` vérifie la révision et le propriétaire ; aucun identifiant de média fourni par le navigateur n’est accepté. Un rollback de candidature ne supprime pas les médias du brouillon.
 
-La finalisation intervient après sauvegarde de `_mp_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
+La finalisation intervient après sauvegarde de `_marcpo_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
 
-La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_mp_media_migrated` marque les dossiers traités et `_mp_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.
+La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_marcpo_media_migrated` marque les dossiers traités et `_marcpo_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.
+
+### Géocodage avec repli communal (30 septembre 2026)
+GalleryMap normalise uniquement les requêtes (espaces postaux Unicode, mots st/ST, alias basques du pays). La signature reste fondée sur les réponses originales. Les caches address_v2 et commune_v2 expirent à 180 jours ; les anciens points valides sont conservés. Repli IGN type=municipality, postcode obligatoire, score minimal 0,5 et écart minimal 0,1 entre deux résultats. Les réponses malformées/échecs réseau ne déclenchent pas de repli. La précision municipality est stockée et explicitée au rendu. Tests cartography-local.php : fixtures isolées désormais autorisées aussi sur marche-potier-migration.local, réponses HTTP simulées et nettoyage final.

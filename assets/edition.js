@@ -1,11 +1,11 @@
 /* Sélecteur natif WordPress. */
 document.addEventListener('click', (event) => {
-    const button = event.target.closest('.mp-media-select, .mp-media-remove');
+    const button = event.target.closest('.marcpo-media-select, .marcpo-media-remove');
     if (!button) return;
-    const field = button.closest('.mp-media-field');
+    const field = button.closest('.marcpo-media-field');
     const input = field.querySelector('input');
-    const label = field.querySelector('.mp-media-name');
-    if (button.classList.contains('mp-media-remove')) {
+    const label = field.querySelector('.marcpo-media-name');
+    if (button.classList.contains('marcpo-media-remove')) {
         input.value = '0';
         label.textContent = 'Aucun fichier sélectionné';
         return;
@@ -20,12 +20,12 @@ document.addEventListener('click', (event) => {
 });
 
 // L’explication est nécessaire uniquement lorsqu’un tarif réduit est proposé.
-const reducedPrice = document.getElementById('mp-reduced_price');
-const reducedDescription = document.getElementById('mp-reduced_description');
+const reducedPrice = document.getElementById('marcpo-reduced_price');
+const reducedDescription = document.getElementById('marcpo-reduced_description');
 if (reducedPrice && reducedDescription) {
     const updateReduced = () => {
         reducedDescription.required = reducedPrice.value !== '';
-        const label = document.querySelector('label[for="mp-reduced_description"]');
+        const label = document.querySelector('label[for="marcpo-reduced_description"]');
         if (label) label.textContent = 'Conditions du tarif réduit' + (reducedDescription.required ? ' *' : ' (facultatif)');
     };
     reducedPrice.addEventListener('input', updateReduced);
