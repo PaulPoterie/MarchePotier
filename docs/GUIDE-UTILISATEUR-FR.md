@@ -165,3 +165,6 @@ Cette version ne comporte pas de service de mise à jour automatique depuis GitH
 ### Médiathèque et liens des pièces
 
 Photos, justificatifs et copies pour les réseaux sociaux sont accessibles par leur URL sans connexion. Les justificatifs ne figurent pas dans la galerie publique. Le CSV contient les liens directs ; son export et les dossiers restent réservés aux comptes autorisés. Dans la vue liste de la médiathèque, la colonne Poterie Navarraise distingue les envois provisoires des pièces rattachées à une candidature. Remplacer une pièce conserve l’ancien média.
+
+### Adresses et centre de commune
+Avant l’envoi à IGN, les espaces du code postal sont retirés, les mots st/ST deviennent saint dans la rue et la commune, et les pays Pays Basque, Pays-Basque, Euskal Herri, Euskal-Herri, Euskal Herria sont interprétés comme France. Les réponses originales du dossier sont conservées. Si l’adresse précise ne convient pas, une seconde recherche porte sur la commune avec son code postal. Le point communal affiche « position approximative ». Une commune encore ambiguë ou introuvable reste sans point.

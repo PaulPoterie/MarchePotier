@@ -106,6 +106,8 @@ Les notifications de candidature réservent chaque tentative sous verrou puis ap
 
 ## 5. Conventions à garder
 
+Les [consignes de contribution et de prévention des régressions WordPress.org](../AGENTS.md) regroupent les exigences à appliquer à chaque modification et les contrôles avant livraison. Elles s'appuient sur les retours de revue déjà corrigés.
+
 - Valider les types d’entrée avant nettoyage ; utiliser `wp_unslash` aux frontières HTTP et `wp_slash` lors de l’écriture des tableaux de métadonnées contenant du texte.
 - Échapper au rendu (`esc_html`, `esc_attr`, `esc_url`). Les valeurs retournées par les fonctions métier ne sont pas pré-échappées.
 - Un champ de `Fields` suit `[libellé, type, obligatoire, choix?, condition?]`. Ajouter un champ à ce schéma peut affecter formulaire, dossier, export et emails : vérifier ces usages ensemble.
@@ -160,3 +162,6 @@ Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier
 La finalisation intervient après sauvegarde de `_marcpo_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.
 
 La migration par lots de dix dossiers conserve les URLs dans uploads et déduplique les pièces jointes par leur chemin. `_marcpo_media_migrated` marque les dossiers traités et `_marcpo_media_library_migrated` la fin du parcours. Une pièce manquante est signalée sans perte de sa référence.
+
+### Géocodage avec repli communal (30 septembre 2026)
+GalleryMap normalise uniquement les requêtes (espaces postaux Unicode, mots st/ST, alias basques du pays). La signature reste fondée sur les réponses originales. Les caches address_v2 et commune_v2 expirent à 180 jours ; les anciens points valides sont conservés. Repli IGN type=municipality, postcode obligatoire, score minimal 0,5 et écart minimal 0,1 entre deux résultats. Les réponses malformées/échecs réseau ne déclenchent pas de repli. La précision municipality est stockée et explicitée au rendu. Tests cartography-local.php : fixtures isolées désormais autorisées aussi sur marche-potier-migration.local, réponses HTTP simulées et nettoyage final.

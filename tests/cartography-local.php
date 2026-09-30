@@ -1,10 +1,10 @@
 <?php
 /** Consent and provider integration checks; local fixtures only, all HTTP calls intercepted. */
-if ( PHP_SAPI !== 'cli' || empty( $argv[1] ) || basename( dirname( dirname( $argv[1] ) ) ) !== 'marche-potier-test' ) { exit( "Local test site required.\n" ); }
+if ( PHP_SAPI !== 'cli' || empty( $argv[1] ) || ! in_array( basename( dirname( dirname( $argv[1] ) ) ), array( 'marche-potier-test', 'marche-potier-migration' ), true ) ) { exit( "Local test site required.\n" ); }
 define( 'WP_PLUGIN_DIR', dirname( __DIR__ ) );
 define( 'DISABLE_WP_CRON', true );
 require $argv[1] . '/wp-load.php';
-if ( wp_parse_url( home_url(), PHP_URL_HOST ) !== 'marche-potier-test.local' ) { exit( "Unexpected site.\n" ); }
+if ( ! in_array( wp_parse_url( home_url(), PHP_URL_HOST ), array( 'marche-potier-test.local', 'marche-potier-migration.local' ), true ) ) { exit( "Unexpected site.\n" ); }
 require dirname( __DIR__ ) . '/marche-potier.php';
 require_once ABSPATH . 'wp-admin/includes/template.php';
 use MarchePotier\{ExternalServices,GalleryMap,Gallery,Records,Editions,PublicForm,Fields,CsvExport,Notifications};
@@ -49,7 +49,7 @@ try {
 	$app = wp_insert_post( array( 'post_type' => 'marcpo_candidature', 'post_status' => 'publish', 'post_title' => '[TEST MAP] Candidate ' . $run ) ); $ids[] = $app;
 	$data = array( 'edition_id' => $edition, 'decision' => 'selected', 'publication_consent' => true, 'identity' => array( 'last_name' => 'Synthetic', 'first_name' => 'Candidate', 'address' => '1 rue fictive ' . $run, 'postcode' => '64100', 'city' => 'Bayonne', 'country' => 'France', 'phone' => '0100000000', 'email' => 'private@example.test' ), 'activity' => array(), 'files' => array() );
 	update_post_meta( $app, Records::META, $data ); update_post_meta( $app, '_marcpo_edition_id', $edition );
-	$cache_key = 'marcpo_address_' . GalleryMap::signature( $data['identity'] );
+	$cache_key = 'marcpo_address_v2_' . GalleryMap::signature( $data['identity'] );
 	$form = PublicForm::render( $edition );
 	preg_match( '/<input\b[^>]*name="marcpo_map_consent"[^>]*>/', $form, $checkbox );
 	marcpo_map_check( isset( $checkbox[0] ) && ! str_contains( $checkbox[0], 'required' ) && ! str_contains( $checkbox[0], 'checked' ), 'Accord cartographique public facultatif et décoché par défaut' );
@@ -114,11 +114,48 @@ try {
 		delete_post_meta( $app, '_marcpo_map_location' ); delete_transient( $cache_key ); GalleryMap::locate( $app );
 		marcpo_map_check( ! get_post_meta( $app, '_marcpo_map_location', true ) && false === get_transient( $cache_key ), 'Réponse HTTP IGN malformée rejetée avant mise en cache' );
 	}
+	// Normalizations affect requests only; fallback must use a real municipality feature.
+	$extra_keys = array();
+	foreach ( array( 'Pays Basque', 'Pays-Basque', 'Euskal Herri', 'Euskal-Herri', 'Euskal Herria' ) as $country ) {
+		$data['identity']['country'] = $country;
+		$data['identity']['postcode'] = "64 \u{00a0}100";
+		$data['identity']['city'] = 'ST Martin';
+		$data['identity']['address'] = '1 rue st Jean, chemin du Castor ' . $run;
+		update_post_meta( $app, Records::META, $data ); delete_post_meta( $app, '_marcpo_map_location' );
+		$signature = GalleryMap::signature( $data['identity'] );
+		$address_key = 'marcpo_address_v2_' . $signature; $commune_key = 'marcpo_commune_v2_' . $signature;
+		$extra_keys[] = $address_key; $extra_keys[] = $commune_key;
+		$provider_features = array();
+		$municipality = $valid_features; $municipality[0]['properties'] = array( 'score' => .93, 'postcode' => '64100', 'city' => 'Saint-Martin', 'type' => 'municipality', 'label' => 'Saint-Martin' );
+		set_transient( $commune_key, $municipality, 60 );
+		GalleryMap::locate( $app );
+		parse_str( wp_parse_url( end( $calls )['url'], PHP_URL_QUERY ), $query );
+		marcpo_map_check( str_contains( $query['q'], 'rue saint Jean, chemin du Castor' ) && str_ends_with( $query['q'], '64100 saint Martin' ), 'Espaces postaux et st/ST normalisés, autres mots conservés : ' . $country );
+		$point = get_post_meta( $app, '_marcpo_map_location', true );
+		marcpo_map_check( 'municipality' === ( $point['precision'] ?? '' ) && Records::data( $app )['identity'] === $data['identity'], 'Repli communal accepté sans réécrire le dossier : ' . $country );
+	}
+	$provider_features = $municipality;
+	delete_post_meta( $app, '_marcpo_map_location' ); delete_transient( $commune_key ); GalleryMap::locate( $app );
+	parse_str( wp_parse_url( end( $calls )['url'], PHP_URL_QUERY ), $query );
+	marcpo_map_check( 'municipality' === $query['type'] && '64100' === $query['postcode'] && 'saint Martin' === $query['q'], 'Requête de repli limitée à la commune et au code postal' );
+	$settings['osm'] = true;
+	marcpo_map_check( str_contains( Gallery::render_edition( $edition ), 'Centre de la commune : Saint-Martin (position approximative)' ), 'Précision communale explicitement affichée sur la carte' );
+	foreach ( array( 'wrong_postcode', 'ambiguous', 'street', 'low_score', 'invalid' ) as $case ) {
+		$bad = $municipality;
+		if ( 'wrong_postcode' === $case ) { $bad[0]['properties']['postcode'] = '75001'; }
+		if ( 'ambiguous' === $case ) { $bad[] = $bad[0]; }
+		if ( 'street' === $case ) { $bad[0]['properties']['type'] = 'street'; }
+		if ( 'low_score' === $case ) { $bad[0]['properties']['score'] = .1; }
+		if ( 'invalid' === $case ) { $bad[0]['geometry']['coordinates'] = array( INF, 0 ); }
+		delete_post_meta( $app, '_marcpo_map_location' ); set_transient( $commune_key, $bad, 60 ); GalleryMap::locate( $app );
+		marcpo_map_check( ! get_post_meta( $app, '_marcpo_map_location', true ), 'Centre communal incohérent refusé : ' . $case );
+	}
 	echo "SUCCÈS : $checks vérifications cartographiques, aucun appel réseau externe.\n";
 } finally {
 	$settings = array();
 	foreach ( array_reverse( $ids ) as $id ) { wp_clear_scheduled_hook('marcpo_locate_city', array($id)); wp_delete_post( $id, true ); }
 	if ( $cache_key ) { delete_transient( $cache_key ); }
+	foreach ( $extra_keys ?? array() as $key ) { delete_transient( $key ); }
 	remove_filter( 'pre_option_' . ExternalServices::OPTION, $options );
 	remove_filter( 'pre_http_request', $network, PHP_INT_MAX );
 }

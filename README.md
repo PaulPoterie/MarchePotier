@@ -38,6 +38,7 @@ Temporary answers and transfers can be recovered for up to 24 hours, with physic
 
 ## Documentation and development
 
+- [Contribution rules and WordPress.org regression checklist — French](AGENTS.md)
 - [Detailed user guide — French](docs/GUIDE-UTILISATEUR-FR.md)
 - [Voting guide — French](docs/VOTES.md)
 - [Architecture, business rules and test instructions — French](docs/DEVELOPPEMENT.md)
@@ -47,3 +48,5 @@ Temporary answers and transfers can be recovered for up to 24 hours, with physic
 PHP, JavaScript and CSS are provided in readable form. No Composer or npm build is required to run the plugin. Development documentation and tests belong in this GitHub repository; the distribution contains the plugin entry point, `includes`, `assets` and `readme.txt`.
 
 Plugin license: [GPL-2.0-or-later](https://www.gnu.org/licenses/gpl-2.0.html). Leaflet: [BSD-2-Clause](assets/vendor/leaflet/LICENSE), with matching source and build links in the WordPress.org readme.
+
+For French maps, postal-code spaces, st/ST abbreviations and configured Basque country aliases are normalized without changing applications. An unsuitable street result falls back to an IGN municipality point, explicitly labelled as approximate.
