@@ -22,7 +22,7 @@ Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser u
 
 Les prochains ZIP de livraison utiliseront le dossier `poterie-navarraise-market-manager`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
-Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis téléversez le nouveau ZIP et choisissez le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour.
+Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis téléversez le nouveau ZIP et choisissez le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour. Le passage de 0.19.1 à 0.19.2 conserve les éditions, candidatures, affectations et notes. Téléchargez le fichier `poterie-navarraise-market-manager-0.19.2.zip` dans les fichiers de la [release GitHub](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.2), plutôt que les archives automatiques « Source code ».
 
 Lors du passage de l’ancien dossier `marche-potier` au nouveau dossier `poterie-navarraise-market-manager`, désactivez l’ancienne extension avant d’activer la nouvelle. WordPress peut les présenter comme deux extensions distinctes : ne les activez pas ensemble.
 

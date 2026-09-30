@@ -4,7 +4,7 @@ Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.19.1
+Stable tag: 0.19.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Manage pottery markets: applications, supporting documents, jury ratings, select
 
 Poterie Navarraise Pottery Market Manager helps pottery market organizers collect applications, review candidates and present selected exhibitors. The French description is "Poterie Navarraise — Organisation de marchés potiers". The interface and outgoing messages are currently mostly in French.
 
-Version 0.19.1 is a development build for the WordPress.org review. Its new marcpo_ identifiers do not migrate the previous test-only data. Create fresh editions and team assignments. Read the document storage information below.
+Version 0.19.2 is available on GitHub and is still undergoing WordPress.org review. Updating from 0.19.1 preserves existing editions, applications, team assignments and ratings. When switching from the old 0.19.0 test package, deactivate it first and create fresh editions and team assignments: the marcpo_ identifiers introduced in 0.19.1 do not migrate those older test records. Read the document storage information below.
 
 = Features =
 
@@ -174,6 +174,16 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Changelog ==
 
+= 0.19.2 =
+
+* Add a save-and-invite button for the market administrator, with required-field validation and draft preservation.
+* Hide the voter section in simple selection mode while preserving assignments and ratings.
+* Add optional edition title guidance.
+* Refresh the administration dashboard with the Gestion Marché Potier menu, role-based shortcuts, setup guidance and version-aware support contact.
+* Narrow identity columns in selection history and add surname, first-name and email search, with access checks and accent-insensitive matching.
+* Normalize IGN address queries and fall back to unambiguous municipality centres, with the location precision shown to visitors.
+* Update English and French documentation and add regression coverage for administration workflows.
+
 = 0.19.1 =
 
 * Adopt the Poterie Navarraise Pottery Market Manager name and the poterie-navarraise-market-manager text domain.
@@ -197,6 +207,10 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 * WordPress Media Library storage, resumable file transfers and safe temporary media cleanup.
 
 == Upgrade Notice ==
+
+= 0.19.2 =
+
+Improves invitations, the dashboard and history search. Data from 0.19.1 is preserved. Back up the database and uploads before updating. WordPress.org review is ongoing.
 
 = 0.19.1 =
 

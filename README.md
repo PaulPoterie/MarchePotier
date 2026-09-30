@@ -2,7 +2,7 @@
 
 Manage pottery market applications, review supporting documents, collect jury ratings and publish selected exhibitors on a WordPress site.
 
-**Development version: 0.19.1.** The plugin is undergoing WordPress.org review and has not been approved yet. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
+**Latest version: 0.19.2.** Download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The plugin is undergoing WordPress.org review and has not been approved yet. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.
 
@@ -27,7 +27,9 @@ Each edition has one market administrator and can have several assigned jurors. 
 5. Test a complete application and email delivery before opening applications to real candidates.
 6. Add the **Présentation de la sélection** block to another page and enable the edition's public selection when ready.
 
-When switching from the former `marche-potier` package, deactivate the old plugin before activating this one. The 0.19.1 review build uses new internal identifiers and does not migrate previous 0.19.0 test records or team assignments. Create fresh test editions and team assignments.
+Updating from 0.19.1 preserves editions, applications, team assignments and ratings. Back up the database and uploads, then upload the new distribution ZIP and replace the installed version.
+
+When switching from the former `marche-potier` package, deactivate the old plugin before activating this one. The internal identifiers introduced in 0.19.1 do not migrate previous 0.19.0 test records or team assignments. Create fresh editions and team assignments.
 
 ## Mapping, consent and files
 
