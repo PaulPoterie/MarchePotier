@@ -15,7 +15,7 @@ final class Jury {
 		add_action( 'admin_enqueue_scripts', static function () {
 			$screen = get_current_screen();
 			if ( $screen && 'marcpo_edition' === $screen->post_type && 'post' === $screen->base ) {
-				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array(), '0.19.1', true );
+				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array( 'post' ), '0.19.1.3', true );
 				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.1' );
 			}
 		} );
@@ -92,14 +92,18 @@ final class Jury {
 		echo '<p class="description">Le rôle « [Poterie Navarraise] Administrateur marché » donne ces droits sur l’ensemble du site. Cet administrateur reçoit les nouvelles candidatures et les réponses des candidats.</p>';
 		$uid = self::administrator( $post->ID ); $member = $data['members'][ $uid ] ?? array(); $user = get_userdata( $uid );
 		echo '<table class="form-table" role="presentation"><tr><th><label for="marcpo-administrator-name">Nom *</label></th><td><input class="regular-text" id="marcpo-administrator-name" name="marcpo_jury[administrator][name]" type="text" maxlength="120" required value="' . esc_attr( $member['name'] ?? '' ) . '"></td></tr>';
-		echo '<tr><th><label for="marcpo-administrator-email">Email *</label></th><td><input class="regular-text" id="marcpo-administrator-email" name="marcpo_jury[administrator][email]" type="email" required value="' . esc_attr( $user ? $user->user_email : '' ) . '"><p class="description">Pour remplacer l’administrateur, renseignez le nom et l’email de son remplaçant. Si celui-ci figure parmi les votants, décochez sa case « Actif » avant d’enregistrer.</p></td></tr>';
-		echo '<tr><th>Invitation</th><td><label><input type="checkbox" name="marcpo_jury[administrator][invite]" value="1"> Envoyer une invitation</label>';
+		echo '<tr><th><label for="marcpo-administrator-email">Email *</label></th><td><input class="regular-text" id="marcpo-administrator-email" name="marcpo_jury[administrator][email]" type="email" required value="' . esc_attr( $user ? $user->user_email : '' ) . '"><p class="description">' . esc_html__( 'Pour remplacer l’administrateur, renseignez le nom et l’email de son remplaçant. En mode votes multiples, si celui-ci figure parmi les votants, décochez sa case « Actif » avant d’enregistrer.', 'poterie-navarraise-market-manager' ) . '</p></td></tr>';
+		echo '<tr><th>Invitation</th><td><button type="submit" id="marcpo-administrator-invite" class="button button-secondary" name="marcpo_jury[administrator][invite]" value="1" aria-describedby="marcpo-administrator-invite-help">' . esc_html__( 'Enregistrer l’édition et envoyer l’invitation', 'poterie-navarraise-market-manager' ) . '</button>';
+		echo '<p class="description" id="marcpo-administrator-invite-help">' . esc_html__( 'Ce bouton enregistre toutes les modifications de l’édition puis envoie l’invitation à l’administrateur indiqué ci-dessus. Complétez d’abord les champs obligatoires. Une nouvelle édition reste en brouillon jusqu’à sa publication.', 'poterie-navarraise-market-manager' ) . '</p>';
 		if ( isset( $member['invitation'] ) ) { echo '<p class="description">' . esc_html( $member['invitation'] ) . '</p>'; }
 		echo '</td></tr></table>';
-		echo '<h3>Votant pour la sélection</h3><p>Le rôle « [Poterie Navarraise] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
+		echo '<p class="description">' . esc_html__( 'Un nouveau compte reçoit automatiquement une invitation au premier enregistrement pour choisir son mot de passe. Pour réinviter l’administrateur, utilisez son bouton d’envoi. Un compte existant conserve son mot de passe.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<fieldset id="marcpo-jury-voters"' . ( 'multiple' === $data['mode'] ? '' : ' hidden disabled' ) . '><legend><h3>Votant pour la sélection</h3></legend><p>Le rôle « [Poterie Navarraise] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
 		self::member_table( $data );
-		echo '<p class="description">Enregistrez l’édition pour appliquer les changements. Un nouveau compte reçoit une invitation pour choisir son mot de passe ; la connexion se fait ensuite avec son email et son mot de passe. Pour un compte existant, cochez « Envoyer une invitation » si nécessaire ; son mot de passe est conservé.</p>';
-		echo '<p class="description">Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées. Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.</p>';
+		echo '<p class="description">' . esc_html__( 'Pour réinviter un votant, cochez « Envoyer une invitation » sur sa ligne, puis enregistrez l’édition.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées.', 'poterie-navarraise-market-manager' ) . '</p></fieldset>';
+		echo '<noscript><p>' . esc_html__( 'Après avoir changé le mode de sélection, enregistrez l’édition pour actualiser l’affichage des votants.', 'poterie-navarraise-market-manager' ) . '</p></noscript>';
+		echo '<p class="description">' . esc_html__( 'Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.', 'poterie-navarraise-market-manager' ) . '</p>';
 	}
 	private static function member_table( array $data ): void {
 		echo '<div class="marcpo-jury-group"><div class="marcpo-jury-scroll" role="region" aria-label="Votants pour la sélection" tabindex="0"><table class="widefat marcpo-jury-members" id="marcpo-jury-members"><thead><tr><th>Nom</th><th>Email</th><th>Participation</th><th>Invitation</th></tr></thead><tbody>';
@@ -133,6 +137,17 @@ final class Jury {
 		if ( ! in_array( $raw['mode'] ?? null, array( 'simple', 'multiple' ), true ) || ! is_array( $raw['members'] ?? array() ) || count( $raw['members'] ?? array() ) > 99 ) { return new \WP_Error( 'invalid', 'Réglages invalides (99 votants maximum).' ); }
 		$administrator = $raw['administrator'] ?? null;
 		if ( isset( $raw['administrators'] ) || ! is_array( $administrator ) || array_is_list( $administrator ) || array_diff( array_keys( $administrator ), array( 'name', 'email', 'invite' ) ) ) { return new \WP_Error( 'administrator', 'Renseignez un seul administrateur du marché avec son nom et son email.' ); }
+		// Le groupe masqué/désactivé n'est pas soumis : conserver les affectations, sans invitation.
+		// Cela permet aussi un changement de mode sans JavaScript, avant le rechargement.
+		if ( ! array_key_exists( 'members', $raw ) ) {
+			$raw['members'] = array();
+			foreach ( $old['members'] as $uid => $member ) {
+				$user = get_userdata( $uid );
+				if ( 'voter' !== $member['kind'] || ! $user ) { continue; }
+				if ( is_string( $administrator['email'] ?? null ) && 0 === strcasecmp( trim( $administrator['email'] ), $user->user_email ) ) { continue; }
+				$raw['members'][] = array( 'user_id' => (string) $uid, 'name' => $member['name'], 'email' => $user->user_email, 'active' => ! empty( $member['active'] ) ? '1' : '0' );
+			}
+		}
 		$rows = array(); $emails = array();
 		foreach ( array( 'administrator' => array( $administrator ), 'voter' => $raw['members'] ?? array() ) as $kind => $group ) {
 			foreach ( $group as $row ) {
@@ -183,7 +198,7 @@ final class Jury {
 		if ( self::settings( $edition ) !== $data ) { return new \WP_Error( 'storage', 'Organisateurs non enregistrés. Réessayez.' ); }
 		foreach ( $invitations as $uid => $created ) {
 			$status = 'Invitation confiée au service d’envoi';
-			$failed = static function () use ( &$status ) { $status = 'Échec de l’invitation — cochez pour réessayer'; };
+			$failed = static function () use ( &$status ) { $status = __( 'Échec de l’invitation — relancez l’envoi pour réessayer', 'poterie-navarraise-market-manager' ); };
 			$intercepted = static function ( $pre ) use ( $failed ) { if ( false === $pre ) { $failed(); } return $pre; };
 			add_action( 'wp_mail_failed', $failed );
 			add_filter( 'pre_wp_mail', $intercepted, PHP_INT_MAX );

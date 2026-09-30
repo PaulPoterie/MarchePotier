@@ -12,13 +12,16 @@ Le README présente le plugin en anglais ; le guide utilisateur français se tro
 | --- | --- |
 | `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif, branche `fix/wordpress-review`. Modifier et committer ici. |
 | `C:\Users\paul\Projects\MarchePotier\marche-potier` | Ancienne version stable conservée. |
-| `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Copie exécutée par le site Local. La synchroniser après vérification. |
+| `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Ancienne copie installée (0.19.0-beta.9). Les suites de test de revue chargent directement le dépôt actif à sa place, uniquement dans leur processus. |
+| `C:\Users\paul\Local Sites\marche-potier-migration\app\public\wp-content\plugins\poterie-navarraise-market-manager` | Copie récente du plugin utilisée dans Local. Synchroniser les fichiers vérifiés depuis le dépôt, après comparaison et sauvegarde des fichiers remplacés. |
 | `C:\Users\paul\Projects\MarchePotier\reports` | Rapports et résultats locaux, hors du paquet installable. |
 | `C:\Users\paul\Projects\MarchePotier\dist` | ZIP de livraisons ponctuelles, potentiellement antérieurs à la branche. |
 
 Ce dépôt ne déploie rien automatiquement. Sur un autre ordinateur, son emplacement peut être quelconque ; ces chemins décrivent uniquement l’installation de développement actuelle.
 
 ### Nom, traductions et identifiants
+
+Le menu d'administration est **Gestion Marché Potier** et son accueil **Gestion de Marché Potier**, avec la mention « fait par Poterie Navarraise ». Le nom officiel ci-dessous reste celui de l'extension dans l'annuaire et les en-têtes. `Plugin::dashboard_assets()` limite le CSS de l'accueil à sa page et aux utilisateurs autorisés ; la version de contact vient de l'en-tête du fichier principal.
 
 Le nom officiel est « Poterie Navarraise Pottery Market Manager », avec la description française « Poterie Navarraise — Organisation de marchés potiers ». Le slug WordPress.org, le dossier du prochain paquet et le domaine de traduction sont `poterie-navarraise-market-manager`. Les appels gettext doivent utiliser ce domaine littéral.
 
@@ -104,6 +107,8 @@ Les points d’entrée HTTP vérifient les droits et le nonce avant d’appeler 
 
 Les notifications de candidature réservent chaque tentative sous verrou puis appellent `wp_mail` après libération. Les invitations de comptes sont actuellement envoyées pendant la configuration du jury, sous son verrou : ne pas confondre ces deux circuits. Un échec d’email ne supprime pas la candidature et n’est pas relancé automatiquement.
 
+L’invitation de l’administrateur utilise un bouton de soumission du formulaire natif d’édition, nommé `marcpo_jury[administrator][invite]`. Sa valeur n’est envoyée que lorsque ce bouton est utilisé. Avec JavaScript, `jury.js` transmet temporairement cette intention au bouton natif de sauvegarde pour conserver la gestion WordPress de l’autosauvegarde et du verrou ; une validation bloquante ne laisse pas l’intention active pour la sauvegarde suivante. Sans JavaScript, le bouton soumet directement le formulaire. Le circuit existant `Editions::save()` puis `Jury::save()` valide paramètres, nonces, droits et révision ; aucune nouvelle route d’envoi n’est ajoutée. Une nouvelle édition est enregistrée en brouillon. Les nouveaux comptes restent invités à leur création ; un enregistrement ordinaire ne réinvite pas un compte existant. Les cases d’invitation des votants restent liées à la sauvegarde.
+
 ## 5. Conventions à garder
 
 Les [consignes de contribution et de prévention des régressions WordPress.org](../AGENTS.md) regroupent les exigences à appliquer à chaque modification et les contrôles avant livraison. Elles s'appuient sur les retours de revue déjà corrigés.
@@ -118,6 +123,10 @@ Les [consignes de contribution et de prévention des régressions WordPress.org]
 - Commenter les invariants, les préconditions et les raisons d’un choix ; éviter les commentaires qui répètent simplement une instruction.
 
 ## 6. Vérifier une modification
+
+`jury.js` masque et désactive le fieldset des votants en mode simple. L'absence de `members` dans une sauvegarde signifie « conserver les affectations », pas « désactiver tous les votants » ; aucune invitation n'est déduite de ces données conservées. Ce contrat couvre aussi le changement de mode sans JavaScript. Un administrateur remplaçant un votant conservé reprend son compte et sa note sans doublon.
+
+L'historique applique les permissions avant la recherche. `s` est lu via `Request`, nettoyé et limité à 200 caractères ; seuls `last_name`, `first_name` et `email` de l'identité affichée participent au filtrage. Les mots sont littéraux, combinés par ET, sans distinction de casse ou d'accents. Les totaux d'édition sont calculés avant ce filtre. Les trois colonnes d'identité utilisent un `colgroup` de largeurs fixes pour ne pas s'étirer quand il y a peu d'éditions.
 
 Depuis ce dépôt, avec un PHP CLI configuré pour joindre la base Local :
 

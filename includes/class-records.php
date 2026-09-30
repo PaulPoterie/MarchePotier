@@ -571,6 +571,7 @@ final class Records {
 
 	public static function history(): void {
 		if ( ! Jury::can_review() ) { wp_die( 'Accès refusé.', '', array( 'response' => 403 ) ); }
+		$search = wp_html_excerpt( trim( Request::query( 's' ) ?? '' ), 200, '' );
 		$editions = get_posts( array( 'post_type' => 'marcpo_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$applications = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' ) );
 		$editions = array_values( array_filter( $editions, static fn( $edition ) => Jury::can_view_edition( $edition->ID ) ) );
@@ -593,18 +594,34 @@ final class Records {
 			$rows[ $potier_id ]['decisions'][ $edition_id ] = $data['decision'] ?? 'pending';
 			$rows[ $potier_id ]['applications'][ $edition_id ] = $application->ID;
 		}
+		// Rechercher uniquement dans l'identité affichée, après les contrôles d'accès.
+		// Les totaux d'édition ci-dessus restent ceux de tous les dossiers accessibles.
+		if ( '' !== $search ) {
+			$terms = preg_split( '/\s+/u', remove_accents( $search ), -1, PREG_SPLIT_NO_EMPTY );
+			$rows = array_filter( $rows, static function ( array $row ) use ( $terms ): bool {
+				$values = array();
+				foreach ( array( 'last_name', 'first_name', 'email' ) as $key ) { $values[] = is_string( $row['identity'][ $key ] ?? null ) ? $row['identity'][ $key ] : ''; }
+				$text = remove_accents( implode( ' ', $values ) );
+				foreach ( $terms as $term ) { if ( ! preg_match( '/' . preg_quote( $term, '/' ) . '/iu', $text ) ) { return false; } }
+				return true;
+			} );
+		}
 		usort( $rows, static function ( array $left, array $right ): int {
 			return strcmp( ( $left['identity']['last_name'] ?? '' ) . "\0" . ( $left['identity']['first_name'] ?? '' ), ( $right['identity']['last_name'] ?? '' ) . "\0" . ( $right['identity']['first_name'] ?? '' ) );
 		} );
 		echo '<div class="wrap"><h1>Historique des sélections</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
 		if ( ! $editions ) { echo '<p>Aucune édition enregistrée.</p></div>'; return; }
-		echo '<p class="marcpo-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="marcpo-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat marcpo-history-table" style="--marcpo-editions:' . count( $editions ) . '"><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '" class="marcpo-history-search" role="search"><input type="hidden" name="page" value="marcpo-historique"><label for="marcpo-history-search">' . esc_html__( 'Rechercher un potier', 'poterie-navarraise-market-manager' ) . '</label><div><input type="search" id="marcpo-history-search" name="s" maxlength="200" value="' . esc_attr( $search ) . '" placeholder="' . esc_attr__( 'Nom, prénom ou email', 'poterie-navarraise-market-manager' ) . '" aria-describedby="marcpo-history-search-help"> <button type="submit" class="button">' . esc_html__( 'Rechercher', 'poterie-navarraise-market-manager' ) . '</button>';
+		if ( '' !== $search ) { echo ' <a class="button" href="' . esc_url( admin_url( 'admin.php?page=marcpo-historique' ) ) . '">' . esc_html__( 'Effacer la recherche', 'poterie-navarraise-market-manager' ) . '</a>'; }
+		echo '</div><p class="description" id="marcpo-history-search-help">' . esc_html__( 'Recherche uniquement sur le nom, le prénom et l’email, sans distinction de majuscules ou d’accents. Les totaux des éditions restent ceux de tous les dossiers accessibles.', 'poterie-navarraise-market-manager' ) . '</p></form>';
+		echo '<p class="marcpo-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="marcpo-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat marcpo-history-table" style="--marcpo-editions:' . count( $editions ) . '"><colgroup><col class="marcpo-history-last"><col class="marcpo-history-first"><col class="marcpo-history-email"><col span="' . count( $editions ) . '"></colgroup><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
 		foreach ( $editions as $edition ) {
 			$total = $totals[ $edition->ID ];
 			$places = Editions::settings( $edition->ID )['exhibitors'];
 			echo '<th scope="col">' . esc_html( $edition->post_title ) . '<span class="marcpo-history-counts"><span>' . esc_html( $total['selected'] . ' / ' . ( '' !== $places ? $places : '—' ) ) . '</span><span>' . esc_html( $total['applications'] . ( 1 === $total['applications'] ? ' candidature' : ' candidatures' ) ) . '</span></span></th>';
 		}
 		echo '</tr></thead><tbody>';
+		if ( ! $rows ) { echo '<tr><td class="marcpo-history-no-results" colspan="' . ( count( $editions ) + 3 ) . '">' . esc_html__( 'Aucun potier ne correspond à cette recherche.', 'poterie-navarraise-market-manager' ) . '</td></tr>'; }
 		foreach ( $rows as $row ) {
 			$identity = $row['identity'];
 			echo '<tr><td>' . esc_html( $identity['last_name'] ?? '' ) . '</td><td>' . esc_html( $identity['first_name'] ?? '' ) . '</td><td>' . esc_html( $identity['email'] ?? '' ) . '</td>';

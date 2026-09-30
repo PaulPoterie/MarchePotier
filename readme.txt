@@ -32,6 +32,10 @@ No ACF or form builder is required. Blocks use the WordPress editor. Scripts and
 
 = Team and permissions =
 
+The admin menu is called "Gestion Marché Potier". The home page offers shortcuts, a setup guide and a contact email link showing the installed version. In simple selection mode the voter section is hidden; existing assignments and ratings are kept for a later return to multiple voting. Selection history has compact identity columns and a search restricted to surname, first name and email.
+
+The administrator's "Enregistrer l’édition et envoyer l’invitation" button saves the edition and sends the invitation after validation. Complete the required fields first. A new edition remains a draft until published. New accounts are also invited automatically when first saved. Existing accounts keep their passwords; ordinary saves do not resend their invitations.
+
 Each edition has one administrator identified by name and email. The "[Poterie Navarraise] Administrateur marché" role can manage editions, applications, pages and posts across the site, including other accounts' content. It cannot access technical settings, plugins or native user management.
 
 The "[Poterie Navarraise] Votant sélection" role can review applications in assigned editions. In multiple voting mode, active jurors can see jury ratings and update their own rating at any time. Application closing dates do not close voting. Point totals never select a candidate automatically.
@@ -46,7 +50,7 @@ The gallery displays names, town, postal code, techniques, website links and pro
 
 The application form requires authorization for public presentation if selected. A separate, optional checkbox authorizes sending the address to IGN and displaying it on the public map. It is unchecked by default. Refusing mapping does not prevent applying or appearing in the gallery. Telephone collection is unchanged; telephone numbers and email addresses are not sent to mapping providers.
 
-Mapping also requires explicit site-administrator authorization under Poterie Navarraise > Services externes. IGN geocoding and OpenStreetMap tiles have separate switches, both off by default. Enabling the plugin, publishing the selection or accepting photo publication does not enable either service or imply the applicant's mapping consent. Existing applications without the new mapping agreement are not mapped. Visitors do not have a separate map consent button.
+Mapping also requires explicit site-administrator authorization under Gestion Marché Potier > Services externes. IGN geocoding and OpenStreetMap tiles have separate switches, both off by default. Enabling the plugin, publishing the selection or accepting photo publication does not enable either service or imply the applicant's mapping consent. Existing applications without the new mapping agreement are not mapped. Visitors do not have a separate map consent button.
 
 = Data and privacy =
 
@@ -70,12 +74,12 @@ Organizers must define retention periods and update their site's privacy policy 
 
 1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. MySQL/MariaDB must support named locks.
 2. On staging, upload the ZIP containing the poterie-navarraise-market-manager folder through Plugins > Add New > Upload Plugin, then activate it.
-3. Sign in as a WordPress administrator and open Poterie Navarraise. Review the documented public file storage behavior and verify email delivery before collecting real applications.
+3. Sign in as a WordPress administrator and open Gestion Marché Potier. Review the documented public file storage behavior and verify email delivery before collecting real applications.
 4. Create an edition, complete its settings and required administrator, then publish it.
 5. Add the "Formulaire de candidature" block to a page and choose the edition. Use one form per page.
 6. Exclude the application page from page/CDN caching, ensure WP-Cron works and test a complete application.
 7. Add the "Présentation de la sélection" block, choose the edition and enable public selection when ready.
-8. To offer a map, a WordPress site administrator must read and enable the desired providers under Poterie Navarraise > Services externes. Applicants must separately opt in to address mapping. Purge page/CDN caches after changing provider settings or withdrawing mapping consent so cached pages reflect the change.
+8. To offer a map, a WordPress site administrator must read and enable the desired providers under Gestion Marché Potier > Services externes. Applicants must separately opt in to address mapping. Purge page/CDN caches after changing provider settings or withdrawing mapping consent so cached pages reflect the change.
 
 When switching from the former marche-potier package, deactivate the old plugin before activating this renamed package. WordPress may list them separately; do not activate both together.
 

@@ -12,6 +12,7 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 ## Identité et compatibilité
 
 - Nom officiel : **Poterie Navarraise Pottery Market Manager**. Présentation française : **Poterie Navarraise — Organisation de marchés potiers**.
+- Dans l'administration, le menu s'appelle **Gestion Marché Potier**, l'accueil **Gestion de Marché Potier**, avec la mention discrète « fait par Poterie Navarraise ». Ces libellés ne changent ni le nom officiel, ni le slug, ni les rôles existants.
 - Slug WordPress.org, dossier distribué et domaine gettext : `poterie-navarraise-market-manager`. Utiliser ce domaine littéral dans les traductions, avec échappement adapté au contexte.
 - Préfixes internes : `marcpo_`, `_marcpo_` et `marcpo-` selon le contexte ; namespace PHP `MarchePotier`. Ne pas réintroduire le préfixe court `mp_` pour les nouveaux identifiants propres au plugin.
 - Conserver les identifiants existants tels que `marche-potier.php`, les blocs `marche-potier/...`, la route REST et les clés de stockage. Le nom public n'impose pas leur remplacement global.

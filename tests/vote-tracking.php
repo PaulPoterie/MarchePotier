@@ -12,7 +12,7 @@ $_GET = array( 'marcpo_edition' => (string) $edition, 'marcpo_from' => 'votes', 
 ob_start(); Records::view(); $tracking_html = ob_get_clean();
 marcpo_check( str_contains( $tracking_html, esc_url( VoteTracking::url( $edition ) ) ) && strpos( $tracking_html, '>Suivi des votes</a>' ) < strpos( $tracking_html, '>Historique des sélections</a>' ) && Records::list_context()['marcpo_from'] === 'votes', 'Examiner : retour au suivi de la bonne édition et bouton avant Historique des sélections' );
 ob_start(); Plugin::render_dashboard(); $tracking_html = ob_get_clean();
-marcpo_check( str_contains( $tracking_html, '>Suivi des votes</a>' ) && str_contains( $tracking_html, '>Historique des sélections</a>' ) && ! str_contains( $tracking_html, '>Historique des candidatures</a>' ), 'Accueil : accès au suivi et nouveau libellé de l’historique' );
+marcpo_check( str_contains( $tracking_html, 'href="' . esc_url( VoteTracking::url() ) . '"' ) && str_contains( $tracking_html, 'href="' . esc_url( admin_url( 'admin.php?page=marcpo-historique' ) ) . '"' ) && str_contains( $tracking_html, 'Historique des sélections' ), 'Accueil : accès au suivi et nouveau libellé de l’historique' );
 wp_set_current_user( $b );
 marcpo_check( VoteTracking::data( $edition )['counts'] === $tracking['counts'], 'Tous les votants de l’édition consultent les mêmes compteurs' );
 $_GET = array( 'marcpo_edition' => (string) $other );

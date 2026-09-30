@@ -11,11 +11,17 @@ final class Editions {
 
 	public static function hooks(): void {
 		add_action( 'add_meta_boxes_marcpo_edition', array( self::class, 'add_box' ) );
+		add_action( 'edit_form_after_title', array( self::class, 'title_help' ) );
 		add_action( 'save_post_marcpo_edition', array( self::class, 'save' ) );
 		add_action( 'admin_notices', array( self::class, 'notice' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ) );
 		add_filter( 'manage_marcpo_edition_posts_columns', array( self::class, 'columns' ) );
 		add_action( 'manage_marcpo_edition_posts_custom_column', array( self::class, 'column' ), 10, 2 );
+	}
+
+	public static function title_help( \WP_Post $post ): void {
+		if ( 'marcpo_edition' !== $post->post_type || ! current_user_can( 'edit_post', $post->ID ) ) { return; }
+		echo '<p class="description">' . esc_html__( 'Saisir un titre de l’édition ci-dessus. Exemple : Marché potier 20XX.', 'poterie-navarraise-market-manager' ) . '</p>';
 	}
 
 	/** Migration idempotente, y compris lors d'une mise à jour sans réactivation. */

@@ -21,7 +21,8 @@ Each edition has one market administrator and can have several assigned jurors. 
 
 1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo, GD supporting JPEG/PNG/WebP and MySQL/MariaDB named locks. Local checks currently use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
 2. Upload the distribution ZIP through **Plugins → Add New → Upload Plugin**, then activate it. The package folder must be `poterie-navarraise-market-manager`. Keep development folders such as `docs` and `tests` out of the installable package.
-3. Open **Poterie Navarraise**, create an edition, configure its application dates and assign its required market administrator.
+3. Open **Gestion Marché Potier**, create an edition, configure its application dates and assign its required market administrator.
+   The **Enregistrer l’édition et envoyer l’invitation** button saves the edition and sends the administrator's invitation after validation. A new edition remains a draft until published. New accounts also receive an invitation automatically when first saved; existing accounts keep their passwords.
 4. Add the **Formulaire de candidature** block to a page and select the edition. Use one application form per page and exclude that page from page/CDN caching.
 5. Test a complete application and email delivery before opening applications to real candidates.
 6. Add the **Présentation de la sélection** block to another page and enable the edition's public selection when ready.
@@ -30,13 +31,15 @@ When switching from the former `marche-potier` package, deactivate the old plugi
 
 ## Mapping, consent and files
 
-**IGN geocoding and OpenStreetMap tiles are both off by default.** A WordPress site administrator can enable each provider separately under **Poterie Navarraise → Services externes**. Applicants must also give separate, optional consent before their address is sent for geocoding or displayed on the map. Refusing mapping does not prevent an application or an eligible exhibitor's gallery entry. The bundled Leaflet 1.9.4 library is served locally.
+**IGN geocoding and OpenStreetMap tiles are both off by default.** A WordPress site administrator can enable each provider separately under **Gestion Marché Potier → Services externes**. Applicants must also give separate, optional consent before their address is sent for geocoding or displayed on the map. Refusing mapping does not prevent an application or an eligible exhibitor's gallery entry. The bundled Leaflet 1.9.4 library is served locally.
 
 Photos and supporting documents are ordinary WordPress Media Library attachments: **their file URLs are public and do not require sign-in**. Application management and CSV export require appropriate permissions. Supporting documents are not displayed in the public gallery. Replacing a file or deleting an application preserves confirmed media; unwanted files must be removed explicitly from the Media Library.
 
 Temporary answers and transfers can be recovered for up to 24 hours, with physical cleanup dependent on browser activity and WordPress scheduled tasks. Back up the database and uploads together. Consult the [data, privacy, external services and Leaflet source documentation](readme.txt) before collecting real applications.
 
 ## Documentation and development
+
+The WordPress admin menu is **Gestion Marché Potier**. Its home page provides shortcuts, a setup guide and a support email link with the installed plugin version. In simple selection mode the voter section is hidden while existing assignments and scores are preserved. Selection history can be searched by surname, first name and email only.
 
 - [Contribution rules and WordPress.org regression checklist — French](AGENTS.md)
 - [Detailed user guide — French](docs/GUIDE-UTILISATEUR-FR.md)

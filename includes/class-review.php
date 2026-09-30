@@ -37,7 +37,7 @@ final class Review {
 		add_action( 'admin_post_marcpo_review_decision', array( self::class, 'save_decision' ) );
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( 'marcpo-historique' === ( Request::query( 'page' ) ?? '' ) ) {
-				wp_enqueue_style( 'marcpo-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.19.1' );
+				wp_enqueue_style( 'marcpo-history', plugins_url( '../assets/history.css', __FILE__ ), array(), '0.19.1.3' );
 				return;
 			}
 			if ( ! in_array( Request::query( 'page' ) ?? '', array( 'marcpo-gestion', 'marcpo-dossier' ), true ) ) { return; }

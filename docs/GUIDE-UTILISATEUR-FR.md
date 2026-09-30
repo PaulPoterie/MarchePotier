@@ -30,11 +30,11 @@ Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essa
 
 ## 2. Donner accès aux organisateurs
 
-Un administrateur WordPress accède au menu **Poterie Navarraise**. Le rôle **[Poterie Navarraise] Administrateur marché** permet de créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles, y compris ceux des autres comptes. Ces droits s’appliquent à l’ensemble du site. Ce rôle ne donne pas accès à la gestion des extensions, des utilisateurs ni aux réglages techniques de WordPress.
+Un administrateur WordPress accède au menu **Gestion Marché Potier**. Le rôle **[Poterie Navarraise] Administrateur marché** permet de créer, modifier, publier et supprimer les éditions, les candidatures, les pages et les articles, y compris ceux des autres comptes. Ces droits s’appliquent à l’ensemble du site. Ce rôle ne donne pas accès à la gestion des extensions, des utilisateurs ni aux réglages techniques de WordPress.
 
 Dans **Organisateur et votes** d’une édition, renseignez le nom et l’email obligatoires de l’**Administrateur du marché**. Il est unique, toujours actif, décide de la sélection en mode simple et participe aussi aux votes multiples. Le tableau **Votant pour la sélection** crée des comptes **[Poterie Navarraise] Votant sélection**, limités à la consultation et à leur propre note dans les éditions affectées. Il n’existe plus de bouton pour ajouter d’autres administrateurs.
 
-Pour remplacer l’administrateur, modifiez son nom et son email dans l’édition. Si le remplaçant figure déjà parmi les votants, décochez sa case **Actif** avant d’enregistrer : sa note reste liée au même compte. L’ancien administrateur devient votant inactif et sa note sort du total. Les droits WordPress préexistants de son compte sont conservés ; seul un administrateur du site peut les retirer.
+Pour remplacer l’administrateur, modifiez son nom et son email dans l’édition. En mode votes multiples, si le remplaçant figure déjà parmi les votants, décochez sa case **Actif** avant d’enregistrer : sa note reste liée au même compte. En mode simple, le changement de rôle est pris en charge à l’enregistrement sans afficher le tableau des votants. L’ancien administrateur devient votant inactif et sa note sort du total. Les droits WordPress préexistants de son compte sont conservés ; seul un administrateur du site peut les retirer.
 
 Les comptes existants gardent leurs identifiants et leurs mots de passe. Les anciens rôles sont renommés automatiquement sans recréer les comptes ; les notes restent associées aux mêmes personnes.
 
@@ -44,7 +44,7 @@ Dans cette liste, le filtre **Tous (avec ou sans notes) / Déjà noté par moi /
 
 ## 3. Créer une édition
 
-Ouvrez **Poterie Navarraise → Éditions → Ajouter**. Donnez un titre explicite, par exemple « Marché de potiers de Bayonne 2027 ».
+Ouvrez **Gestion Marché Potier → Éditions → Ajouter**. Donnez un titre explicite, par exemple « Marché de potiers de Bayonne 2027 ».
 
 Renseignez :
 
@@ -58,7 +58,11 @@ Renseignez :
 
 Précisez dans le texte complémentaire ce qui est compris dans le prix, les éventuels équipements fournis, les modalités de paiement et la date prévue de réponse aux candidats.
 
+Dans **Administrateur du marché**, le bouton **Enregistrer l’édition et envoyer l’invitation** sauvegarde l’ensemble des modifications puis invite l’administrateur renseigné, après validation des champs obligatoires. Le résultat de l’envoi apparaît sous le bouton. Une nouvelle édition reste en brouillon : ce bouton ne remplace pas sa publication. Les nouveaux comptes reçoivent aussi une invitation automatiquement lors de leur premier enregistrement ; les comptes existants conservent leur mot de passe et ne sont pas réinvités par un simple enregistrement.
+
 Publiez l’édition. L’ouverture des candidatures respecte automatiquement les dates : la publication ne rend pas le formulaire disponible avant la date de début.
+
+Le conseil sous le titre propose « Marché potier 20XX » comme exemple ; il ne rend pas le titre obligatoire. En mode **Simple — sélection directe**, la rubrique des votants est masquée. Choisir **Votes multiples** la fait réapparaître immédiatement. Les affectations et notes déjà enregistrées sont conservées lors d'un changement de mode.
 
 ## 4. Afficher le formulaire
 
@@ -122,7 +126,7 @@ La mise à la corbeille permet de retirer un spam ou un doublon. Le bouton **Cor
 
 ### Suivi des votes
 
-Ouvrez **Suivi des votes** depuis le menu Poterie Navarraise, l’accueil du plugin ou le bouton placé avant **Historique des sélections** dans **Examiner**. Depuis un dossier, son édition est déjà choisie.
+Ouvrez **Suivi des votes** depuis le menu Gestion Marché Potier, l’accueil du plugin ou le bouton placé avant **Historique des sélections** dans **Examiner**. Depuis un dossier, son édition est déjà choisie.
 
 Chaque ligne représente une candidature et chaque colonne un membre actif du jury, **administrateur compris**. Sous son nom, **10 votes / 30 candidatures** indique l’avancement de ce membre pour l’ensemble de l’édition. Une case **0/5** est un vote ; **—** signifie qu’aucune note n’est enregistrée. Les candidatures à la corbeille et les membres inactifs sont exclus du suivi.
 
@@ -131,6 +135,10 @@ Les administrateurs et les votants peuvent consulter ce tableau. Les votants ne 
 ## 8. Consulter l’historique et exporter
 
 L’**Historique des sélections** garde nom, prénom et email fixes à gauche ; les éditions défilent vers la droite. Vert : sélectionné ; rouge : non sélectionné ; gris : à examiner ; tiret : aucune candidature.
+
+Ces trois colonnes sont compactes. Le champ **Rechercher un potier** filtre uniquement le nom, le prénom et l'email affichés, sans distinction de casse ou d'accents. Plusieurs mots peuvent être combinés ; les intitulés d'édition et les autres réponses ne sont pas recherchés. **Effacer la recherche** réaffiche les personnes accessibles. Les totaux en tête des éditions ne changent pas avec la recherche.
+
+L'accueil **Gestion de Marché Potier** regroupe les accès et un guide de démarrage. En bas, **Besoin d'aide ?** permet de contacter `paul@poterie-navarraise.info` ; le lien prépare un email dont l'objet contient la version installée. Décrivez le problème avant de l'envoyer : le plugin n'envoie aucun message de support automatiquement.
 
 Sous chaque édition, `12 / 30` signifie 12 candidatures sélectionnées pour 30 places prévues. La ligne suivante donne le total des candidatures. La corbeille est exclue. Un tiret au dénominateur signifie que la capacité de l’édition n’a pas été renseignée.
 
@@ -144,7 +152,7 @@ Dans la rubrique **Affichage sur le site**, en bas de l’édition après les r�
 
 La galerie affiche tous les sélectionnés : trois colonnes sur grand écran, une sur téléphone, avec un diaporama carré des trois photos de créations. Elle présente nom, prénom, ville, code postal, techniques et liens web/réseaux. Les justificatifs et la photo du stand n’apparaissent pas dans cette galerie.
 
-Les services cartographiques sont **désactivés par défaut**. Un administrateur WordPress peut les autoriser dans **Poterie Navarraise → Services externes**, après lecture des informations sur les données transmises et des conditions des prestataires. Les deux cases sont indépendantes : l’IGN localise les adresses françaises ; OpenStreetMap fournit le fond de carte. Les organisateurs et votants ne disposent pas de ce réglage technique.
+Les services cartographiques sont **désactivés par défaut**. Un administrateur WordPress peut les autoriser dans **Gestion Marché Potier → Services externes**, après lecture des informations sur les données transmises et des conditions des prestataires. Les deux cases sont indépendantes : l’IGN localise les adresses françaises ; OpenStreetMap fournit le fond de carte. Les organisateurs et votants ne disposent pas de ce réglage technique.
 
 La carte nécessite aussi l’accord distinct de chaque candidat. Son absence n’empêche pas l’affichage de la fiche dans la galerie. L’accord et sa date figurent dans le dossier et l’export CSV ; la confirmation de candidature rappelle le choix. À la demande d’un candidat, décochez son autorisation cartographique dans **Modifier** pour retirer sa position et arrêter sa localisation. L’ancien accord de présentation publique ne vaut pas accord cartographique.
 

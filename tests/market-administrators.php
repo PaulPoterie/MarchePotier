@@ -36,7 +36,7 @@ marcpo_check( is_wp_error( marcpo_config( $edition, $raw ) ) && ! user_can( $a, 
 
 // Une erreur de paramètres ne doit jamais créer un compte ou accorder des droits.
 $new_email = 'mpvote_' . substr( $state['run'], 0, 8 ) . '_gestion@example.test';
-$raw = marcpo_raw( $edition ); $raw['administrator'] = array( 'name' => 'Gestion test', 'email' => $new_email );
+$raw = marcpo_raw( $edition ); $raw['administrator'] = array( 'name' => 'Gestion test', 'email' => $new_email, 'invite' => '1' );
 $_POST = array( 'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $edition ), 'marcpo_edition' => array( 'year' => '2098', 'opens' => 'invalide', 'closes' => '2098-12-31T23:00' ), 'marcpo_jury_nonce' => wp_create_nonce( 'marcpo_jury_' . $edition ), 'marcpo_jury' => $raw );
 $before_mails = count( $mails ); Editions::save( $edition );
 marcpo_check( ! email_exists( $new_email ) && count( $mails ) === $before_mails && Jury::settings( $edition ) === $before, 'Dates invalides : aucun compte créé, aucune invitation ni changement d’équipe' );

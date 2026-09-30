@@ -213,6 +213,8 @@ try {
 	wp_trash_post( $second ); wp_set_current_user( $b ); marcpo_check( is_wp_error( Votes::record( $second, '2' ) ), 'Vote refusé sur dossier à la corbeille' );
 	wp_set_current_user( 1 ); wp_untrash_post( $second );
 	require __DIR__ . '/market-administrators.php';
+	require __DIR__ . '/administrator-invitation.php';
+	require __DIR__ . '/admin-interface.php';
 	require __DIR__ . '/blocks-local.php';
 	require __DIR__ . '/application-sorting.php';
 	require __DIR__ . '/plugin-check-regressions.php';
