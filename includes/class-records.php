@@ -575,6 +575,18 @@ final class Records {
 		$editions = get_posts( array( 'post_type' => 'marcpo_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) );
 		$applications = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'date', 'order' => 'DESC' ) );
 		$editions = array_values( array_filter( $editions, static fn( $edition ) => Jury::can_view_edition( $edition->ID ) ) );
+		// Build the city choices only from accessible editions; an invalid filter never broadens access.
+		$cities = array(); $edition_city_keys = array();
+		foreach ( $editions as $edition ) {
+			$city = Editions::city( $edition->ID );
+			$key = '' === $city ? 'missing' : hash( 'sha256', strtolower( remove_accents( $city ) ) );
+			$edition_city_keys[ $edition->ID ] = $key;
+			if ( ! isset( $cities[ $key ] ) ) { $cities[ $key ] = '' === $city ? __( 'Ville non renseignée', 'poterie-navarraise-market-manager' ) : $city; }
+		}
+		uasort( $cities, static fn( string $left, string $right ) => strcasecmp( remove_accents( $left ), remove_accents( $right ) ) );
+		$city_filter = Request::query( 'marcpo_city' ) ?? ( Request::has_query( 'marcpo_city' ) ? 'invalid' : '' );
+		if ( '' !== $city_filter && ! isset( $cities[ $city_filter ] ) ) { $city_filter = 'invalid'; }
+		if ( '' !== $city_filter ) { $editions = array_values( array_filter( $editions, static fn( $edition ) => $edition_city_keys[ $edition->ID ] === $city_filter ) ); }
 		$applications = array_values( array_filter( $applications, static fn( $application ) => Jury::can_view_application( $application->ID ) ) );
 		$edition_ids = array_fill_keys( wp_list_pluck( $editions, 'ID' ), true );
 		$totals = array_fill_keys( array_keys( $edition_ids ), array( 'selected' => 0, 'applications' => 0 ) );
@@ -610,15 +622,20 @@ final class Records {
 			return strcmp( ( $left['identity']['last_name'] ?? '' ) . "\0" . ( $left['identity']['first_name'] ?? '' ), ( $right['identity']['last_name'] ?? '' ) . "\0" . ( $right['identity']['first_name'] ?? '' ) );
 		} );
 		echo '<div class="wrap"><h1>Historique des sélections</h1><p>Chaque ligne correspond à un potier et chaque colonne à une édition. Un tiret signifie qu’aucune candidature n’a été déposée pour cette édition.</p>';
-		if ( ! $editions ) { echo '<p>Aucune édition enregistrée.</p></div>'; return; }
-		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '" class="marcpo-history-search" role="search"><input type="hidden" name="page" value="marcpo-historique"><label for="marcpo-history-search">' . esc_html__( 'Rechercher un potier', 'poterie-navarraise-market-manager' ) . '</label><div><input type="search" id="marcpo-history-search" name="s" maxlength="200" value="' . esc_attr( $search ) . '" placeholder="' . esc_attr__( 'Nom, prénom ou email', 'poterie-navarraise-market-manager' ) . '" aria-describedby="marcpo-history-search-help"> <button type="submit" class="button">' . esc_html__( 'Rechercher', 'poterie-navarraise-market-manager' ) . '</button>';
-		if ( '' !== $search ) { echo ' <a class="button" href="' . esc_url( admin_url( 'admin.php?page=marcpo-historique' ) ) . '">' . esc_html__( 'Effacer la recherche', 'poterie-navarraise-market-manager' ) . '</a>'; }
-		echo '</div><p class="description" id="marcpo-history-search-help">' . esc_html__( 'Recherche uniquement sur le nom, le prénom et l’email, sans distinction de majuscules ou d’accents. Les totaux des éditions restent ceux de tous les dossiers accessibles.', 'poterie-navarraise-market-manager' ) . '</p></form>';
+		$history_url = admin_url( 'admin.php?page=marcpo-historique' );
+		echo '<form method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '" class="marcpo-history-search" role="search"><input type="hidden" name="page" value="marcpo-historique"><div class="marcpo-history-filters"><div><label for="marcpo-history-city">' . esc_html__( 'Ville du marché', 'poterie-navarraise-market-manager' ) . '</label><select id="marcpo-history-city" name="marcpo_city"><option value="">' . esc_html__( 'Toutes les villes', 'poterie-navarraise-market-manager' ) . '</option>';
+		if ( 'invalid' === $city_filter ) { echo '<option value="invalid" selected>' . esc_html__( 'Ville indisponible', 'poterie-navarraise-market-manager' ) . '</option>'; }
+		foreach ( $cities as $key => $label ) { echo '<option value="' . esc_attr( $key ) . '"' . selected( $city_filter, $key, false ) . '>' . esc_html( $label ) . '</option>'; }
+		echo '</select></div><div><label for="marcpo-history-search">' . esc_html__( 'Rechercher un potier', 'poterie-navarraise-market-manager' ) . '</label><input type="search" id="marcpo-history-search" name="s" maxlength="200" value="' . esc_attr( $search ) . '" placeholder="' . esc_attr__( 'Nom, prénom ou email', 'poterie-navarraise-market-manager' ) . '" aria-describedby="marcpo-history-search-help"></div><button type="submit" class="button">' . esc_html__( 'Rechercher', 'poterie-navarraise-market-manager' ) . '</button>';
+		if ( '' !== $search ) { echo '<a class="button" href="' . esc_url( add_query_arg( 'marcpo_city', $city_filter, $history_url ) ) . '">' . esc_html__( 'Effacer la recherche', 'poterie-navarraise-market-manager' ) . '</a>'; }
+		if ( '' !== $city_filter ) { echo '<a class="button" href="' . esc_url( $history_url ) . '">' . esc_html__( 'Réinitialiser les filtres', 'poterie-navarraise-market-manager' ) . '</a>'; }
+		echo '</div><p class="description" id="marcpo-history-search-help">' . esc_html__( 'La ville filtre les éditions du marché. La recherche porte uniquement sur le nom, le prénom et l’email des potiers, sans distinction de majuscules ou d’accents. Les totaux des éditions affichées restent ceux de tous leurs dossiers accessibles.', 'poterie-navarraise-market-manager' ) . '</p></form>';
+		if ( ! $editions ) { echo '<p>' . esc_html__( 'Aucune édition accessible pour cette ville.', 'poterie-navarraise-market-manager' ) . '</p></div>'; return; }
 		echo '<p class="marcpo-history-help">Faites défiler les éditions horizontalement. Nom, prénom et email restent visibles à gauche.</p><div class="marcpo-history-scroll" role="region" aria-label="Historique par édition, tableau défilant" tabindex="0"><table class="widefat marcpo-history-table" style="--marcpo-editions:' . count( $editions ) . '"><colgroup><col class="marcpo-history-last"><col class="marcpo-history-first"><col class="marcpo-history-email"><col span="' . count( $editions ) . '"></colgroup><thead><tr><th scope="col">Nom</th><th scope="col">Prénom</th><th scope="col">Email</th>';
 		foreach ( $editions as $edition ) {
 			$total = $totals[ $edition->ID ];
 			$places = Editions::settings( $edition->ID )['exhibitors'];
-			echo '<th scope="col">' . esc_html( $edition->post_title ) . '<span class="marcpo-history-counts"><span>' . esc_html( $total['selected'] . ' / ' . ( '' !== $places ? $places : '—' ) ) . '</span><span>' . esc_html( $total['applications'] . ( 1 === $total['applications'] ? ' candidature' : ' candidatures' ) ) . '</span></span></th>';
+			echo '<th scope="col">' . esc_html( $edition->post_title ) . '<span class="marcpo-history-city">' . esc_html( $cities[ $edition_city_keys[ $edition->ID ] ] ) . '</span><span class="marcpo-history-counts"><span>' . esc_html( $total['selected'] . ' / ' . ( '' !== $places ? $places : '—' ) ) . '</span><span>' . esc_html( $total['applications'] . ( 1 === $total['applications'] ? ' candidature' : ' candidatures' ) ) . '</span></span></th>';
 		}
 		echo '</tr></thead><tbody>';
 		if ( ! $rows ) { echo '<tr><td class="marcpo-history-no-results" colspan="' . ( count( $editions ) + 3 ) . '">' . esc_html__( 'Aucun potier ne correspond à cette recherche.', 'poterie-navarraise-market-manager' ) . '</td></tr>'; }

@@ -215,6 +215,7 @@ try {
 	require __DIR__ . '/market-administrators.php';
 	require __DIR__ . '/administrator-invitation.php';
 	require __DIR__ . '/admin-interface.php';
+	require __DIR__ . '/edition-city.php';
 	require __DIR__ . '/blocks-local.php';
 	require __DIR__ . '/application-sorting.php';
 	require __DIR__ . '/plugin-check-regressions.php';

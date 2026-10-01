@@ -128,6 +128,10 @@ Les [consignes de contribution et de prévention des régressions WordPress.org]
 
 L'historique applique les permissions avant la recherche. `s` est lu via `Request`, nettoyé et limité à 200 caractères ; seuls `last_name`, `first_name` et `email` de l'identité affichée participent au filtrage. Les mots sont littéraux, combinés par ET, sans distinction de casse ou d'accents. Les totaux d'édition sont calculés avant ce filtre. Les trois colonnes d'identité utilisent un `colgroup` de largeurs fixes pour ne pas s'étirer quand il y a peu d'éditions.
 
+La ville interne d’une édition est `city` dans `_marcpo_edition_settings`. Toute sauvegarde complète exige une chaîne non vide de 120 caractères maximum ; nettoyage par `sanitize_text_field`, normalisation des espaces Unicode, contrôle serveur avant modification de l’équipe ou invitation. Les anciennes métadonnées sans `city` donnent une chaîne vide, sans migration déduite du lieu public ni blocage des candidatures existantes. `Editions::introduction()` et le formulaire public n’utilisent pas cette ville.
+
+L’historique construit les choix de ville après contrôle d’accès aux éditions. Le paramètre `marcpo_city` utilise une empreinte de la ville normalisée sans accents et en minuscules, ou `missing` pour les anciennes éditions ; il doit correspondre aux choix autorisés. Un paramètre malformé ou inconnu donne un résultat vide. Ce filtre réduit les colonnes d’éditions et les candidatures avant les totaux et la recherche d’identité. La ville du candidat n’intervient pas. `tests/edition-city.php`, appelée par `votes-local.php`, couvre validation, conservation des données en cas d’échec, formulaire public, regroupement et cloisonnement des accès.
+
 Depuis ce dépôt, avec un PHP CLI configuré pour joindre la base Local :
 
 ```powershell

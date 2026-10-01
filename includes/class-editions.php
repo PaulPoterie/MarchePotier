@@ -93,7 +93,18 @@ final class Editions {
 
 	public static function settings( int $id ): array {
 		$value = get_post_meta( $id, self::META, true );
-		return array_merge( array( 'market_start' => '', 'market_end' => '', 'venue' => '', 'exhibitors' => '', 'price' => '', 'reduced_price' => '', 'reduced_description' => '', 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
+		return array_merge( array( 'city' => '', 'market_start' => '', 'market_end' => '', 'venue' => '', 'exhibitors' => '', 'price' => '', 'reduced_price' => '', 'reduced_description' => '', 'year' => '', 'opens' => '', 'closes' => '', 'selection_public' => false, 'presentation' => '', 'thank_you' => '', 'image' => 0, 'rules' => 0, 'application_document' => 0, 'stand_length' => '5', 'stand_editable' => true ), is_array( $value ) ? $value : array() );
+	}
+
+	/** Internal market city; never inferred from the public venue or applicant addresses. */
+	public static function city( int $id ): string {
+		$value = self::settings( $id )['city'];
+		return is_string( $value ) ? self::clean_city( $value ) : '';
+	}
+
+	private static function clean_city( string $value ): string {
+		$value = trim( preg_replace( '/\s+/u', ' ', sanitize_text_field( $value ) ) ?? '' );
+		return wp_html_excerpt( $value, 120, '' ) === $value ? $value : '';
 	}
 
 	public static function assets(): void {
@@ -142,8 +153,9 @@ final class Editions {
 	}
 
 	public static function market_fields( array $data ): void {
-		echo '<h3>Informations pratiques du marché</h3><p>Affichées au-dessus du formulaire public. Les dates du marché sont distinctes de la période de candidature. Les prix sont en euros, pour un emplacement sur l’ensemble du marché.</p><table class="form-table" role="presentation">';
+		echo '<h3>Informations pratiques du marché</h3><p>' . esc_html__( 'Les informations pratiques sont affichées au-dessus du formulaire public, sauf la ville de classement interne. Les dates du marché sont distinctes de la période de candidature. Les prix sont en euros, pour un emplacement sur l’ensemble du marché.', 'poterie-navarraise-market-manager' ) . '</p><table class="form-table" role="presentation">';
 		echo '<tr><th><label for="marcpo-year">Édition de l’année *</label></th><td><input class="regular-text" id="marcpo-year" name="marcpo_edition[year]" type="number" min="2000" max="9999" required value="' . esc_attr( $data['year'] ) . '"></td></tr>';
+		echo '<tr><th><label for="marcpo-city">' . esc_html__( 'Ville', 'poterie-navarraise-market-manager' ) . ' *</label></th><td><input class="regular-text" id="marcpo-city" name="marcpo_edition[city]" type="text" maxlength="120" required value="' . esc_attr( is_string( $data['city'] ?? null ) ? $data['city'] : '' ) . '" aria-describedby="marcpo-city-help"><p class="description" id="marcpo-city-help">' . esc_html__( 'Ville du marché, utilisée pour filtrer l’historique des sélections. Ce champ n’est pas affiché dans le formulaire public.', 'poterie-navarraise-market-manager' ) . '</p></td></tr>';
 		$fields = array( 'market_start' => array( 'Date de début du marché', 'date' ), 'market_end' => array( 'Date de fin du marché', 'date' ), 'venue' => array( 'Lieu d’exposition', 'text' ), 'exhibitors' => array( 'Nombre d’exposants', 'number' ), 'price' => array( 'Prix de l’emplacement (€)', 'number' ), 'reduced_price' => array( 'Prix de l’emplacement — tarif réduit (€)', 'number' ) );
 		foreach ( $fields as $key => [ $label, $type ] ) {
 			$optional = 'reduced_price' === $key;
@@ -264,6 +276,9 @@ final class Editions {
 	}
 
 	public static function validate( array $data ): ?array {
+		if ( ! is_string( $data['city'] ?? null ) || strlen( $data['city'] ) > 480 ) { return null; }
+		$city = self::clean_city( $data['city'] );
+		if ( '' === $city ) { return null; }
 		foreach ( array( 'year', 'opens', 'closes' ) as $key ) {
 			if ( ! isset( $data[ $key ] ) || ! is_string( $data[ $key ] ) ) {
 				return null;
@@ -292,6 +307,7 @@ final class Editions {
 			if ( $media[ $key ] && ( 'attachment' !== get_post_type( $media[ $key ] ) || ! in_array( get_post_mime_type( $media[ $key ] ), 'image' === $key ? array( 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif' ) : array( 'application/pdf' ), true ) ) ) { return null; }
 		}
 		return $market + array(
+			'city' => $city,
 			'thank_you' => sanitize_textarea_field( $data['thank_you'] ?? '' ),
 			'presentation' => isset( $data['presentation'] ) ? wp_kses_post( $data['presentation'] ) : '',
 			'image' => $media['image'], 'rules' => $media['rules'], 'application_document' => 0,
@@ -330,7 +346,7 @@ final class Editions {
 		if ( ! $screen || 'marcpo_edition' !== $screen->post_type || null === Request::query( 'marcpo_edition_error' ) || ! current_user_can( 'marcpo_manage_editions' ) ) {
 			return;
 		}
-		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999 et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'poterie-navarraise-market-manager' ) . '</p></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'Paramètres non enregistrés : indiquez une année entre 2000 et 9999, une ville (120 caractères maximum) et deux dates valides, avec une fermeture après l’ouverture. Vérifiez aussi les informations du marché (dates, lieu, exposants, prix et conditions du tarif réduit), la taille du stand (0,01 à 1000 m, deux décimales maximum), le texte et les médias (image ou PDF selon le champ). Les anciens paramètres sont conservés ; le titre et le statut WordPress peuvent avoir été enregistrés.', 'poterie-navarraise-market-manager' ) . '</p></div>';
 	}
 
 	/** À réutiliser côté serveur lors du dépôt, sans dépendre de WP-Cron. */

@@ -34,6 +34,8 @@ No ACF or form builder is required. Blocks use the WordPress editor. Scripts and
 
 The admin menu is called "Gestion Marché Potier". The home page offers shortcuts, a setup guide and a contact email link showing the installed version. In simple selection mode the voter section is hidden; existing assignments and ratings are kept for a later return to multiple voting. Selection history has compact identity columns and a search restricted to surname, first name and email.
 
+Each edition requires an internal market city ("Ville") below its year. It is not shown in the public application form. Selection history can be filtered by this market city, together with the identity search; only accessible editions contribute to the city choices and results. Existing editions without a city remain usable and can be found under "Ville non renseignée". Complete their city when next editing them. The applicant's city and the public venue description remain separate.
+
 The administrator's "Enregistrer l’édition et envoyer l’invitation" button saves the edition and sends the invitation after validation. Complete the required fields first. A new edition remains a draft until published. New accounts are also invited automatically when first saved. Existing accounts keep their passwords; ordinary saves do not resend their invitations.
 
 Each edition has one administrator identified by name and email. The "[Poterie Navarraise] Administrateur marché" role can manage editions, applications, pages and posts across the site, including other accounts' content. It cannot access technical settings, plugins or native user management.
