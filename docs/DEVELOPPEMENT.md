@@ -10,7 +10,7 @@ Le README présente le plugin en anglais ; le guide utilisateur français se tro
 
 | Emplacement | Usage |
 | --- | --- |
-| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif. Les correctifs de `fix/wordpress-review` sont fusionnés dans `main` pour la version 0.19.2. Vérifier la branche avant toute nouvelle modification. |
+| `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif. Les correctifs de `fix/wordpress-review` sont fusionnés dans `main` depuis la version 0.19.2 ; `feature/ville-editions` est intégrée pour la 0.19.3. Vérifier la branche avant toute nouvelle modification. |
 | `C:\Users\paul\Projects\MarchePotier\marche-potier` | Ancienne version stable conservée. |
 | `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Ancienne copie installée (0.19.0-beta.9). Les suites de test de revue chargent directement le dépôt actif à sa place, uniquement dans leur processus. |
 | `C:\Users\paul\Local Sites\marche-potier-migration\app\public\wp-content\plugins\poterie-navarraise-market-manager` | Copie récente du plugin utilisée dans Local. Synchroniser les fichiers vérifiés depuis le dépôt, après comparaison et sauvegarde des fichiers remplacés. |
