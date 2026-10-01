@@ -27,7 +27,10 @@
 
 .marcpo-history-search { margin:20px 0; }
 .marcpo-history-search label { display:block; margin-bottom:6px; font-weight:600; }
-.marcpo-history-search > div { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.marcpo-history-search > div { display:flex; flex-wrap:wrap; align-items:flex-end; gap:8px; }
+.marcpo-history-filters > div { max-width:100%; }
+.marcpo-history-filters select { min-width:180px; max-width:100%; margin:0; }
+.marcpo-history-city { display:block; margin-top:6px; font-size:12px; font-weight:400; }
 .marcpo-history-search input[type="search"] { width:320px; max-width:100%; margin:0; }
 .marcpo-history-table td.marcpo-history-no-results { position:static; width:auto; padding:24px; }
 

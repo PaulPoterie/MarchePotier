@@ -14,7 +14,7 @@ $invite_request = static function () use ( $invite_edition, $manager ): array {
 		'original_post_status' => get_post_status( $invite_edition ),
 		'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $invite_edition ),
 		'marcpo_jury_nonce' => wp_create_nonce( 'marcpo_jury_' . $invite_edition ),
-		'marcpo_edition' => array( 'year' => '2098', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00', 'market_start' => '2099-01-15', 'market_end' => '2099-01-16', 'venue' => "Place de l'église", 'exhibitors' => '30', 'price' => '50' ),
+		'marcpo_edition' => array( 'year' => '2098', 'city' => 'Bayonne', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00', 'market_start' => '2099-01-15', 'market_end' => '2099-01-16', 'venue' => "Place de l'église", 'exhibitors' => '30', 'price' => '50' ),
 		'marcpo_jury' => array( 'revision' => Jury::settings( $invite_edition )['revision'], 'mode' => 'simple', 'administrator' => array( 'name' => 'Responsable', 'email' => get_userdata( $manager )->user_email, 'invite' => '1' ) ),
 	);
 };

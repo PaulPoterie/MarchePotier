@@ -37,10 +37,10 @@ marcpo_check( is_wp_error( marcpo_config( $edition, $raw ) ) && ! user_can( $a, 
 // Une erreur de paramètres ne doit jamais créer un compte ou accorder des droits.
 $new_email = 'mpvote_' . substr( $state['run'], 0, 8 ) . '_gestion@example.test';
 $raw = marcpo_raw( $edition ); $raw['administrator'] = array( 'name' => 'Gestion test', 'email' => $new_email, 'invite' => '1' );
-$_POST = array( 'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $edition ), 'marcpo_edition' => array( 'year' => '2098', 'opens' => 'invalide', 'closes' => '2098-12-31T23:00' ), 'marcpo_jury_nonce' => wp_create_nonce( 'marcpo_jury_' . $edition ), 'marcpo_jury' => $raw );
+$_POST = array( 'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $edition ), 'marcpo_edition' => array( 'year' => '2098', 'city' => 'Bayonne', 'opens' => 'invalide', 'closes' => '2098-12-31T23:00' ), 'marcpo_jury_nonce' => wp_create_nonce( 'marcpo_jury_' . $edition ), 'marcpo_jury' => $raw );
 $before_mails = count( $mails ); Editions::save( $edition );
 marcpo_check( ! email_exists( $new_email ) && count( $mails ) === $before_mails && Jury::settings( $edition ) === $before, 'Dates invalides : aucun compte créé, aucune invitation ni changement d’équipe' );
-$_POST['marcpo_edition'] = array( 'year' => '2098', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00' );
+$_POST['marcpo_edition'] = array( 'year' => '2098', 'city' => 'Bayonne', 'opens' => '2020-01-01T00:00', 'closes' => '2098-12-31T23:00' );
 Editions::save( $edition ); $_POST = array();
 $new_admin = (int) email_exists( $new_email );
 if ( $new_admin ) { update_user_meta( $new_admin, '_marcpo_vote_test', $state['run'] ); $state['users'][] = $new_admin; marcpo_state(); }
@@ -74,7 +74,7 @@ marcpo_check( substr_count( $html, 'name="marcpo_jury[administrator][name]"' ) =
 ob_start(); Editions::render_box( get_post( $edition ) ); $html = ob_get_clean();
 marcpo_check( ! str_contains( $html, 'name="marcpo_edition[organizer_email]"' ), 'Le champ email indépendant de l’organisateur a disparu' );
 $before_settings = Editions::settings( $edition );
-$_POST = array( 'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $edition ), 'marcpo_edition' => array( 'year' => '2097', 'opens' => '2020-01-01T00:00', 'closes' => '2097-12-31T23:00' ) );
+$_POST = array( 'marcpo_edition_nonce' => wp_create_nonce( 'marcpo_save_edition_' . $edition ), 'marcpo_edition' => array( 'year' => '2097', 'city' => 'Bayonne', 'opens' => '2020-01-01T00:00', 'closes' => '2097-12-31T23:00' ) );
 Editions::save( $edition ); $_POST = array();
 marcpo_check( Editions::settings( $edition ) === $before_settings, 'Une requête omettant l’administrateur ne peut pas enregistrer les paramètres de l’édition' );
 wp_set_current_user( 1 );

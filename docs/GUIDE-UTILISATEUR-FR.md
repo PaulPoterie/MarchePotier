@@ -49,6 +49,7 @@ Ouvrez **Gestion Marché Potier → Éditions → Ajouter**. Donnez un titre exp
 Renseignez :
 
 - **Édition de l’année**, le premier champ des paramètres. Plusieurs éditions peuvent avoir la même année : chaque bloc conserve l’édition choisie, même si son titre ou son année change.
+- **Ville**, obligatoire juste sous l’année : indiquez la ville du marché. Elle sert au classement interne et au filtre de l’historique ; elle n’est pas affichée dans le formulaire public. Le lieu d’exposition reste le texte public et l’adresse du candidat est indépendante. Les éditions existantes sans ville continuent de fonctionner ; renseignez leur ville lors de leur prochaine modification.
 - L’ouverture et la fermeture des candidatures. Les heures déterminent la disponibilité réelle du formulaire, dans le fuseau horaire WordPress. La page publique affiche uniquement les dates.
 - Les dates du marché, son lieu, le nombre d’exposants et le prix de l’emplacement pour l’ensemble du marché.
 - Le tarif réduit, si nécessaire, avec l’explication des personnes concernées.
@@ -136,7 +137,9 @@ Les administrateurs et les votants peuvent consulter ce tableau. Les votants ne 
 
 L’**Historique des sélections** garde nom, prénom et email fixes à gauche ; les éditions défilent vers la droite. Vert : sélectionné ; rouge : non sélectionné ; gris : à examiner ; tiret : aucune candidature.
 
-Ces trois colonnes sont compactes. Le champ **Rechercher un potier** filtre uniquement le nom, le prénom et l'email affichés, sans distinction de casse ou d'accents. Plusieurs mots peuvent être combinés ; les intitulés d'édition et les autres réponses ne sont pas recherchés. **Effacer la recherche** réaffiche les personnes accessibles. Les totaux en tête des éditions ne changent pas avec la recherche.
+Choisissez une **Ville du marché**, puis cliquez sur **Rechercher** : seules les éditions de cette ville et leurs candidatures sont affichées. Les villes proposées viennent des éditions auxquelles vous avez accès. Les différences de majuscules, d’accents et d’espaces ne créent pas de doublon de ville. **Toutes les villes** regroupe les marchés accessibles ; **Ville non renseignée** permet de retrouver les anciennes éditions à compléter.
+
+Les trois colonnes d’identité sont compactes. Le champ **Rechercher un potier** filtre uniquement le nom, le prénom et l'email affichés, sans distinction de casse ou d'accents. Il se combine avec la ville du marché. Plusieurs mots peuvent être combinés ; les intitulés d'édition et les autres réponses ne sont pas recherchés. **Effacer la recherche** conserve la ville choisie. **Réinitialiser les filtres** revient à toutes les villes et personnes accessibles. Les totaux en tête des éditions affichées ne changent pas avec la recherche d’identité.
 
 L'accueil **Gestion de Marché Potier** regroupe les accès et un guide de démarrage. En bas, **Besoin d'aide ?** permet de contacter `paul@poterie-navarraise.info` ; le lien prépare un email dont l'objet contient la version installée. Décrivez le problème avant de l'envoyer : le plugin n'envoie aucun message de support automatiquement.
 

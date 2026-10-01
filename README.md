@@ -43,6 +43,8 @@ Temporary answers and transfers can be recovered for up to 24 hours, with physic
 
 The WordPress admin menu is **Gestion Marché Potier**. Its home page provides shortcuts, a setup guide and a support email link with the installed plugin version. In simple selection mode the voter section is hidden while existing assignments and scores are preserved. Selection history can be searched by surname, first name and email only.
 
+Editions require a **Ville** (market city) below the year. This internal field is not displayed in the public application form. The **Ville du marché** history filter shows only editions and applications for that market city and can be combined with the identity search. City choices come from editions the current user can access. Existing editions without a city remain available under **Ville non renseignée**; complete the city when next editing them. Applicant addresses and the public venue text are separate fields.
+
 - [Contribution rules and WordPress.org regression checklist — French](AGENTS.md)
 - [Detailed user guide — French](docs/GUIDE-UTILISATEUR-FR.md)
 - [Voting guide — French](docs/VOTES.md)
