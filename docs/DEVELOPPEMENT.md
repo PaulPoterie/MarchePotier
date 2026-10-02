@@ -170,6 +170,8 @@ Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier
 
 ## Cycle des médias
 
+Les bibliothèques du cœur sont chargées au point d'utilisation : `file.php` avant `wp_handle_upload`, `image.php` avant `wp_generate_attachment_metadata` lors de l'enregistrement ou de l'import. Le plugin n'utilise aucune fonction de `wp-admin/includes/media.php` et ne le charge pas. Les classes de système de fichiers restent nécessaires à la copie des anciens médias ; `upgrade.php` reste nécessaire à `dbDelta` pour la table des votes. Aucun fichier de démarrage WordPress n'est inclus par le code distribué.
+
 `MediaLibrary::store` reçoit les fichiers via `wp_handle_upload`, puis crée les pièces jointes et leurs métadonnées. Le formulaire signé ou le nonce administrateur est validé par l’appelant. `UploadDrafts::files` vérifie la révision et le propriétaire ; aucun identifiant de média fourni par le navigateur n’est accepté. Un rollback de candidature ne supprime pas les médias du brouillon.
 
 La finalisation intervient après sauvegarde de `_marcpo_record` et du reçu. Le nettoyage et les écritures partagent `SubmissionLock`. Avant suppression, le nettoyage vérifie toutes les références de candidature, corbeille comprise : un arrêt entre sauvegarde et finalisation ne détruit pas les médias. Les fichiers définitifs restent conservés après remplacement ou suppression du dossier. Les suppressions explicites de médias passent par `wp_delete_attachment`.

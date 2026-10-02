@@ -12,20 +12,15 @@ final class MediaLibrary {
 			elseif ( 'marcpo_candidature' === get_post_type( wp_get_post_parent_id( $id ) ) ) { echo 'Candidature enregistrée'; }
 		}, 10, 2 );
 	}
-	public static function load(): void {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		require_once ABSPATH . 'wp-admin/includes/media.php';
-		require_once ABSPATH . 'wp-admin/includes/image.php';
-	}
-
 	public static function register( string $path, string $mime, string $title, string $owner = '' ): int|\WP_Error {
-		self::load(); $path = wp_normalize_path( $path );
+		$path = wp_normalize_path( $path );
 		$id = wp_insert_attachment( wp_slash( array(
 			'post_mime_type' => $mime, 'post_title' => sanitize_text_field( $title ), 'post_status' => 'inherit',
 			'meta_input' => array( '_marcpo_temporary_until' => time() + DAY_IN_SECONDS, '_marcpo_draft_owner' => $owner ),
 		) ), $path, 0, true );
 		if ( is_wp_error( $id ) ) { return $id; }
 		// The marker is saved with the attachment, before potentially expensive image processing.
+		require_once ABSPATH . 'wp-admin/includes/image.php';
 		wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $path ) );
 		return $id;
 	}
@@ -56,7 +51,7 @@ final class MediaLibrary {
 	public static function store( array $uploads, bool $partial = false, string $owner = '' ): array|\WP_Error {
 		$uploads = self::validate_uploads( $uploads );
 		if ( is_wp_error( $uploads ) ) { return $uploads; }
-		self::load(); $stored = array();
+		$stored = array();
 		try {
 			foreach ( PrivateFiles::slots() as $slot => $label ) {
 				$file = $uploads[ $slot ] ?? null;
@@ -77,6 +72,7 @@ final class MediaLibrary {
 					if ( ! $info || $info[0] * $info[1] > 60000000 || max( $info[0], $info[1] ) > 12000 || ( $memory > 0 && memory_get_usage( true ) + $info[0] * $info[1] * 8 + 33554432 > $memory ) ) { throw new \RuntimeException( $label . ' : image trop grande pour le traitement.' ); }
 				}
 				// The caller validates the signed public form or the administrator nonce before this method.
+				require_once ABSPATH . 'wp-admin/includes/file.php';
 				$result = wp_handle_upload( $file, array( 'test_form' => false, 'mimes' => $mimes ) );
 				if ( isset( $result['error'] ) ) { throw new \RuntimeException( $label . ' : ' . $result['error'] ); }
 				$id = self::register( $result['file'], $result['type'], $label . ' — ' . $file['name'], $owner );
@@ -200,9 +196,9 @@ final class MediaLibrary {
 		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 1, 'fields' => 'ids', 'meta_query' => array( 'relation' => 'OR', array( 'key' => '_wp_attached_file', 'value' => $relative ), array( 'key' => '_marcpo_import_source', 'value' => $relative ) ) ) );
 		if ( $ids ) { $id = (int) $ids[0]; }
 		else {
-			self::load();
 			$id = wp_insert_attachment( wp_slash( array( 'post_mime_type' => $file['mime'], 'post_title' => $file['original_name'] ?? $file['label'] ?? wp_basename( $path ), 'post_status' => 'inherit', 'meta_input' => array( '_marcpo_import_source' => $relative ) ) ), $path, 0, true );
 			if ( is_wp_error( $id ) ) { return $id; }
+			require_once ABSPATH . 'wp-admin/includes/image.php';
 			wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $path ) );
 		}
 		$file['attachment_id'] = $id;
