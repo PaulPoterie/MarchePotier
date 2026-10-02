@@ -57,7 +57,7 @@ final class Plugin {
 		if ( ! current_user_can( 'marcpo_access_market' ) ) {
 			wp_die( esc_html__( 'Vous ne pouvez pas accéder à cette page.', 'poterie-navarraise-market-manager' ) );
 		}
-		$headers = get_file_data( dirname( __DIR__ ) . '/marche-potier.php', array( 'Version' => 'Version' ), 'plugin' );
+		$headers = get_file_data( dirname( __DIR__ ) . '/marche-potier.php', array( 'Version' => 'Version', 'PluginURI' => 'Plugin URI' ), 'plugin' );
 		$version = sanitize_text_field( $headers['Version'] );
 		$mailto = 'mailto:paul@poterie-navarraise.info?subject=' . rawurlencode( 'Gestion de Marché Potier — version ' . $version );
 		?>
@@ -109,6 +109,7 @@ final class Plugin {
 			<section class="marcpo-dashboard-contact" aria-labelledby="marcpo-dashboard-contact-title">
 				<div><h2 id="marcpo-dashboard-contact-title"><?php esc_html_e( 'Besoin d’aide ?', 'poterie-navarraise-market-manager' ); ?></h2>
 				<p><?php esc_html_e( 'En cas de souci, contactez-nous en précisant la version du plugin et le problème rencontré.', 'poterie-navarraise-market-manager' ); ?></p>
+				<p><a href="<?php echo esc_url( $headers['PluginURI'] ); ?>"><?php esc_html_e( 'Visiter le site du plugin', 'poterie-navarraise-market-manager' ); ?></a></p>
 				<p class="description"><?php echo esc_html( 'Poterie Navarraise Pottery Market Manager · ' . $version ); ?></p></div>
 				<a class="button button-secondary" href="<?php echo esc_url( $mailto ); ?>">paul@poterie-navarraise.info</a>
 			</section>

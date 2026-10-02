@@ -2,6 +2,8 @@
 
 Poterie Navarraise — Organisation de marchés potiers — Guide utilisateur
 
+[Site officiel de présentation du plugin](https://gestion-marche-potier.poterie-navarraise.info/)
+
 Base publiée sur GitHub : 0.19.3 — corrections de développement du 2 octobre 2026 sur `fix/wordpress-core-includes`, pas encore livrées dans un nouveau ZIP.
 
 Cette version prépare les corrections demandées par WordPress.org. Le nouveau préfixe technique est `marcpo_` : les données de test de la 0.19.0 ne sont pas migrées et ne sont plus utilisées. Recréez les éditions et affectations pour les nouveaux essais. Le nom officiel est « Poterie Navarraise Pottery Market Manager » ; le slug WordPress.org et le domaine de traduction sont `poterie-navarraise-market-manager`. Le préfixe interne `marcpo_` est conservé.
@@ -143,7 +145,7 @@ Choisissez une **Ville du marché**, puis cliquez sur **Rechercher** : seules le
 
 Les trois colonnes d’identité sont compactes. Le champ **Rechercher un potier** filtre uniquement le nom, le prénom et l'email affichés, sans distinction de casse ou d'accents. Il se combine avec la ville du marché. Plusieurs mots peuvent être combinés ; les intitulés d'édition et les autres réponses ne sont pas recherchés. **Effacer la recherche** conserve la ville choisie. **Réinitialiser les filtres** revient à toutes les villes et personnes accessibles. Les totaux en tête des éditions affichées ne changent pas avec la recherche d’identité.
 
-L'accueil **Gestion de Marché Potier** regroupe les accès et un guide de démarrage. En bas, **Besoin d'aide ?** permet de contacter `paul@poterie-navarraise.info` ; le lien prépare un email dont l'objet contient la version installée. Décrivez le problème avant de l'envoyer : le plugin n'envoie aucun message de support automatiquement.
+L'accueil **Gestion de Marché Potier** regroupe les accès et un guide de démarrage. En bas, **Besoin d'aide ?** propose **Visiter le site du plugin** et permet de contacter `paul@poterie-navarraise.info` ; le lien email prépare un message dont l'objet contient la version installée. Décrivez le problème avant de l'envoyer : le plugin n'envoie aucun message de support automatiquement.
 
 Sous chaque édition, `12 / 30` signifie 12 candidatures sélectionnées pour 30 places prévues. La ligne suivante donne le total des candidatures. La corbeille est exclue. Un tiret au dénominateur signifie que la capacité de l’édition n’a pas été renseignée.
 

@@ -2,6 +2,8 @@
 
 Manage pottery market applications, review supporting documents, collect jury ratings and publish selected exhibitors on a WordPress site.
 
+[Official plugin website — in French](https://gestion-marche-potier.poterie-navarraise.info/)
+
 **Latest version: 0.19.3.** Download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The plugin is undergoing WordPress.org review and has not been approved yet. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.

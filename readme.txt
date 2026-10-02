@@ -14,6 +14,8 @@ Manage pottery markets: applications, supporting documents, jury ratings, select
 
 Poterie Navarraise Pottery Market Manager helps pottery market organizers collect applications, review candidates and present selected exhibitors. The French description is "Poterie Navarraise — Organisation de marchés potiers". The interface and outgoing messages are currently mostly in French.
 
+Visit the [official plugin website](https://gestion-marche-potier.poterie-navarraise.info/) for a presentation in French.
+
 Version 0.19.3 is available on GitHub and is still undergoing WordPress.org review. Updating from 0.19.1 or 0.19.2 preserves existing editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. When switching from the old 0.19.0 test package, deactivate it first and create fresh editions and team assignments: the marcpo_ identifiers introduced in 0.19.1 do not migrate those older test records. Read the document storage information below.
 
 = Features =

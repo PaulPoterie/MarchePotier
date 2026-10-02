@@ -25,6 +25,8 @@ Le menu d'administration est **Gestion Marché Potier** et son accueil **Gestion
 
 Le nom officiel est « Poterie Navarraise Pottery Market Manager », avec la description française « Poterie Navarraise — Organisation de marchés potiers ». Le slug WordPress.org, le dossier du prochain paquet et le domaine de traduction sont `poterie-navarraise-market-manager`. Les appels gettext doivent utiliser ce domaine littéral.
 
+Le site de présentation est `https://gestion-marche-potier.poterie-navarraise.info/`. L'en-tête `Plugin URI` de `marche-potier.php` est relu avec la version pour le lien « Visiter le site du plugin » dans la rubrique d'aide de l'accueil. Ce sont de simples liens : aucun appel au site n'est effectué automatiquement par le plugin. Les liens GitHub des sources et des releases gardent leur fonction distincte.
+
 Le préfixe `marcpo_` (six lettres), sa variante `marcpo-` et le namespace PHP `MarchePotier` restent les identifiants internes. Ils évitent les collisions et ne sont pas tenus de correspondre au slug. Le fichier principal `marche-potier.php`, les identifiants des blocs, la route REST, les clés de stockage et les chemins historiques restent stables. Ne pas faire de remplacement global de `marche-potier`.
 
 Références : [préfixes WordPress](https://developer.wordpress.org/plugins/plugin-basics/best-practices/#prefix-everything) et [domaine de traduction](https://developer.wordpress.org/plugins/internationalization/how-to-internationalize-your-plugin/#text-domains).

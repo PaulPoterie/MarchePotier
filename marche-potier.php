@@ -1,6 +1,7 @@
 <?php
 /**
  * Plugin Name: Poterie Navarraise Pottery Market Manager
+ * Plugin URI: https://gestion-marche-potier.poterie-navarraise.info/
  * Description: Organize pottery markets with applications, supporting documents, jury ratings, exhibitor selection and an optional public map.
  * Version: 0.19.3
  * Requires at least: 6.6
