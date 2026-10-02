@@ -4,6 +4,8 @@ defined( 'ABSPATH' ) || exit;
 
 /** Copie de diffusion ; ne remplace jamais la photo du dossier. */
 final class SocialImages {
+	public const WIDTH = 1080;
+	public const HEIGHT = 1350;
 	public static function render( int $application ): void {
 		$files = Records::data( $application )['files'] ?? array();
 		foreach ( array( 'product1', 'product2', 'product3' ) as $slot ) {
@@ -11,48 +13,60 @@ final class SocialImages {
 			if ( $url ) { echo '<p><a href="' . esc_url( $url ) . '" target="_blank" rel="noopener">' . esc_html( PrivateFiles::slots()[ $slot ] . ' — copie réseaux sociaux 1 080 × 1 350' ) . '</a></p>'; }
 		}
 	}
-	public static function create( \GdImage $source, string $original ): array {
+	/** Only our export gets the padding adapters; WordPress loads their parent classes first. */
+	public static function editors( array $editors ): array {
+		foreach ( $editors as &$editor ) {
+			if ( 'WP_Image_Editor_Imagick' === $editor ) {
+				require_once __DIR__ . '/class-social-image-editor-imagick.php';
+				$editor = SocialImageEditorImagick::class;
+			} elseif ( 'WP_Image_Editor_GD' === $editor ) {
+				require_once __DIR__ . '/class-social-image-editor-gd.php';
+				$editor = SocialImageEditorGD::class;
+			}
+		}
+		return $editors;
+	}
+	private static function check( mixed $result ): void {
+		if ( is_wp_error( $result ) ) { throw new \RuntimeException( 'Traitement de l’image impossible avec l’éditeur WordPress.' ); }
+	}
+	public static function create( string $original ): array {
 		$memory = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
 		if ( $memory > 0 && memory_get_usage( true ) + 25165824 > $memory ) { throw new \RuntimeException( 'Mémoire insuffisante pour la copie sociale.' ); }
 		$uploads = wp_upload_dir(); $root = $uploads['path'];
 		if ( ! empty( $uploads['error'] ) ) { throw new \RuntimeException( 'Stockage indisponible.' ); }
-		$orientation = 1;
-		if ( function_exists( 'exif_read_data' ) && IMAGETYPE_JPEG === @exif_imagetype( $original ) ) {
-			$exif = @exif_read_data( $original );
-			$orientation = (int) ( $exif['Orientation'] ?? 1 );
-		}
-		$swapped = in_array( $orientation, array( 5, 6, 7, 8 ), true );
-		$width = imagesx( $source ); $height = imagesy( $source );
-		$scale = min( 1, ( $swapped ? 1350 : 1080 ) / $width, ( $swapped ? 1080 : 1350 ) / $height );
-		$w = max( 1, (int) round( $width * $scale ) ); $h = max( 1, (int) round( $height * $scale ) );
-		$photo = null; $canvas = null;
+		// Scope the native editor filter to this load, including when WordPress returns an error.
+		add_filter( 'wp_image_editors', array( self::class, 'editors' ), PHP_INT_MAX );
+		try { $editor = wp_get_image_editor( $original, array( 'methods' => array( 'marcpo_frame' ) ) ); }
+		finally { remove_filter( 'wp_image_editors', array( self::class, 'editors' ), PHP_INT_MAX ); }
+		self::check( $editor );
+		self::check( $editor->maybe_exif_rotate() );
+		$size = $editor->get_size();
+		// Do not enlarge small photographs or crop any part of the pottery.
+		if ( $size['width'] > self::WIDTH || $size['height'] > self::HEIGHT ) { self::check( $editor->resize( self::WIDTH, self::HEIGHT, false ) ); }
+		self::check( $editor->marcpo_frame() );
+		self::check( $editor->set_quality( 90 ) );
 		$name = bin2hex( random_bytes( 24 ) ) . '.jpg';
 		$path = $root . '/' . $name;
+		// These downloadable copies promise JPEG, even when the site converts ordinary thumbnails.
+		$jpeg = static function ( $formats, $filename ) use ( $path ) {
+			if ( $filename && wp_normalize_path( $filename ) === wp_normalize_path( $path ) ) { unset( $formats['image/jpeg'] ); }
+			return $formats;
+		};
+		add_filter( 'image_editor_output_format', $jpeg, PHP_INT_MAX, 2 );
 		try {
-			$photo = imagecreatetruecolor( $w, $h );
-			imagefill( $photo, 0, 0, imagecolorallocate( $photo, 255, 255, 255 ) );
-			if ( ! imagecopyresampled( $photo, $source, 0, 0, 0, 0, $w, $h, $width, $height ) ) { throw new \RuntimeException( 'Redimensionnement impossible.' ); }
-			if ( in_array( $orientation, array( 2, 5, 7 ), true ) ) { imageflip( $photo, IMG_FLIP_HORIZONTAL ); }
-			if ( 4 === $orientation ) { imageflip( $photo, IMG_FLIP_VERTICAL ); }
-			$angle = match ( $orientation ) { 3 => 180, 5, 8 => 90, 6, 7 => -90, default => 0 };
-			if ( $angle ) {
-				$rotated = imagerotate( $photo, $angle, 0 );
-				if ( ! $rotated ) { throw new \RuntimeException( 'Rotation impossible.' ); }
-				imagedestroy( $photo ); $photo = $rotated;
-			}
-			$canvas = imagecreatetruecolor( 1080, 1350 );
-			imagefill( $canvas, 0, 0, imagecolorallocate( $canvas, 255, 255, 255 ) );
-			imagecopy( $canvas, $photo, (int) floor( ( 1080 - imagesx( $photo ) ) / 2 ), (int) floor( ( 1350 - imagesy( $photo ) ) / 2 ), 0, 0, imagesx( $photo ), imagesy( $photo ) );
-			if ( ! imagejpeg( $canvas, $path, 90 ) ) { throw new \RuntimeException( 'Écriture impossible.' ); }
+			$saved = $editor->save( $path, 'image/jpeg' );
+			self::check( $saved );
+			if ( 'image/jpeg' !== $saved['mime-type'] || self::WIDTH !== $saved['width'] || self::HEIGHT !== $saved['height'] ) { throw new \RuntimeException( 'Format de copie inattendu.' ); }
+			unset( $editor ); // Release decoded pixels before WordPress generates attachment metadata.
+			// Metadata generation can also convert the full image; keep its JPEG protection until then.
 			$id = MediaLibrary::register( $path, 'image/jpeg', 'Copie réseaux sociaux — 1080 × 1350' );
 			if ( is_wp_error( $id ) ) { throw new \RuntimeException( $id->get_error_message() ); }
-			return array( 'attachment_id' => $id, 'mime' => 'image/jpeg', 'width' => 1080, 'height' => 1350 );
+			return array( 'attachment_id' => $id, 'mime' => 'image/jpeg', 'width' => self::WIDTH, 'height' => self::HEIGHT );
 		} catch ( \Throwable $error ) {
 			if ( is_file( $path ) ) { wp_delete_file( $path ); }
 			throw $error;
 		} finally {
-			if ( $photo ) { imagedestroy( $photo ); }
-			if ( $canvas ) { imagedestroy( $canvas ); }
+			remove_filter( 'image_editor_output_format', $jpeg, PHP_INT_MAX );
 		}
 	}
 }

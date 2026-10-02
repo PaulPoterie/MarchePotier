@@ -30,7 +30,7 @@ La version 0.19.4 change le mécanisme de verrouillage. Avant de remplacer une a
 
 Lors du passage de l’ancien dossier `marche-potier` au nouveau dossier `poterie-navarraise-market-manager`, désactivez l’ancienne extension avant d’activer la nouvelle. WordPress peut les présenter comme deux extensions distinctes : ne les activez pas ensemble.
 
-Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essais portent sur WordPress 7.1 et PHP 8.3. L’hébergement doit disposer de MySQL/MariaDB, ou de SQLite avec l’intégration officielle WordPress, ainsi que de Fileinfo et de GD avec JPEG, PNG et WebP. Le verrou livré depuis la 0.19.4 est testé sur MySQL et SQLite ; MariaDB n’a pas fait l’objet d’un banc séparé. Les autres adaptateurs de base ne sont pas validés. Les versions minimales déclarées n’ont pas toutes été testées séparément ; vérifiez le formulaire et les emails sur votre hébergement avant ouverture.
+Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essais portent sur WordPress 7.1 et PHP 8.3. L’hébergement doit disposer de MySQL/MariaDB, ou de SQLite avec l’intégration officielle WordPress, ainsi que de Fileinfo et d’un éditeur d’images WordPress (Imagick ou GD) avec JPEG, PNG et WebP pour les copies destinées aux réseaux sociaux. Le verrou livré depuis la 0.19.4 est testé sur MySQL et SQLite ; MariaDB n’a pas fait l’objet d’un banc séparé. Les autres adaptateurs de base ne sont pas validés. Les versions minimales déclarées n’ont pas toutes été testées séparément ; vérifiez le formulaire et les emails sur votre hébergement avant ouverture.
 
 Si le message « Un autre enregistrement est en cours » persiste après un arrêt brutal du serveur, contacter l’administrateur du site. Le verrou protège les écritures et n’est pas supprimé automatiquement sur la seule base de son âge. Son éventuelle remise à zéro doit attendre l’arrêt confirmé de toutes les écritures du plugin ; modifier les droits du dossier uploads ne corrige pas ce cas.
 
@@ -167,7 +167,7 @@ La carte nécessite aussi l’accord distinct de chaque candidat. Son absence n�
 
 Aucune clé API n’est requise. Le géocodage dépend des tâches planifiées WordPress, qui revérifient l’autorisation du site et du candidat à chaque exécution. Désactiver IGN arrête les nouvelles localisations ; désactiver OpenStreetMap masque la carte. Purgez les caches de pages/CDN après un changement ou un retrait d’accord pour actualiser les pages déjà mises en cache. Une adresse étrangère ou non reconnue peut rester absente de la carte sans empêcher la fiche d’apparaître dans la galerie.
 
-Après validation de la candidature, le plugin prépare automatiquement des copies JPEG de 1080 × 1350 pixels pour de futures publications Instagram et Facebook. La photo entière est conservée sur fond blanc, sans remplacer l’image du dossier. Les copies sont disponibles dans la médiathèque et par des liens sous les photos dans **Examiner**. Cette version ne publie pas automatiquement sur ces réseaux.
+Après validation de la candidature, le plugin prépare automatiquement des copies JPEG de 1080 × 1350 pixels pour de futures publications Instagram et Facebook. WordPress choisit le moteur disponible (Imagick ou GD). La photo entière est conservée sur fond blanc, sans agrandir les petites images ni remplacer l’image du dossier. Si le traitement échoue ou si aucun moteur n’est disponible, la candidature et son original restent enregistrés ; seule la copie est signalée en échec. Les copies sont disponibles dans la médiathèque et par des liens sous les photos dans **Examiner**. Cette version ne publie pas automatiquement sur ces réseaux.
 
 ## 10. Sauvegarde et entretien
 
@@ -185,3 +185,5 @@ Photos, justificatifs et copies pour les réseaux sociaux sont accessibles par l
 
 ### Adresses et centre de commune
 Avant l’envoi à IGN, les espaces du code postal sont retirés, les mots st/ST deviennent saint dans la rue et la commune, et les pays Pays Basque, Pays-Basque, Euskal Herri, Euskal-Herri, Euskal Herria sont interprétés comme France. Les réponses originales du dossier sont conservées. Si l’adresse précise ne convient pas, une seconde recherche porte sur la commune avec son code postal. Le point communal affiche « position approximative ». Une commune encore ambiguë ou introuvable reste sans point.
+
+**Code en développement après la 0.19.4 :** la prise en charge d’Imagick décrite ci-dessus n’est pas encore présente dans le ZIP 0.19.4 publié, qui utilise GD pour les copies.

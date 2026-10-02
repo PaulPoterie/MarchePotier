@@ -8,6 +8,8 @@ Manage pottery market applications, review supporting documents, collect jury ra
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.
 
+The development code now uses WordPress image editors with either Imagick or GD for social copies. This change is not included in the published 0.19.4 ZIP, which still requires GD for those copies.
+
 ## What the plugin does
 
 - Manage multiple market editions, application periods, venue information, prices, PDF rules and stand settings.
@@ -21,7 +23,7 @@ Each edition has one market administrator and can have several assigned jurors. 
 
 ## Install and get started
 
-1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo and GD supporting JPEG/PNG/WebP. Use MySQL/MariaDB or SQLite through the official WordPress SQLite Database Integration plugin. Local checks use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
+1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo and a WordPress image editor (Imagick or GD) supporting JPEG/PNG/WebP for social copies. Use MySQL/MariaDB or SQLite through the official WordPress SQLite Database Integration plugin. Local checks use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
 2. Upload the distribution ZIP through **Plugins → Add New → Upload Plugin**, then activate it. The package folder must be `poterie-navarraise-market-manager`. Keep development folders such as `docs` and `tests` out of the installable package.
 3. Open **Gestion Marché Potier**, create an edition, configure its application dates and assign its required market administrator.
    The **Enregistrer l’édition et envoyer l’invitation** button saves the edition and sends the administrator's invitation after validation. A new edition remains a draft until published. New accounts also receive an invitation automatically when first saved; existing accounts keep their passwords.

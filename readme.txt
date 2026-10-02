@@ -60,7 +60,7 @@ Mapping also requires explicit site-administrator authorization under Gestion Ma
 
 Contact details, answers, decisions, authorizations, team assignments, ratings and email status are stored in the WordPress database. Mapping authorization is recorded separately with the date of agreement. Applicants can contact the organizer to withdraw it; the organizer can uncheck the mapping agreement in the application. This removes its saved map position and cancels its queued geocoding task. Previously transmitted requests cannot be recalled from the provider. Organizers and jurors use WordPress accounts; applicants do not receive accounts.
 
-Photos and supporting documents are WordPress Media Library attachments with ordinary public file URLs. Files follow the configured WordPress uploads directory. JPEG copies at 1080 by 1350 pixels are generated locally after an application is saved and are also available in the Media Library. Nothing is posted automatically to Instagram or Facebook.
+Photos and supporting documents are WordPress Media Library attachments with ordinary public file URLs. Files follow the configured WordPress uploads directory. JPEG copies at 1080 by 1350 pixels are generated locally after an application is saved and are also available in the Media Library. WordPress selects the available image editor (Imagick or GD). Copies preserve the whole photo, centred on white, without enlarging small photos or replacing the source. If an editor is unavailable or processing fails, the application and its source file remain saved; only the optional copy is marked as failed. Nothing is posted automatically to Instagram or Facebook.
 
 Supporting documents have no special access protection. Their URLs can be opened without signing in. This does not display them in the selection gallery: that gallery only shows the selected product photographs and public presentation. Access to application management and CSV export still requires the appropriate WordPress permissions.
 
@@ -76,7 +76,7 @@ Organizers must define retention periods and update their site's privacy policy 
 
 == Installation ==
 
-1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. Use MySQL/MariaDB, or SQLite through the official WordPress SQLite Database Integration plugin.
+1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and a WordPress image editor (Imagick or GD) supporting JPEG, PNG and WebP for social copies. Use MySQL/MariaDB, or SQLite through the official WordPress SQLite Database Integration plugin.
 2. On staging, upload the ZIP containing the poterie-navarraise-market-manager folder through Plugins > Add New > Upload Plugin, then activate it.
 3. Sign in as a WordPress administrator and open Gestion Marché Potier. Review the documented public file storage behavior and verify email delivery before collecting real applications.
 4. Create an edition, complete its settings and required administrator, then publish it.

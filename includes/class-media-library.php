@@ -128,21 +128,18 @@ final class MediaLibrary {
 			if ( ! empty( $file['attachment_id'] ) ) { self::promote( (int) $file['attachment_id'], $application ); }
 			if ( ! empty( $file['social']['attachment_id'] ) ) { self::promote( (int) $file['social']['attachment_id'], $application ); }
 			if ( ! in_array( $slot, array( 'product1', 'product2', 'product3' ), true ) || ! empty( $file['social'] ) ) { continue; }
-			$path = PrivateFiles::path( $file ); $source = null;
+			$path = PrivateFiles::path( $file );
 			try {
 				if ( ! $path ) { throw new \RuntimeException( 'Photo indisponible.' ); }
 				$info = @getimagesize( $path ); $memory = wp_convert_hr_to_bytes( ini_get( 'memory_limit' ) );
 				if ( ! $info || ( $memory > 0 && memory_get_usage( true ) + $info[0] * $info[1] * 8 + 33554432 > $memory ) ) { throw new \RuntimeException( 'Mémoire insuffisante pour la copie sociale.' ); }
-				$source = @imagecreatefromstring( file_get_contents( $path ) );
-				if ( ! $source ) { throw new \RuntimeException( 'Photo illisible.' ); }
-				$social = SocialImages::create( $source, $path );
+				$social = SocialImages::create( $path );
 				$data['files'][ $slot ]['social'] = $social;
 				unset( $data['files'][ $slot ]['social_error'] );
 				// Persist the reference before clearing the temporary marker.
 				if ( ! update_post_meta( $application, Records::META, wp_slash( $data ) ) ) { self::remove_temporary( array( $social ) ); unset( $data['files'][ $slot ]['social'] ); throw new \RuntimeException( 'Copie non enregistrée.' ); }
 				self::promote( (int) $social['attachment_id'], $application );
 			} catch ( \Throwable $error ) { $data['files'][ $slot ]['social_error'] = true; $changed = true; }
-			finally { if ( $source ) { imagedestroy( $source ); } }
 		}
 		if ( $changed ) { update_post_meta( $application, Records::META, wp_slash( $data ) ); }
 	}
