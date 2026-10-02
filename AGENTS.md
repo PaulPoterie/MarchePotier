@@ -54,6 +54,13 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 - Garder des dépendances sous licences compatibles, leurs attributions et des sources lisibles accessibles. Ne pas ajouter de télémétrie, ressources distantes, crédits publics promotionnels ou mécanisme de mise à jour externe par défaut.
 - Mettre à jour ensemble les textes affectés : `readme.txt` et présentation GitHub en anglais, guide utilisateur français, documentation métier, changelog lors d'une livraison. Ne pas annoncer une compatibilité ou un résultat de test non vérifié.
 
+## Entretien et lisibilité
+
+- Pour le périmètre modifié, rechercher les fonctions, ressources, paramètres et branches devenus inutiles. Vérifier les appels directs mais aussi les hooks, callbacks de blocs/REST, tâches planifiées, scripts et anciens liens avant de supprimer. Une recherche textuelle sans appel direct ne prouve pas qu'un callback WordPress est mort.
+- Retirer les restes confirmés d'une implémentation abandonnée. Conserver les migrations et contrats de données encore utiles aux mises à jour ; expliquer leur rôle au lieu de les supprimer parce que le site de développement a déjà migré.
+- Ajouter des commentaires ciblés sur les responsabilités, préconditions, invariants et raisons des choix : verrou, reprise après échec, consentement, compatibilité. Ne pas paraphraser chaque instruction ni annoncer une garantie absente du code.
+- Consigner les limites et dettes identifiées dans `docs/DEVELOPPEMENT.md`. Une revue ponctuelle ne garantit pas l'absence totale de code mort ou de dette ; distinguer les corrections réalisées des refontes restant à envisager.
+
 ## Vérifications proportionnées à la modification
 
 - Relire le diff et les usages similaires ; vérifier la syntaxe PHP/JS modifiée et `git diff --check`.

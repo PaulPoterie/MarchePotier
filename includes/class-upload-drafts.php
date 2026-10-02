@@ -25,11 +25,13 @@ final class UploadDrafts {
 		}
 		return $data;
 	}
+	/** Reçu porté par la candidature, conservé après suppression du brouillon et mise à la corbeille. */
 	public static function receipt( string $key ): int {
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key, WordPress.DB.SlowDBQuery.slow_db_query_meta_value -- Idempotency receipt lookup limited to one ID by the exact draft key, including trashed submissions.
 		$ids = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => array( 'publish', 'private', 'draft', 'pending', 'future', 'trash' ), 'fields' => 'ids', 'posts_per_page' => 1, 'meta_key' => '_marcpo_upload_key', 'meta_value' => $key ) );
 		return $ids ? (int) $ids[0] : 0;
 	}
+	/** Le navigateur reçoit les libellés et la révision, jamais les chemins ni les IDs des médias. */
 	public static function state( array $data ): array {
 		$files = array();
 		foreach ( $data['files'] ?? array() as $slot => $file ) {
@@ -37,6 +39,7 @@ final class UploadDrafts {
 		}
 		return array( 'files' => $files, 'revision' => $data['revision'] ?? '', 'expires' => $data['expires'] ?? 0 );
 	}
+	/** Appelé sous verrou ; enregistrer le remplacement avant de retirer l'ancienne pièce temporaire. */
 	public static function upload( string $key, string $slot, array $uploads ): array|\WP_Error {
 		$data = self::read( $key );
 		if ( self::receipt( $key ) ) { return new \WP_Error( 'submitted', 'Cette candidature est déjà enregistrée. Rechargez la page pour afficher la confirmation.' ); }
@@ -79,6 +82,7 @@ final class UploadDrafts {
 		}
 		return $data['files'];
 	}
+	/** Oublie le brouillon après rattachement des médias ; le reçu durable reste dans la candidature. */
 	public static function finish( string $key ): void { delete_option( $key ); }
 	public static function cleanup(): void {
 		global $wpdb;

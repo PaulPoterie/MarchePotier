@@ -2,6 +2,10 @@
 namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Façade historique des pièces : stockage délégué à MediaLibrary, rendu et anciens liens conservés ici.
+ * Le nom de classe ne décrit plus leur confidentialité : les URL des médias sont publiques.
+ */
 final class PrivateFiles {
 	public const MAX_SIZE = 20971520;
 	/** Plafond plugin, limites PHP et éventuelle restriction WordPress. */

@@ -30,6 +30,7 @@ final class PublicForm {
 	private static function signature( int $edition, string $issued, string $random ): string {
 		return hash_hmac( 'sha256', self::session() . '|' . $edition . '|' . $issued . '|' . $random, wp_salt( 'nonce' ) );
 	}
+	/** Frontière HTTP commune au dépôt et aux transferts asynchrones : même session et formulaire signé. */
 	public static function request(): void {
 		if ( ! self::is_form_page() ) { return; }
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- WordPress page-cache interoperability constant; must keep this external name.
@@ -136,7 +137,11 @@ final class PublicForm {
 		}
 		return $clean;
 	}
-	/** Les coordonnées publiques ne peuvent jamais remplacer un profil existant. */
+	/**
+	 * Enregistre les réponses et pièces sous verrou ; l'appelant HTTP a déjà vérifié session et nonce.
+	 * Les coordonnées publiques ne remplacent jamais un profil existant. Le reçu rend un nouvel envoi
+	 * du même brouillon sans effet après une réponse réseau perdue ; les emails partent hors verrou.
+	 */
 	public static function submit( int $edition, array $raw, array $uploads, bool $consent = false, string $draft = '', string $revision = '', bool $map_consent = false ): int|\WP_Error {
 		if ( $draft && ( $receipt = UploadDrafts::receipt( $draft ) ) ) { return $receipt; }
 		if ( ! $consent ) { return new \WP_Error( 'consent', 'Pour envoyer votre candidature, veuillez cocher l’autorisation de présentation publique. La localisation sur la carte reste facultative.' ); }
@@ -146,6 +151,7 @@ final class PublicForm {
 		if ( ! SubmissionLock::acquire() ) { return new \WP_Error( 'busy', 'Un autre enregistrement est en cours. Réessayez dans quelques instants.' ); }
 		$files = array(); $created = array(); $ok = false;
 		try {
+			// Une autre requête a pu enregistrer ce brouillon pendant l'attente du verrou.
 			if ( $draft && ( $receipt = UploadDrafts::receipt( $draft ) ) ) { $ok = true; return $receipt; }
 			if ( ! Editions::is_open( $edition ) ) { return new \WP_Error( 'closed', 'La période de candidature vient de se terminer.' ); }
 			$email = strtolower( $clean['identity']['email'] );
@@ -168,6 +174,7 @@ final class PublicForm {
 			$data = $clean + array( 'potier_id' => (int) $potier, 'edition_id' => $edition, 'decision' => 'pending', 'internal' => array( 'notes' => '', 'social_date' => '' ), 'files' => $files, 'submitted_at' => gmdate( 'c' ), 'publication_consent' => $consent, 'map_consent' => $map_consent, 'map_consent_at' => $map_consent ? gmdate( 'c' ) : '', 'source' => 'public', 'email_verified' => false );
 			if ( ! update_post_meta( $app, Records::META, wp_slash( $data ) ) || ! update_post_meta( $app, '_marcpo_potier_id', $potier ) || ! update_post_meta( $app, '_marcpo_edition_id', $edition ) || ! update_post_meta( $app, '_marcpo_decision', 'pending' ) ) { throw new \RuntimeException( 'metadata' ); }
 			if ( $draft && ! update_post_meta( $app, '_marcpo_upload_key', $draft ) ) { throw new \RuntimeException( 'receipt' ); }
+			// Les réponses et références sont durables : ne plus les annuler si la finalisation échoue.
 			$ok = true;
 			MediaLibrary::finalize( $app );
 			update_post_meta( $app, '_marcpo_media_migrated', 1 );
@@ -176,6 +183,7 @@ final class PublicForm {
 		} catch ( \Throwable $error ) {
 			return new \WP_Error( 'save', 'L’enregistrement n’a pas abouti. Réessayez plus tard ; les pièces envoyées séparément restent disponibles pendant leur durée de conservation.' );
 		} finally {
+			// En cas d'échec, les pièces du brouillon restent disponibles pour une nouvelle tentative.
 			if ( ! $ok ) { foreach ( array_reverse( $created ) as $id ) { wp_delete_post( $id, true ); } if ( ! $draft ) { PrivateFiles::remove( $files ); } }
 			SubmissionLock::release();
 			if ( $ok && ! empty( $created ) && isset( $app ) && is_int( $app ) ) {

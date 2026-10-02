@@ -164,6 +164,16 @@ Les fichiers secondaires partagent les fixtures du point d’entrée : ne pas le
 
 Le [rapport de relecture du 16 septembre 2026](REVUE-CODE-2026-09-16.md) distingue les clarifications réalisées et les points restant à traiter, dont l’accès HTTP direct confirmé sur le site Local.
 
+### Entretien du 2 octobre 2026
+
+La recherche de code inutilisé couvre les 23 fichiers PHP d'exécution, les références aux ressources JS/CSS propres au plugin et les callbacks enregistrés dans WordPress. Elle a identifié `Notifications::render_status()`, ancien rendu sans appel ni hook : cette méthode est retirée. L'envoi, la réservation contre les doublons et les métadonnées de diagnostic des emails restent utilisés et conservés. Aucun fichier d'exécution entier n'a été identifié comme supprimable lors de cette revue. Le chargement inutile de `media.php` avait été retiré dans le correctif précédent.
+
+Les migrations d'identités et de médias, ainsi que les routes d'anciens téléchargements/exports, restent nécessaires aux sites mettant à jour une ancienne version. `PrivateFiles` garde son nom pour la compatibilité, mais délègue le stockage à `MediaLibrary` ; ce nom ne promet pas de stockage privé. Des commentaires ciblés expliquent ces responsabilités, le reçu de dépôt, la propriété des brouillons et les contrôles avant géocodage.
+
+Les grandes méthodes mêlant préparation des données et rendu (`Records::history()`, `PublicForm::request()`) restent des candidates à une extraction progressive lors de leurs prochaines évolutions, avec conservation des contrôles d'accès et des parcours sans JavaScript. Les anciennes clés stockées `application_document` (plus d'interface associée) et `email_verified` (toujours faux au dépôt, aucune vérification d'email) restent présentes : ne pas leur attribuer une fonctionnalité active ni modifier leur contrat de stockage implicitement. Les limites de volume et de modifications concurrentes ci-dessus ne sont pas corrigées par cet entretien.
+
+Cette revue combine recherche de références et lecture des parcours ; elle ne constitue pas une preuve exhaustive d'absence de code mort, notamment dans les sélecteurs CSS ou les comportements conditionnels du navigateur. Les tests et documents du dépôt restent utiles au développement et exclus du ZIP.
+
 ## 8. Livraison locale
 
 Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier les fichiers d’exécution modifiés dans le plugin du site Local. Comparer les empreintes des fichiers copiés. Ne pas copier `tests` ni les documents de développement. Enregistrer le résultat de vérification et le commit ; générer un ZIP uniquement lors d’une demande de livraison. Changer de branche ne change ni les fichiers installés ni la base WordPress.

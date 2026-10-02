@@ -29,6 +29,7 @@ final class GalleryMap {
 	public static function eligible( int $id ): bool {
 		return Gallery::eligible( $id ) && true === ( Records::data( $id )['map_consent'] ?? false );
 	}
+	/** Empreinte des réponses originales : normaliser une requête IGN ne doit pas masquer un changement d'adresse. */
 	public static function signature( array $identity ): string {
 		return hash( 'sha256', wp_json_encode( array_intersect_key( $identity, array_flip( array( 'address', 'city', 'postcode', 'country' ) ) ) ) );
 	}
@@ -48,6 +49,7 @@ final class GalleryMap {
 	}
 	/** Géocodage IGN des adresses françaises ; seuls les éléments de l'adresse sont transmis. */
 	public static function locate( int $id ): void {
+		// La tâche différée ne vaut pas autorisation : réglages et consentement peuvent avoir changé depuis.
 		if ( ! ExternalServices::enabled( 'ign' ) || ! self::eligible( $id ) ) { return; }
 		$identity = Records::data( $id )['identity'] ?? array();
 		$signature = self::signature( $identity );

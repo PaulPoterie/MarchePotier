@@ -3,17 +3,7 @@ namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
 final class Notifications {
-	public static function render_status( int $app ): void {
-		if ( ! current_user_can( 'marcpo_manage_applications' ) ) { return; }
-		$labels = array( 'accepted' => 'confié au service d’envoi', 'failed' => 'échec de l’envoi', 'missing_recipient' => 'adresse destinataire manquante ou invalide' );
-		$titles = array( 'candidate' => 'Confirmation au candidat' );
-		foreach ( Jury::settings( (int) ( Records::data( $app )['edition_id'] ?? 0 ) )['members'] as $uid => $member ) { $titles[ 'jury_' . $uid ] = 'Notification à ' . $member['name']; }
-		foreach ( $titles as $kind => $title ) {
-			$status = get_post_meta( $app, '_marcpo_mail_' . $kind, true );
-			if ( $status ) { echo '<p><strong>' . esc_html( $title ) . ' :</strong> ' . esc_html( $labels[ $status ] ?? $status ) . '.</p>'; }
-		}
-		if ( get_post_meta( $app, '_marcpo_mail_error', true ) ) { echo '<p>Une erreur est survenue lors de la préparation des emails. La candidature est bien enregistrée.</p>'; }
-	}
+	/** Résumé en texte brut des réponses validées ; les emails ne contiennent pas les pièces en annexe. */
 	public static function summary( array $data ): string {
 		$lines = array();
 		foreach ( array( 'identity' => Fields::identity(), 'activity' => Fields::activity() ) as $group => $schema ) {

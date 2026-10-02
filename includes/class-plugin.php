@@ -9,6 +9,7 @@ defined( 'ABSPATH' ) || exit;
 
 final class Plugin {
 
+	/** Point d'entrée appelé sur plugins_loaded ; les callbacks enregistrés ici vivent ensuite via WordPress. */
 	public static function boot(): void {
 		add_action( 'init', array( Editions::class, 'register' ) );
 		add_action( 'admin_init', array( Editions::class, 'install_permissions' ) );

@@ -2,6 +2,11 @@
 namespace MarchePotier;
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Conversion des profils partagés en réponses propres à chaque candidature, puis identités minimales.
+ * Les sauvegardes avant conversion permettent une reprise ; le marqueur final évite de tout rejouer.
+ * Reste nécessaire pour les sites mettant à jour directement une ancienne version.
+ */
 final class IdentityMigration {
 	public static function run(): void {
 		if ( '1' === get_option( 'marcpo_identity_model_version' ) || ! current_user_can( 'manage_options' ) || ! SubmissionLock::acquire() ) { return; }
@@ -28,6 +33,7 @@ final class IdentityMigration {
 				update_post_meta( $id, '_marcpo_potier_id', $data['potier_id'] );
 				if ( (int) get_post_meta( $id, '_marcpo_potier_id', true ) !== $data['potier_id'] ) { return; }
 			}
+			// Réduire les profils seulement après avoir recopié leurs réponses dans les candidatures.
 			foreach ( get_posts( array( 'post_type' => 'marcpo_potier', 'post_status' => $statuses, 'posts_per_page' => -1, 'fields' => 'ids' ) ) as $id ) {
 				$old = Records::data( $id );
 				$data = array( 'identity' => Records::minimal_identity( $old['identity'] ?? array() ) );
