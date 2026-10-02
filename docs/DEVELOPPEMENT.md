@@ -11,7 +11,7 @@ Le README présente le plugin en anglais ; le guide utilisateur français se tro
 | Emplacement | Usage |
 | --- | --- |
 | `C:\Users\paul\Projects\MarchePotier\.tools\publish-MarchePotier` | Dépôt actif. Les correctifs de `fix/wordpress-review` sont fusionnés dans `main` depuis la version 0.19.2 ; `feature/ville-editions` est intégrée pour la 0.19.3. Vérifier la branche avant toute nouvelle modification. |
-| `C:\Users\paul\Projects\MarchePotier\marche-potier` | Ancienne version stable conservée. |
+| `C:\Users\paul\Projects\MarchePotier\marche-potier` | Copie de lecture du code courant. À synchroniser depuis le dépôt actif après chaque modification du plugin et changement de branche de travail, puis vérifier les empreintes. |
 | `C:\Users\paul\Local Sites\marche-potier-test\app\public\wp-content\plugins\marche-potier` | Ancienne copie installée (0.19.0-beta.9). Les suites de test de revue chargent directement le dépôt actif à sa place, uniquement dans leur processus. |
 | `C:\Users\paul\Local Sites\marche-potier-migration\app\public\wp-content\plugins\poterie-navarraise-market-manager` | Copie récente du plugin utilisée dans Local. Synchroniser les fichiers vérifiés depuis le dépôt, après comparaison et sauvegarde des fichiers remplacés. |
 | `C:\Users\paul\Projects\MarchePotier\reports` | Rapports et résultats locaux, hors du paquet installable. |
@@ -186,6 +186,10 @@ Les grandes méthodes mêlant préparation des données et rendu (`Records::hist
 Cette revue combine recherche de références et lecture des parcours ; elle ne constitue pas une preuve exhaustive d'absence de code mort, notamment dans les sélecteurs CSS ou les comportements conditionnels du navigateur. Les tests et documents du dépôt restent utiles au développement et exclus du ZIP.
 
 ## 8. Livraison locale
+
+À la fin de chaque modification du plugin et après un changement de branche de travail, actualiser également la copie de lecture `C:\Users\paul\Projects\MarchePotier\marche-potier` depuis le dépôt actif. Elle contient `marche-potier.php`, `readme.txt`, `includes/` et `assets/`, avec les ajouts et suppressions correspondants. Comparer les fichiers avant remplacement et sauvegarder ceux remplacés ou retirés dans un nouveau rapport hors du plugin ; préserver et examiner les modifications inattendues de la copie. Vérifier ensuite l'égalité des chemins et des empreintes SHA-256, et conserver ce résultat dans `reports/` à la racine de l'espace de travail. L'ancienne copie 0.18.0 est conservée dans `reports/root-copy-sync-2026-10-02/before/`.
+
+Cette synchronisation fait partie de la procédure de travail ; aucun service en arrière-plan ne la réalise. La copie de lecture inclut les correctifs encore non publiés. Elle n'est pas une source de livraison : construire les ZIP depuis le dépôt actif. Sur un autre ordinateur, adapter le chemin de cette copie si elle existe.
 
 Vérifier la branche et son diff, exécuter les contrôles adaptés, puis copier les fichiers d’exécution modifiés dans le plugin du site Local. Comparer les empreintes des fichiers copiés. Ne pas copier `tests` ni les documents de développement. Enregistrer le résultat de vérification et le commit ; générer un ZIP uniquement lors d’une demande de livraison. Changer de branche ne change ni les fichiers installés ni la base WordPress.
 

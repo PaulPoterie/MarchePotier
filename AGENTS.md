@@ -83,6 +83,13 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 - Ne pas confondre contrôle statique et contrôle à l'exécution : charger le bootstrap officiel, vérifier que le plugin cible est effectivement actif/chargé dans l'environnement de test isolé, avec `WP_DEBUG`, et conserver la liste des contrôles réellement exécutés. Le simple `--require` de `cli.php` ne prouve pas leur activation.
 - Conserver résultat, versions des outils et empreintes des sources testées dans un nouveau rapport. Un ancien résultat vert ne valide pas des fichiers modifiés. Les tests CLI ne prouvent pas le rendu navigateur ni la livraison d'emails ; Plugin Check ne remplace pas la revue humaine WordPress.org.
 
+## Copie de lecture à la racine du projet
+
+- Dans l'espace de Paul, conserver `C:\Users\paul\Projects\MarchePotier\marche-potier` à jour à la fin de chaque modification du plugin et après un changement de branche de travail. Le dépôt actif `.tools/publish-MarchePotier` reste la source du développement et des livraisons.
+- Synchroniser `marche-potier.php`, `readme.txt`, `includes/` et `assets/` depuis les fichiers courants du dépôt, y compris ajouts et suppressions. Réévaluer cette liste si de nouveaux fichiers d'exécution apparaissent. Exclure `.git`, tests, documentation de développement, outils, rapports et secrets.
+- Comparer les sources et la copie avant remplacement ; sauvegarder les fichiers remplacés ou retirés hors du dossier du plugin. Examiner et préserver toute modification inattendue de la copie. Vérifier ensuite l'égalité de la liste des fichiers et de leurs empreintes SHA-256 ; consigner le résultat dans `reports/` à la racine de l'espace de travail.
+- Cette copie reflète le code courant, même non publié. Sa synchronisation ne constitue ni un test WordPress, ni une mise à jour de Local, ni une publication GitHub ou un nouveau ZIP. Aucun service de synchronisation automatique n'est installé.
+
 ## Préparation d'une livraison
 
 - Changer la version pour une nouvelle livraison publiée, sans modifier silencieusement un tag publié. Les champs `Version:` et `Stable tag:` doivent correspondre et contenir uniquement chiffres et points ; les suffixes comme `-beta.1` ont déjà été rejetés pour cette soumission.
