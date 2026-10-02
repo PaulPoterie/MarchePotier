@@ -34,6 +34,7 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 - Passer par `Request::uploads()` et `MediaLibrary::validate_uploads()` ; ne pas transmettre `$_FILES` brut au métier. Conserver la liste des emplacements autorisés, les contrôles de structure, d'origine réelle du transfert, de taille réelle, de nom, d'extension, de MIME détecté et les limites de traitement des images/PDF.
 - Ne pas faire confiance au MIME ou à la taille déclarés par le navigateur. Ne pas appliquer `wp_unslash` ou un nettoyage textuel aux chemins temporaires PHP ou aux données binaires.
 - Préserver les API de transfert et de pièces jointes WordPress, la propriété des brouillons, les révisions et le verrou commun. Ne pas reprendre un `SubmissionLock` déjà détenu ; garantir sa libération avec `finally`.
+- Le verrou commun utilise une ligne d'options atomique et un propriétaire unique, indépendamment du cache. Ne pas réintroduire `GET_LOCK`/`RELEASE_LOCK` ni interpréter leur simulation SQLite comme une protection. Préserver la suppression conditionnelle par propriétaire, le secours de fin de requête et l'absence de vol par expiration ; documenter la récupération après arrêt brutal. Tester les modifications de ce mécanisme sur MySQL et SQLite officiel, avec plusieurs processus.
 - Ne nettoyer comme temporaires que les médias explicitement marqués et non référencés, corbeille comprise. Préserver les médias confirmés lors d'un échec, remplacement ou retrait de candidature, selon le cycle documenté.
 - Les URL des médias, justificatifs compris, sont publiques par choix explicite du propriétaire. Garder cette information exacte dans les écrans et documents ; ne pas promettre une confidentialité que le stockage n'assure pas. Toute nouvelle demande de confidentialité doit être traitée comme une évolution du stockage et des accès.
 
@@ -68,6 +69,7 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 
 | Modification | Contrôles pertinents |
 | --- | --- |
+| Verrou commun, compatibilité de base | `tests/submission-lock-local.php` dans les bases jetables, puis suites votes et médias sur chaque moteur ciblé |
 | Entrées, droits, éditions, votes, blocs, tri | `tests/votes-local.php`, qui appelle aussi les régressions Plugin Check et les suites secondaires |
 | Transferts, formulaires, brouillons, médias | `tests/media-lifecycle-local.php`, avec les véritables requêtes HTTP du banc local |
 | Cartographie, consentement, services | `tests/cartography-local.php`, avec réponses externes simulées |

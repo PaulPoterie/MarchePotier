@@ -206,7 +206,7 @@ final class MediaLibrary {
 	}
 
 	public static function migrate(): array|\WP_Error {
-		if ( ! SubmissionLock::acquire() ) { return new \WP_Error( 'media', 'Migration occupée ; réessayez.' ); }
+		if ( ! SubmissionLock::acquire() ) { return SubmissionLock::error(); }
 		try {
 			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Resumable migration processes only a small batch of unconverted applications.
 			$ids = get_posts( array( 'post_type' => 'marcpo_candidature', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 10, 'fields' => 'ids', 'orderby' => 'ID', 'order' => 'ASC', 'meta_query' => array( array( 'key' => '_marcpo_media_migrated', 'compare' => 'NOT EXISTS' ) ) ) );

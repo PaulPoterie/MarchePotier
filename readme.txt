@@ -74,7 +74,7 @@ Organizers must define retention periods and update their site's privacy policy 
 
 == Installation ==
 
-1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. MySQL/MariaDB must support named locks.
+1. Use WordPress 6.6 or later and PHP 8.2 or later, Fileinfo and GD supporting JPEG, PNG and WebP. Use MySQL/MariaDB, or SQLite through the official WordPress SQLite Database Integration plugin.
 2. On staging, upload the ZIP containing the poterie-navarraise-market-manager folder through Plugins > Add New > Upload Plugin, then activate it.
 3. Sign in as a WordPress administrator and open Gestion Marché Potier. Review the documented public file storage behavior and verify email delivery before collecting real applications.
 4. Create an edition, complete its settings and required administrator, then publish it.
@@ -88,6 +88,12 @@ When switching from the former marche-potier package, deactivate the old plugin 
 Documented local tests use WordPress 7.1 and PHP 8.3. Declared minimum versions do not represent a fully tested compatibility matrix.
 
 == Frequently Asked Questions ==
+
+= Can I use SQLite or WordPress Playground? =
+
+The write lock uses the WordPress options table instead of MySQL named locks. MySQL and SQLite with the official SQLite Database Integration plugin are covered by the local database tests. MariaDB uses the same WordPress SQL path; it has not been tested separately in this test run. PostgreSQL, SQL Server and other third-party database adapters are not validated. Playground uses SQLite, but these local tests do not certify every browser/runtime combination.
+
+The lock is released after each operation, with a fallback at request shutdown. It is never taken over merely because an operation is slow. A hard server termination can leave an orphaned lock: if the busy message persists, ask the site administrator to investigate rather than changing upload permissions. Recovery requires confirming that no plugin write is still running.
 
 = Which files are accepted? =
 

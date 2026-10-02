@@ -19,7 +19,7 @@ Each edition has one market administrator and can have several assigned jurors. 
 
 ## Install and get started
 
-1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo, GD supporting JPEG/PNG/WebP and MySQL/MariaDB named locks. Local checks currently use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
+1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo and GD supporting JPEG/PNG/WebP. The current development code supports MySQL/MariaDB and SQLite through the official WordPress SQLite Database Integration plugin. Local checks use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
 2. Upload the distribution ZIP through **Plugins → Add New → Upload Plugin**, then activate it. The package folder must be `poterie-navarraise-market-manager`. Keep development folders such as `docs` and `tests` out of the installable package.
 3. Open **Gestion Marché Potier**, create an edition, configure its application dates and assign its required market administrator.
    The **Enregistrer l’édition et envoyer l’invitation** button saves the edition and sends the administrator's invitation after validation. A new edition remains a draft until published. New accounts also receive an invitation automatically when first saved; existing accounts keep their passwords.
@@ -28,6 +28,8 @@ Each edition has one market administrator and can have several assigned jurors. 
 6. Add the **Présentation de la sélection** block to another page and enable the edition's public selection when ready.
 
 Updating from 0.19.1 or 0.19.2 preserves editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. Back up the database and uploads, then upload the new distribution ZIP and replace the installed version.
+
+The portable write lock is a development change and is not included in the published 0.19.3 ZIP. It has been tested with MySQL and the official SQLite integration; MariaDB has not been run separately, and other database adapters are not validated. See the [database compatibility and recovery notes](readme.txt). An orphaned lock after a hard server termination requires maintenance with all plugin writes stopped; a running operation is never displaced by a timeout.
 
 When switching from the former `marche-potier` package, deactivate the old plugin before activating this one. The internal identifiers introduced in 0.19.1 do not migrate previous 0.19.0 test records or team assignments. Create fresh editions and team assignments.
 

@@ -103,7 +103,13 @@ Le select de tri est visuellement hors du formulaire, mais associé par `form="m
 
 Les points d’entrée HTTP vérifient les droits et le nonce avant d’appeler les fonctions métier. Le dépôt public ajoute une signature liée au cookie, vérifie l’édition du bloc et les dates, puis valide les champs et les pièces.
 
-`SubmissionLock` est un verrou MySQL commun au site, lié à la connexion. Il n’est pas réentrant : une fonction appelée sous verrou ne doit pas le reprendre. Utiliser `try/finally` pour le libérer. `Jury::configure()` et les opérations de brouillon attendent un verrou détenu par leur appelant ; `Votes::record()` et `PublicForm::submit()` prennent le leur. Le verrou ne rend pas plusieurs écritures transactionnelles. La `revision` du jury et celle des pièces détectent les formulaires périmés ; les réponses internes du dossier n’ont pas de révision équivalente.
+`SubmissionLock` est un verrou commun à la table d'options du site. Il utilise une insertion atomique de `_marcpo_submission_lock` avec `INSERT IGNORE`, comme le principe du verrou de `WP_Upgrader`, et l'index unique `option_name`. La valeur contient un propriétaire aléatoire et une date de diagnostic ; `autoload=no`. Aucune lecture ne passe par le cache d'options. La suppression exige le même propriétaire et utilise la table mémorisée à l'acquisition, même après un changement de blog. L'attente d'acquisition est limitée à trois secondes.
+
+Il n’est pas réentrant : une fonction appelée sous verrou ne doit pas le reprendre. Utiliser `try/finally` pour le libérer ; un callback de fin de requête sert de secours. `Jury::configure()` et les opérations de brouillon attendent un verrou détenu par leur appelant ; `Votes::record()` et `PublicForm::submit()` prennent le leur. Le verrou ne rend pas plusieurs écritures transactionnelles. La `revision` du jury et celle des pièces détectent les formulaires périmés ; les réponses internes du dossier n’ont pas de révision équivalente.
+
+Il n'y a pas de vol automatique d'un verrou ancien : dépasser une durée supposée ne prouve pas que son propriétaire s'est arrêté. Un arrêt brutal empêchant les callbacks PHP ou une perte de connexion à la base peut laisser la ligne en place. Pour la récupération, placer le site en maintenance, arrêter aussi cron/CLI et confirmer la fin de tous les traitements du plugin ; seulement ensuite retirer l'option `_marcpo_submission_lock` du site concerné, puis rouvrir les écritures. Ne pas ajouter un bouton de déblocage inconditionnel ni une expiration arbitraire. Une mise à jour depuis l'ancien verrou MySQL doit également attendre la fin des requêtes exécutant l'ancien code.
+
+MySQL et SQLite via SQLite Database Integration 3.0.2 sont testés avec WordPress 7.1.2 / PHP 8.3.33. MariaDB suit le même chemin SQL WordPress, sans banc distinct pour ce correctif. L'intégration SQLite traduit aussi le schéma `dbDelta`, `SHOW TABLES` et l'UPSERT des votes : les conserver tant que leurs tests de compatibilité passent. Les autres adaptateurs de base ne sont pas validés. Ne pas transformer le résultat simulé `1=1` de `GET_LOCK` sous SQLite en succès : il ne constitue pas un verrou.
 
 Les notifications de candidature réservent chaque tentative sous verrou puis appellent `wp_mail` après libération. Les invitations de comptes sont actuellement envoyées pendant la configuration du jury, sous son verrou : ne pas confondre ces deux circuits. Un échec d’email ne supprime pas la candidature et n’est pas relancé automatiquement.
 
@@ -152,6 +158,9 @@ La suite refuse un site autre que `marche-potier-test.local`. Elle charge le cod
 | `market-administrators.php` | Administrateur unique, remplacement, droits et notifications. |
 | `blocks-local.php` | Blocs par ID, dates et règles de publication ; absence de shortcodes. |
 | `application-sorting.php` | Six tris, accents, données absentes, pagination et navigation. |
+| `submission-lock-local.php` | Suite CLI autonome sur base jetable : exclusion entre processus, écritures concurrentes, propriétaire, cache, fin de requête, contexte de table, erreurs et migration vide. |
+
+Le banc de compatibilité de base, distinct du site Local habituel, définit `MARCPO_DB_REVIEW` et `WP_CONTENT_DIR` avant le bootstrap WordPress. Son `db.php` sélectionne exclusivement le préfixe jetable `marcpo_db261002_`, et pour SQLite définit `DB_ENGINE=sqlite` avec un `DB_DIR` isolé et l'intégration officielle. Les configurations PHP des processus enfants doivent reprendre ce bootstrap. Il intercepte les emails, bloque le HTTP externe et active `WP_DEBUG`. Ne jamais lancer ce test de verrou sur une base de production : il simule notamment un remplacement de propriétaire. Le banc courant et les résultats sont dans `.tools/database-review-20261002` et `reports/database-compatibility-2026-10-02`, hors distribution.
 
 Les fichiers secondaires partagent les fixtures du point d’entrée : ne pas les exécuter seuls. Pour un changement visuel, vérifier Gestion et Examiner avec un administrateur et un votant, ainsi que le défilement sur écran étroit. Les tests CLI ne prouvent ni le rendu navigateur ni la livraison réelle des emails.
 
@@ -159,7 +168,7 @@ Les fichiers secondaires partagent les fixtures du point d’entrée : ne pas le
 
 - Les médias sont intentionnellement publics par URL. Les anciens liens de téléchargement redirigent vers les médias sans authentification. La galerie conserve ses règles de sélection et de consentement. La migration conserve les anciennes copies extérieures à uploads après vérification ; leur éventuel retrait relève d’une maintenance distincte.
 - Les listes et l’historique chargent tous les IDs concernés, et le rapprochement d’identité parcourt les fiches. Le fonctionnement est adapté au jeu de démonstration ; un grand volume demande un profilage avant toute promesse de performance.
-- Les sauvegardes de candidature ne détectent pas deux modifications concurrentes de leurs réponses par deux administrateurs. Le jury, lui, possède une révision de formulaire.
+- Un formulaire de candidature resté ouvert peut écraser des réponses enregistrées entre-temps, y compris par le même administrateur dans deux onglets. La configuration de l'équipe possède, elle, une révision de formulaire.
 - Pas de publication automatique Meta, de relance automatique des emails ni de mise à jour depuis GitHub.
 
 Le [rapport de relecture du 16 septembre 2026](REVUE-CODE-2026-09-16.md) distingue les clarifications réalisées et les points restant à traiter, dont l’accès HTTP direct confirmé sur le site Local.

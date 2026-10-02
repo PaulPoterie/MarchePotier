@@ -49,6 +49,8 @@ final class PrivateFiles {
 		$plugin_screen = in_array( $screen->post_type, array( 'marcpo_edition', 'marcpo_potier', 'marcpo_candidature' ), true ) || 'toplevel_page_marche-potier' === $screen->id || str_starts_with( $screen->id, 'marche-potier_page_marcpo-' );
 		if ( ! $plugin_screen ) { return; }
 		$message = is_wp_error( $result ) ? $result->get_error_message() . ' Vérifiez les fichiers et les droits d’écriture du dossier uploads, puis rechargez cette page pour réessayer.' : 'Import des fichiers dans la médiathèque en cours. Rechargez cette page pour poursuivre ; ce message disparaîtra à la fin de l’import.';
+		// Un conflit ou une erreur de base ne permet pas de conclure à un défaut du dossier uploads.
+		if ( is_wp_error( $result ) && in_array( $result->get_error_code(), array( 'marcpo_lock_busy', 'marcpo_lock_storage' ), true ) ) { $message = $result->get_error_message(); }
 		echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html( $message ) . '</p></div>';
 	}
 	/** Suit le répertoire uploads configuré par WordPress, y compris en multisite. */

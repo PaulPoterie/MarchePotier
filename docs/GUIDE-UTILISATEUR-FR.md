@@ -2,7 +2,7 @@
 
 Poterie Navarraise — Organisation de marchés potiers — Guide utilisateur
 
-Version de travail 0.19.1 — 29 septembre 2026 — branche `fix/wordpress-review`.
+Base publiée sur GitHub : 0.19.3 — corrections de développement du 2 octobre 2026 sur `fix/wordpress-core-includes`, pas encore livrées dans un nouveau ZIP.
 
 Cette version prépare les corrections demandées par WordPress.org. Le nouveau préfixe technique est `marcpo_` : les données de test de la 0.19.0 ne sont pas migrées et ne sont plus utilisées. Recréez les éditions et affectations pour les nouveaux essais. Le nom officiel est « Poterie Navarraise Pottery Market Manager » ; le slug WordPress.org et le domaine de traduction sont `poterie-navarraise-market-manager`. Le préfixe interne `marcpo_` est conservé.
 
@@ -14,7 +14,7 @@ Ce dépôt contient le code actif du plugin : administration du marché, candida
 
 Les blocs **Formulaire de candidature** et **Présentation de la sélection** utilisent l’ID de l’édition choisie. Il n’y a plus de shortcodes. Chaque édition demande **un seul administrateur**, avec nom et email obligatoires. Les votes restent possibles à toute date en mode multiple.
 
-Dernière version soumise : **0.19.1**, sous l’ancien nom « Marché Potier ». Cette branche contient les corrections en cours, non encore soumises.
+La validation WordPress.org est toujours en cours. Les derniers correctifs de cette branche doivent être livrés et vérifiés avant une nouvelle soumission.
 
 ## 1. Installer le plugin
 
@@ -26,7 +26,9 @@ Pour mettre à jour une installation existante, sauvegardez d’abord la base Wo
 
 Lors du passage de l’ancien dossier `marche-potier` au nouveau dossier `poterie-navarraise-market-manager`, désactivez l’ancienne extension avant d’activer la nouvelle. WordPress peut les présenter comme deux extensions distinctes : ne les activez pas ensemble.
 
-Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essais de cette livraison portent sur WordPress 7.1 et PHP 8.3. L’hébergement doit disposer de MySQL/MariaDB avec les verrous nommés, de Fileinfo et de GD avec JPEG, PNG et WebP. Les versions minimales déclarées n’ont pas toutes été testées séparément ; vérifiez le formulaire et les emails sur votre hébergement avant ouverture.
+Prévoir WordPress 6.6 minimum déclaré et PHP 8.2 minimum déclaré ; les essais portent sur WordPress 7.1 et PHP 8.3. L’hébergement doit disposer de MySQL/MariaDB, ou de SQLite avec l’intégration officielle WordPress, ainsi que de Fileinfo et de GD avec JPEG, PNG et WebP. Le nouveau verrou est testé sur MySQL et SQLite ; MariaDB n’a pas fait l’objet d’un banc séparé. Les autres adaptateurs de base ne sont pas validés. Les versions minimales déclarées n’ont pas toutes été testées séparément ; vérifiez le formulaire et les emails sur votre hébergement avant ouverture. Le ZIP 0.19.3 ne contient pas encore ce correctif de compatibilité.
+
+Si le message « Un autre enregistrement est en cours » persiste après un arrêt brutal du serveur, contacter l’administrateur du site. Le verrou protège les écritures et n’est pas supprimé automatiquement sur la seule base de son âge. Son éventuelle remise à zéro doit attendre l’arrêt confirmé de toutes les écritures du plugin ; modifier les droits du dossier uploads ne corrige pas ce cas.
 
 ## 2. Donner accès aux organisateurs
 
