@@ -4,7 +4,7 @@ Manage pottery market applications, review supporting documents, collect jury ra
 
 [Official plugin website — in French](https://gestion-marche-potier.poterie-navarraise.info/)
 
-**Latest version: 0.19.3.** Download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The plugin is undergoing WordPress.org review and has not been approved yet. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
+**Latest version: 0.19.4.** Download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The plugin is undergoing WordPress.org review and has not been approved yet. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.
 
@@ -21,7 +21,7 @@ Each edition has one market administrator and can have several assigned jurors. 
 
 ## Install and get started
 
-1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo and GD supporting JPEG/PNG/WebP. The current development code supports MySQL/MariaDB and SQLite through the official WordPress SQLite Database Integration plugin. Local checks use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
+1. Use WordPress 6.6 or later and PHP 8.2 or later, with Fileinfo and GD supporting JPEG/PNG/WebP. Use MySQL/MariaDB or SQLite through the official WordPress SQLite Database Integration plugin. Local checks use WordPress 7.1 and PHP 8.3; the declared minimum versions are not a fully tested compatibility matrix.
 2. Upload the distribution ZIP through **Plugins → Add New → Upload Plugin**, then activate it. The package folder must be `poterie-navarraise-market-manager`. Keep development folders such as `docs` and `tests` out of the installable package.
 3. Open **Gestion Marché Potier**, create an edition, configure its application dates and assign its required market administrator.
    The **Enregistrer l’édition et envoyer l’invitation** button saves the edition and sends the administrator's invitation after validation. A new edition remains a draft until published. New accounts also receive an invitation automatically when first saved; existing accounts keep their passwords.
@@ -29,9 +29,9 @@ Each edition has one market administrator and can have several assigned jurors. 
 5. Test a complete application and email delivery before opening applications to real candidates.
 6. Add the **Présentation de la sélection** block to another page and enable the edition's public selection when ready.
 
-Updating from 0.19.1 or 0.19.2 preserves editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. Back up the database and uploads, then upload the new distribution ZIP and replace the installed version.
+Updating from 0.19.1, 0.19.2 or 0.19.3 preserves editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. Back up the database and uploads, then upload the new distribution ZIP and replace the installed version. Before upgrading to the new lock, stop plugin writes (including scheduled tasks and CLI jobs) and allow requests running the old version to finish.
 
-The portable write lock is a development change and is not included in the published 0.19.3 ZIP. It has been tested with MySQL and the official SQLite integration; MariaDB has not been run separately, and other database adapters are not validated. See the [database compatibility and recovery notes](readme.txt). An orphaned lock after a hard server termination requires maintenance with all plugin writes stopped; a running operation is never displaced by a timeout.
+Version 0.19.4 includes the portable write lock, tested with MySQL and the official SQLite integration; MariaDB has not been run separately, and other database adapters are not validated. See the [database compatibility and recovery notes](readme.txt). An orphaned lock after a hard server termination requires maintenance with all plugin writes stopped; a running operation is never displaced by a timeout.
 
 When switching from the former `marche-potier` package, deactivate the old plugin before activating this one. The internal identifiers introduced in 0.19.1 do not migrate previous 0.19.0 test records or team assignments. Create fresh editions and team assignments.
 

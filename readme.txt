@@ -4,7 +4,7 @@ Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.19.3
+Stable tag: 0.19.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ Poterie Navarraise Pottery Market Manager helps pottery market organizers collec
 
 Visit the [official plugin website](https://gestion-marche-potier.poterie-navarraise.info/) for a presentation in French.
 
-Version 0.19.3 is available on GitHub and is still undergoing WordPress.org review. Updating from 0.19.1 or 0.19.2 preserves existing editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. When switching from the old 0.19.0 test package, deactivate it first and create fresh editions and team assignments: the marcpo_ identifiers introduced in 0.19.1 do not migrate those older test records. Read the document storage information below.
+Version 0.19.4 is available on GitHub and is still undergoing WordPress.org review. Updating from 0.19.1, 0.19.2 or 0.19.3 preserves existing editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. When switching from the old 0.19.0 test package, deactivate it first and create fresh editions and team assignments: the marcpo_ identifiers introduced in 0.19.1 do not migrate those older test records. Read the document storage information below.
 
 = Features =
 
@@ -184,6 +184,14 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Changelog ==
 
+= 0.19.4 =
+
+* Remove an unused WordPress media library include and load required core libraries only at their point of use.
+* Replace MySQL named locks with an owner-checked options-table lock, tested with MySQL and the official SQLite integration.
+* Distinguish busy or unavailable database locks from upload-directory errors in migration notices.
+* Add the official plugin website to the plugin header, dashboard and documentation.
+* Remove unused notification rendering code and document media lifecycles, database compatibility and recovery.
+
 = 0.19.3 =
 
 * Require an internal market city below the edition year, with server-side validation; keep it out of the public application form.
@@ -225,6 +233,10 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 * WordPress Media Library storage, resumable file transfers and safe temporary media cleanup.
 
 == Upgrade Notice ==
+
+= 0.19.4 =
+
+Fixes core includes and SQLite locking. Existing data is preserved. Back up the database and uploads, stop plugin writes and allow in-flight requests to finish before updating from an earlier version.
 
 = 0.19.3 =
 
