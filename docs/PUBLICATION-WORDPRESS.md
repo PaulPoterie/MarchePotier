@@ -39,11 +39,11 @@ Un commit SVN réussi ne prouve pas encore la disponibilité du téléchargement
 - le nouveau tag dans le SVN ;
 - la version présentée sur la fiche publique et le ZIP généré par WordPress.org ;
 - une éventuelle demande de confirmation de release WordPress.org, si cette option est activée ;
-- la mise à jour proposée par WordPress sur une installation de test.
+- la disponibilité de la nouvelle version via l'API publique WordPress.org.
 
 Ne pas republier un tag pour tenter d'accélérer les caches de l'annuaire.
 
-Pour notre essai **0.19.4 → 0.19.5**, conserver d'abord une installation de test en 0.19.4 avec des données repérées et une sauvegarde. Activer les mises à jour automatiques de cette extension dans WordPress. Publier la 0.19.5 seulement après validation de la première publication, puis observer sa réception par le mécanisme natif WordPress. Vérifier versions, activation et conservation des éditions, candidatures, fichiers et notes. WP-Cron doit pouvoir s'exécuter ; une mise à jour manuelle ne démontre pas l'exécution automatique.
+Le périmètre de notre essai **0.19.4 → 0.19.5** est exclusivement **GitHub → SVN**. Envoyer d'abord le ZIP GitHub 0.19.4 via le lancement manuel, puis vérifier sa publication SVN. Une fois ce premier transfert validé, la publication ultérieure de la release GitHub 0.19.5 devra déclencher automatiquement le workflow ; contrôler le nouveau tag SVN et la disponibilité WordPress.org. Ce test ne modifie aucun site Local et ne cherche pas à déclencher les mises à jour des extensions installées sur des sites WordPress.
 
 ## Entretien
 
