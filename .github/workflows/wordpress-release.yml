@@ -1,0 +1,118 @@
+name: Publish WordPress.org
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing published GitHub release (for example v0.19.4)
+        required: true
+        type: string
+      dry_run:
+        description: Validate and stage without committing to SVN
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wordpress-org-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'PaulPoterie/MarchePotier' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'release' && !github.event.release.draft && !github.event.release.prerelease))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
+      RELEASE_WORK: ${{ runner.temp }}/marcpo-wordpress-release
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - name: Load trusted release tooling from main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Test release guards
+        run: python3 -m unittest discover -s tests -p test_wordpress_release.py -v
+
+      - name: Download and verify the exact release ZIP
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/wordpress_release.py prepare --tag "$RELEASE_TAG" --work "$RELEASE_WORK"
+
+      - name: Install SVN client if needed
+        run: |
+          if ! command -v svn >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y subversion
+          fi
+
+      - name: Prevent overwritten tags and downgrades
+        id: svn
+        run: python3 scripts/wordpress_release.py preflight --work "$RELEASE_WORK"
+
+      - name: Configure the isolated WordPress check
+        if: steps.svn.outputs.deploy == 'true'
+        run: python3 scripts/wordpress_release.py configure-check --work "$RELEASE_WORK"
+
+      - name: Check the actual package with official Plugin Check
+        if: steps.svn.outputs.deploy == 'true'
+        uses: WordPress/plugin-check-action@005058d6dbd2942b6a58610836b981c2ee3cc19d
+        with:
+          build-dir: ${{ steps.package.outputs.build_dir }}
+          slug: poterie-navarraise-market-manager
+          strict: true
+
+      - name: Confirm runtime coverage and unchanged package
+        if: steps.svn.outputs.deploy == 'true'
+        run: python3 scripts/wordpress_release.py audit-check --work "$RELEASE_WORK"
+
+      - name: Publish the verified files to SVN
+        if: steps.svn.outputs.deploy == 'true'
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2
+        with:
+          dry-run: ${{ env.DRY_RUN }}
+        env:
+          SVN_USERNAME: pauligno
+          SVN_PASSWORD: ${{ env.DRY_RUN == 'true' && 'dry-run' || secrets.SVN_PASSWORD }}
+          SLUG: poterie-navarraise-market-manager
+          VERSION: ${{ steps.package.outputs.version }}
+          BUILD_DIR: ${{ steps.package.outputs.build_dir }}
+
+      - name: Verify the committed SVN tag
+        if: steps.svn.outputs.deploy == 'true' && env.DRY_RUN != 'true'
+        run: python3 scripts/wordpress_release.py verify --work "$RELEASE_WORK"
+
+      - name: Summarize the result
+        if: success()
+        env:
+          DEPLOY: ${{ steps.svn.outputs.deploy }}
+          VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          {
+            echo "Version: $VERSION"
+            echo "Simulation: $DRY_RUN"
+            echo "New SVN tag needed: $DEPLOY"
+            echo "The exact GitHub release ZIP was checked."
+            echo "WordPress.org indexing or release confirmation may still be pending."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve verification reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: wordpress-release-verification
+          path: |
+            ${{ env.RELEASE_WORK }}/package.json
+            ${{ env.RELEASE_WORK }}/diagnostics/
+          if-no-files-found: ignore

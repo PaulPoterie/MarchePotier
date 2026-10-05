@@ -190,6 +190,8 @@ Cette revue combine recherche de références et lecture des parcours ; elle ne 
 
 ## 8. Livraison locale
 
+La publication officielle des versions est décrite dans [Publication GitHub → WordPress.org](PUBLICATION-WORDPRESS.md). Le workflow transmet le ZIP d'une release stable vers SVN après vérification de son contenu et Plugin Check ; une simple modification de `main` ne déclenche pas de publication. Le premier transfert conserve exactement le paquet 0.19.4, avant l'essai de mise à jour vers 0.19.5.
+
 À la fin de chaque modification du plugin et après un changement de branche de travail, actualiser également la copie de lecture `C:\Users\paul\Projects\MarchePotier\marche-potier` depuis le dépôt actif. Elle contient `marche-potier.php`, `readme.txt`, `includes/` et `assets/`, avec les ajouts et suppressions correspondants. Comparer les fichiers avant remplacement et sauvegarder ceux remplacés ou retirés dans un nouveau rapport hors du plugin ; préserver et examiner les modifications inattendues de la copie. Vérifier ensuite l'égalité des chemins et des empreintes SHA-256, et conserver ce résultat dans `reports/` à la racine de l'espace de travail. L'ancienne copie 0.18.0 est conservée dans `reports/root-copy-sync-2026-10-02/before/`.
 
 Cette synchronisation fait partie de la procédure de travail ; aucun service en arrière-plan ne la réalise. La copie de lecture inclut les correctifs encore non publiés. Elle n'est pas une source de livraison : construire les ZIP depuis le dépôt actif. Sur un autre ordinateur, adapter le chemin de cette copie si elle existe.

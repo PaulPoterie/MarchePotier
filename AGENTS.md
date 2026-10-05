@@ -97,7 +97,7 @@ Ces consignes conservent les enseignements des retours WordPress.org et les choi
 - Actualiser les versions de cache des assets modifiés ; les versions de migration du schéma et des droits sont distinctes. Ne pas transformer une modification de documentation en changement de version automatique.
 - Construire le ZIP depuis la source vérifiée, sous le dossier `poterie-navarraise-market-manager/`, avec `marche-potier.php`, `readme.txt`, `includes/` et `assets/`. Réévaluer cette liste si de nouveaux fichiers d'exécution sont nécessaires.
 - Exclure tests, docs de développement, `AGENTS.md`, rapports, outils locaux, secrets et fixtures du ZIP. Contrôler contenu, cohérence de version et empreinte ; garder les sources tierces et licences requises accessibles comme documenté.
-- GitHub sert au développement ; une sauvegarde GitHub ne publie pas une mise à jour WordPress.org. La stratégie d'automatisation des versions reste à décider avec le propriétaire. Ne pas ajouter un updater GitHub au plugin destiné à l'annuaire.
+- GitHub sert au développement ; une simple sauvegarde GitHub ne publie pas une mise à jour WordPress.org. La publication d'une release stable avec son ZIP déclenche désormais le workflow SVN décrit dans `docs/PUBLICATION-WORDPRESS.md`. Joindre le ZIP au brouillon avant publication, contrôler son identité avec le tag Git et ne jamais remplacer un tag livré. Le secret SVN reste dans GitHub Actions. Ne pas ajouter un updater GitHub au plugin destiné à l'annuaire.
 
 ## Références officielles
 
