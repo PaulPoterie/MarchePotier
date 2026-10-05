@@ -6,9 +6,9 @@ GitHub reste le dépôt de développement. WordPress.org distribue les versions 
 
 **Transfert effectué le 5 octobre 2026 :** la 0.19.4 est publiée sur WordPress.org, révision SVN **3728646**. Le [run réel réussi](https://github.com/PaulPoterie/MarchePotier/actions/runs/37296767328) a exécuté les 13 tests de livraison et les 34 contrôles Plugin Check, dont 5 à l'exécution, sans erreur ni avertissement Plugin Check. Les 46 fichiers du tag SVN et du ZIP téléchargé depuis WordPress.org correspondent exactement au ZIP GitHub. La simulation préalable est le run `37296272471` ; l'échec initial `37296188359` concernait une variable YAML déplacée depuis au bon emplacement, avant tout envoi.
 
-La publication 0.19.5 reste à préparer. Elle permettra de vérifier le déclenchement par l'événement `release.published` ; le premier transfert de la release 0.19.4 déjà existante a utilisé `workflow_dispatch`. Aucun site Local n'a été modifié pour cet essai.
+**Déclenchement automatique validé le 5 octobre 2026 :** la publication de la [release 0.19.5](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.5), avec son ZIP préalablement joint au brouillon, a déclenché l'événement `release.published`. Le [run 37298983306](https://github.com/PaulPoterie/MarchePotier/actions/runs/37298983306) a réussi et créé la révision SVN **3728709**. Les 48 fichiers du tag SVN et du téléchargement WordPress.org correspondent exactement au ZIP GitHub. L'API WordPress.org annonce la version 0.19.5. Les 13 tests de livraison et les 34 contrôles Plugin Check, dont 5 à l'exécution, passent sans erreur ni avertissement. Aucun site Local n'a été modifié pour cet essai.
 
-La première version à transférer est **0.19.4**, à partir du ZIP déjà joint à la release GitHub `v0.19.4`. Ne pas reconstruire ce ZIP depuis `main` : cette branche contient déjà la modification GD/Imagick prévue pour la 0.19.5. Le texte de la 0.19.4 qui mentionne encore la revue est conservé avec ce paquet ; il sera actualisé lors de la prochaine version. Les tags et paquets publiés restent immuables.
+La première version transférée était **0.19.4**, à partir du ZIP déjà joint à la release GitHub `v0.19.4`. Ne pas reconstruire ce ZIP depuis `main` : la modification GD/Imagick est livrée séparément en 0.19.5. Le texte de la 0.19.4 qui mentionne encore la revue est conservé avec ce paquet ; il est actualisé dans la 0.19.5. Les tags et paquets publiés restent immuables.
 
 Le workflow **Publish WordPress.org**, dans `.github/workflows/wordpress-release.yml`, possède un déclenchement manuel pour cette première publication et les reprises :
 
@@ -47,7 +47,7 @@ Un commit SVN réussi ne prouve pas encore la disponibilité du téléchargement
 
 Ne pas republier un tag pour tenter d'accélérer les caches de l'annuaire.
 
-Le périmètre de notre essai **0.19.4 → 0.19.5** est exclusivement **GitHub → SVN**. Envoyer d'abord le ZIP GitHub 0.19.4 via le lancement manuel, puis vérifier sa publication SVN. Une fois ce premier transfert validé, la publication ultérieure de la release GitHub 0.19.5 devra déclencher automatiquement le workflow ; contrôler le nouveau tag SVN et la disponibilité WordPress.org. Ce test ne modifie aucun site Local et ne cherche pas à déclencher les mises à jour des extensions installées sur des sites WordPress.
+L'essai **0.19.4 → 0.19.5** a validé exclusivement **GitHub → SVN** : transfert manuel de la release GitHub 0.19.4 déjà existante, puis déclenchement automatique à la publication de la release 0.19.5. Les tags SVN et les téléchargements WordPress.org ont été vérifiés. Ce test n'a modifié aucun site Local et n'a pas cherché à déclencher les mises à jour des extensions installées sur des sites WordPress.
 
 ## Entretien
 
