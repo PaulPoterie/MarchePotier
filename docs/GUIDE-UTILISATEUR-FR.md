@@ -4,9 +4,9 @@ Poterie Navarraise — Organisation de marchés potiers — Guide utilisateur
 
 [Site officiel de présentation du plugin](https://gestion-marche-potier.poterie-navarraise.info/)
 
-Version 0.19.4 — correctifs de revue WordPress.org, compatibilité SQLite et lien vers le site de présentation.
+Version 0.19.5 — copies d’images avec les éditeurs natifs WordPress, compatibles GD et Imagick.
 
-Cette version prépare les corrections demandées par WordPress.org. Le nouveau préfixe technique est `marcpo_` : les données de test de la 0.19.0 ne sont pas migrées et ne sont plus utilisées. Recréez les éditions et affectations pour les nouveaux essais. Le nom officiel est « Poterie Navarraise Pottery Market Manager » ; le slug WordPress.org et le domaine de traduction sont `poterie-navarraise-market-manager`. Le préfixe interne `marcpo_` est conservé.
+Le plugin est approuvé et disponible sur [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/). Le préfixe technique est `marcpo_` : les anciennes données de test de la 0.19.0 ne sont pas migrées. Si vous utilisez encore cette ancienne version de test, recréez les éditions et affectations. Le nom officiel est « Poterie Navarraise Pottery Market Manager » ; le slug WordPress.org et le domaine de traduction sont `poterie-navarraise-market-manager`. Le préfixe interne `marcpo_` est conservé.
 
 Ce dépôt contient le code actif du plugin : administration du marché, candidatures, notes de 0 à 5, invitations, suivi des votes et blocs publics.
 
@@ -24,7 +24,7 @@ Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser u
 
 Les ZIP de livraison utilisent le dossier `poterie-navarraise-market-manager`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
-Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis téléversez le nouveau ZIP et choisissez le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour. Le passage de 0.19.1, 0.19.2 ou 0.19.3 à 0.19.4 conserve les éditions, candidatures, affectations et notes. Téléchargez le fichier `poterie-navarraise-market-manager-0.19.4.zip` dans les fichiers de la [release GitHub](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.4), plutôt que les archives automatiques « Source code ».
+Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis utilisez la mise à jour proposée par WordPress ou téléversez le nouveau ZIP en choisissant le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour. Le passage des versions 0.19.1 à 0.19.4 vers la 0.19.5 conserve les éditions, candidatures, affectations, notes et fichiers. Pour une installation manuelle, téléchargez `poterie-navarraise-market-manager-0.19.5.zip` dans les fichiers de la [release GitHub](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.5), plutôt que les archives automatiques « Source code ».
 
 La version 0.19.4 change le mécanisme de verrouillage. Avant de remplacer une ancienne version, interrompez les écritures du plugin, y compris les tâches planifiées et CLI, et attendez la fin des requêtes déjà en cours.
 
@@ -186,4 +186,4 @@ Photos, justificatifs et copies pour les réseaux sociaux sont accessibles par l
 ### Adresses et centre de commune
 Avant l’envoi à IGN, les espaces du code postal sont retirés, les mots st/ST deviennent saint dans la rue et la commune, et les pays Pays Basque, Pays-Basque, Euskal Herri, Euskal-Herri, Euskal Herria sont interprétés comme France. Les réponses originales du dossier sont conservées. Si l’adresse précise ne convient pas, une seconde recherche porte sur la commune avec son code postal. Le point communal affiche « position approximative ». Une commune encore ambiguë ou introuvable reste sans point.
 
-**Code en développement après la 0.19.4 :** la prise en charge d’Imagick décrite ci-dessus n’est pas encore présente dans le ZIP 0.19.4 publié, qui utilise GD pour les copies.
+La prise en charge d’Imagick est disponible depuis la 0.19.5. Le ZIP 0.19.4 utilise uniquement GD pour ces copies.

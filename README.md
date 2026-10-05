@@ -4,13 +4,13 @@ Manage pottery market applications, review supporting documents, collect jury ra
 
 [Official plugin website — in French](https://gestion-marche-potier.poterie-navarraise.info/)
 
-**Latest version: 0.19.4.** Install from [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/) or download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
+**Latest version: 0.19.5.** Install from [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/) or download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 Stable GitHub releases with an attached distribution ZIP are published to WordPress.org through GitHub Actions and SVN. See the [release procedure (in French)](docs/PUBLICATION-WORDPRESS.md). Ordinary commits do not publish updates.
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.
 
-The development code now uses WordPress image editors with either Imagick or GD for social copies. This change is not included in the published 0.19.4 ZIP, which still requires GD for those copies.
+Version 0.19.5 uses native WordPress image editors with either Imagick or GD for social copies. Original photos and applications remain saved if an optional copy cannot be generated.
 
 ## What the plugin does
 
@@ -33,7 +33,7 @@ Each edition has one market administrator and can have several assigned jurors. 
 5. Test a complete application and email delivery before opening applications to real candidates.
 6. Add the **Présentation de la sélection** block to another page and enable the edition's public selection when ready.
 
-Updating from 0.19.1, 0.19.2 or 0.19.3 preserves editions, applications, team assignments and ratings. Existing editions without a city remain usable; enter their market city when next saving their settings. Back up the database and uploads, then upload the new distribution ZIP and replace the installed version. Before upgrading to the new lock, stop plugin writes (including scheduled tasks and CLI jobs) and allow requests running the old version to finish.
+Updating from versions 0.19.1 through 0.19.4 preserves editions, applications, team assignments, ratings and uploaded files. Existing editions without a city remain usable; enter their market city when next saving their settings. Back up the database and uploads, then update through WordPress or upload the new distribution ZIP and replace the installed version. When upgrading from a version older than 0.19.4, stop plugin writes (including scheduled tasks and CLI jobs) and allow requests running the old locking code to finish.
 
 Version 0.19.4 includes the portable write lock, tested with MySQL and the official SQLite integration; MariaDB has not been run separately, and other database adapters are not validated. See the [database compatibility and recovery notes](readme.txt). An orphaned lock after a hard server termination requires maintenance with all plugin writes stopped; a running operation is never displaced by a timeout.
 
