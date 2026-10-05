@@ -3,4 +3,6 @@
 *.css text eol=lf
 *.md text eol=lf
 *.txt text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
 assets/vendor/** -text
