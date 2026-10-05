@@ -4,7 +4,7 @@ Manage pottery market applications, review supporting documents, collect jury ra
 
 [Official plugin website — in French](https://gestion-marche-potier.poterie-navarraise.info/)
 
-**Latest version: 0.19.4.** Download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). WordPress.org hosting has been approved. The assigned directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
+**Latest version: 0.19.4.** Install from [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/) or download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 Stable GitHub releases with an attached distribution ZIP are published to WordPress.org through GitHub Actions and SVN. See the [release procedure (in French)](docs/PUBLICATION-WORDPRESS.md). Ordinary commits do not publish updates.
 

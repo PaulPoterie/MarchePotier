@@ -4,6 +4,10 @@ GitHub reste le dépôt de développement. WordPress.org distribue les versions 
 
 ## Première publication
 
+**Transfert effectué le 5 octobre 2026 :** la 0.19.4 est publiée sur WordPress.org, révision SVN **3728646**. Le [run réel réussi](https://github.com/PaulPoterie/MarchePotier/actions/runs/37296767328) a exécuté les 13 tests de livraison et les 34 contrôles Plugin Check, dont 5 à l'exécution, sans erreur ni avertissement Plugin Check. Les 46 fichiers du tag SVN et du ZIP téléchargé depuis WordPress.org correspondent exactement au ZIP GitHub. La simulation préalable est le run `37296272471` ; l'échec initial `37296188359` concernait une variable YAML déplacée depuis au bon emplacement, avant tout envoi.
+
+La publication 0.19.5 reste à préparer. Elle permettra de vérifier le déclenchement par l'événement `release.published` ; le premier transfert de la release 0.19.4 déjà existante a utilisé `workflow_dispatch`. Aucun site Local n'a été modifié pour cet essai.
+
 La première version à transférer est **0.19.4**, à partir du ZIP déjà joint à la release GitHub `v0.19.4`. Ne pas reconstruire ce ZIP depuis `main` : cette branche contient déjà la modification GD/Imagick prévue pour la 0.19.5. Le texte de la 0.19.4 qui mentionne encore la revue est conservé avec ce paquet ; il sera actualisé lors de la prochaine version. Les tags et paquets publiés restent immuables.
 
 Le workflow **Publish WordPress.org**, dans `.github/workflows/wordpress-release.yml`, possède un déclenchement manuel pour cette première publication et les reprises :
