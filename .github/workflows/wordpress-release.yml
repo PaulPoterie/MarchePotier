@@ -31,9 +31,11 @@ jobs:
     timeout-minutes: 35
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event.release.tag_name }}
-      RELEASE_WORK: ${{ runner.temp }}/marcpo-wordpress-release
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
+      - name: Set disposable staging directory
+        run: echo "RELEASE_WORK=$RUNNER_TEMP/marcpo-wordpress-release" >> "$GITHUB_ENV"
+
       - name: Load trusted release tooling from main
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
