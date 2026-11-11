@@ -106,7 +106,7 @@ final class Records {
 		echo '<label' . ( $grouped ? '' : ' class="screen-reader-text"' ) . ' for="marcpo-edition-filter">' . ( $grouped ? 'Édition' : 'Filtrer par édition' ) . '</label><select id="marcpo-edition-filter" name="marcpo_edition"><option value="">Toutes les éditions</option>';
 		foreach ( get_posts( array( 'post_type' => 'marcpo_edition', 'post_status' => self::STATUSES, 'posts_per_page' => -1, 'orderby' => 'title', 'order' => 'ASC' ) ) as $item ) {
 			if ( ! Jury::can_view_edition( $item->ID ) ) { continue; }
-			echo '<option value="' . esc_attr( $item->ID ) . '" ' . selected( $edition, $item->ID, false ) . '>' . esc_html( $item->post_title ) . '</option>';
+			echo '<option value="' . esc_attr( $item->ID ) . '" ' . selected( $edition, $item->ID, false ) . '>' . esc_html( Blocks::edition_label( $item->ID ) ) . '</option>';
 		}
 		echo '</select> ';
 		if ( $grouped ) { echo '</div><div class="marcpo-filter-field">'; }

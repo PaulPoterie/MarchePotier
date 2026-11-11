@@ -72,6 +72,7 @@ $ui_raw = marcpo_raw( $ui_edition ); unset( $ui_raw['members'] ); $ui_raw['mode'
 marcpo_check( true === marcpo_config( $ui_edition, $ui_raw ) && Jury::settings( $ui_edition )['members'] === $ui_members && Votes::all( array( $ui_apps[0] ) ) === $ui_notes, 'Retour aux votes multiples sans JS : aucun membre ni vote perdu' );
 ob_start(); Jury::box( get_post( $ui_edition ) ); $ui_box = ob_get_clean();
 marcpo_check( str_contains( $ui_box, 'id="marcpo-jury-voters"><legend>' ), 'Mode multiple : groupe des votants affiché et actif' );
+marcpo_check( str_contains( $ui_box, 'id="marcpo-voters-invite"' ) && str_contains( $ui_box, 'Valider l’édition et envoyer les invitations' ), 'Mode multiple : bouton d’invitation des votants sous le tableau' );
 $ui_raw = marcpo_raw( $ui_edition ); unset( $ui_raw['members'] ); $ui_raw['mode'] = 'simple'; $ui_raw['administrator'] = array( 'name' => 'Jury promu', 'email' => get_userdata( $ui_juror )->user_email );
 marcpo_check( true === marcpo_config( $ui_edition, $ui_raw ) && Jury::administrator( $ui_edition ) === $ui_juror && Votes::all( array( $ui_apps[0] ) ) === $ui_notes, 'Administrateur remplacé par un votant masqué : promotion sans doublon et note conservée' );
 wp_set_current_user( 0 );

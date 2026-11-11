@@ -41,6 +41,10 @@ final class Blocks {
 		$year = Editions::settings( $id )['year'];
 		return $title . ' (' . ( $year ?: 'année à renseigner' ) . ')';
 	}
+	/** Titre seul, pour le formulaire public où l'année figure déjà dans les informations du marché. */
+	public static function edition_title( int $id ): string {
+		return sanitize_text_field( wp_specialchars_decode( get_the_title( $id ), ENT_QUOTES ) ) ?: 'Édition sans titre';
+	}
 	/** Seuls les responsables authentifiés obtiennent la liste des éditions privées. */
 	public static function edition_options(): array {
 		$rows = array();

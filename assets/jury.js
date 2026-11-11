@@ -26,6 +26,18 @@ document.addEventListener('DOMContentLoaded', function () {
 		// Retirer l'intention même si un autre contrôle bloque l'envoi : une sauvegarde
 		// ordinaire ultérieure ne doit pas envoyer une invitation à notre insu.
 	});
+	const votersInvite = document.getElementById('marcpo-voters-invite');
+	if (votersInvite) votersInvite.addEventListener('click', function (event) {
+		const form = votersInvite.form;
+		if (!form) return;
+		// Les invitations dépendent des cases « Envoyer une invitation » : le bouton n'a
+		// qu'à déclencher la sauvegarde native, sans intention supplémentaire à transmettre.
+		const save = form.querySelector('#save-post') || form.querySelector('#publish');
+		if (!save) return;
+		event.preventDefault();
+		if (save.disabled || save.classList.contains('disabled') || !form.reportValidity()) return;
+		save.click();
+	});
 	let index = 0;
 	document.querySelectorAll('.marcpo-jury-group').forEach(group => {
 		const table = group.querySelector('tbody');

@@ -48,6 +48,10 @@
 .marcpo-public .marcpo-error, .marcpo-public .marcpo-success { margin:1.5rem 0; padding:1.25rem; border-left:4px solid; border-radius:8px; background:var(--marcpo-paper); }
 .marcpo-public .marcpo-error { border-color:#a42525; }
 .marcpo-public .marcpo-success { border-color:#24713f; background:#f1f7ef; }
+.marcpo-public .marcpo-success-message { margin:0; }
+.marcpo-public .marcpo-success-message + p { margin:1.2rem 0 0; }
+.marcpo-public .marcpo-success .marcpo-new-application { display:inline-block; padding:.8rem 1.3rem; border-radius:8px; background:var(--marcpo-clay); color:#fff; font-weight:600; text-decoration:none; }
+.marcpo-public .marcpo-success .marcpo-new-application:hover { background:#6d3e2b; }
 .marcpo-public .marcpo-honey, .marcpo-public [hidden] { display:none !important; }
 @media(max-width:600px) {
  .marcpo-public { margin:2rem auto; }

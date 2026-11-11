@@ -28,9 +28,9 @@ marcpo_check( $response->get_status() === 403, 'Le votant limité ne peut pas li
 wp_set_current_user( 0 );
 $html_a = do_blocks( $form_a ); $html_b = do_blocks( $form_b );
 marcpo_check( str_contains( $html_a, 'name="marcpo_edition" value="' . $block_edition_a . '"' ) && str_contains( $html_b, 'name="marcpo_edition" value="' . $block_edition_b . '"' ), 'Deux formulaires de la même année ciblent chacun leur édition par ID' );
-marcpo_check( str_contains( $html_a, 'Marché Alpha (2030)' ) && ! str_contains( $html_a, 'Marché Bêta' ), 'Le formulaire affiche le titre de la bonne édition' );
+marcpo_check( str_contains( $html_a, 'Votre candidature — [TEST VOTES] Marché Alpha' ) && ! str_contains( $html_a, '(2030)' ) && ! str_contains( $html_a, 'Marché Bêta' ), 'Le formulaire affiche le titre seul de la bonne édition, sans année' );
 update_post_meta( $block_edition_a, '_marcpo_edition_settings', array_merge( $block_settings, array( 'year' => '2031' ) ) );
-marcpo_check( str_contains( do_blocks( $form_a ), 'Marché Alpha (2031)' ) && str_contains( do_blocks( $form_a ), 'name="marcpo_edition" value="' . $block_edition_a . '"' ), 'Changer l’année conserve l’édition ciblée par le bloc' );
+marcpo_check( str_contains( do_blocks( $form_a ), '[TEST VOTES] Marché Alpha' ) && ! str_contains( do_blocks( $form_a ), '(2031)' ) && str_contains( do_blocks( $form_a ), 'name="marcpo_edition" value="' . $block_edition_a . '"' ), 'Changer l’année ne modifie plus le titre public et conserve l’édition ciblée par le bloc' );
 marcpo_check( ! str_contains( do_blocks( '<!-- wp:' . Blocks::FORM . ' /-->' ), '<form ' ), 'Un bloc sans édition ne publie aucun formulaire' );
 marcpo_check( ! str_contains( PublicForm::render( $page_form ), '<form ' ), 'Un identifiant d’un autre type de contenu ne peut pas devenir une édition' );
 update_post_meta( $block_edition_a, '_marcpo_edition_settings', array_merge( $block_settings, array( 'opens' => '2020-01-01T00:00', 'closes' => '2020-02-01T00:00' ) ) );
@@ -80,6 +80,8 @@ marcpo_check( wp_script_is( 'marcpo-leaflet', 'enqueued' ) && wp_style_is( 'marc
 remove_filter( 'pre_option_' . ExternalServices::OPTION, $map_options );
 $GLOBALS['wp_query'] = $saved_query; $GLOBALS['post'] = $saved_post;
 wp_set_current_user( $manager );
+$_GET = array(); ob_start(); Records::render_list_filters( 'marcpo_candidature', true ); $filter_html = ob_get_clean();
+marcpo_check( str_contains( $filter_html, '[TEST VOTES] Marché Alpha (2030)' ), 'Le filtre Édition affiche le titre et l’année' );
 ob_start(); Editions::render_box( get_post( $block_edition_a ) ); $html = ob_get_clean();
 marcpo_check( strpos( $html, 'Édition de l’année' ) < strpos( $html, 'Date de début du marché' ) && ! str_contains( $html, 'shortcode' ) && ! str_contains( $html, 'selection_public' ), 'Année avant la date de début, aucune proposition de shortcode ni sélection publique parmi les paramètres' );
 ob_start(); Editions::publication_box( get_post( $block_edition_a ) ); $html = ob_get_clean();

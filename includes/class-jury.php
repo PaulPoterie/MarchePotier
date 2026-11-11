@@ -15,8 +15,8 @@ final class Jury {
 		add_action( 'admin_enqueue_scripts', static function () {
 			$screen = get_current_screen();
 			if ( $screen && 'marcpo_edition' === $screen->post_type && 'post' === $screen->base ) {
-				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array( 'post' ), '0.19.1.3', true );
-				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.1' );
+				wp_enqueue_script( 'marcpo-jury', plugins_url( '../assets/jury.js', __FILE__ ), array( 'post' ), '0.19.5.1', true );
+				wp_enqueue_style( 'marcpo-jury', plugins_url( '../assets/jury.css', __FILE__ ), array(), '0.19.5.1' );
 			}
 		} );
 	}
@@ -100,7 +100,9 @@ final class Jury {
 		echo '<p class="description">' . esc_html__( 'Un nouveau compte reçoit automatiquement une invitation au premier enregistrement pour choisir son mot de passe. Pour réinviter l’administrateur, utilisez son bouton d’envoi. Un compte existant conserve son mot de passe.', 'poterie-navarraise-market-manager' ) . '</p>';
 		echo '<fieldset id="marcpo-jury-voters"' . ( 'multiple' === $data['mode'] ? '' : ' hidden disabled' ) . '><legend><h3>Votant pour la sélection</h3></legend><p>Le rôle « [Poterie Navarraise] Votant sélection » permet de consulter les dossiers des éditions affectées, de voir toutes les notes et de modifier uniquement sa propre note. Les votants reçoivent les nouvelles candidatures en mode votes multiples. Le mode simple conserve leurs affectations et leurs notes, mais désactive la notation.</p>';
 		self::member_table( $data );
-		echo '<p class="description">' . esc_html__( 'Pour réinviter un votant, cochez « Envoyer une invitation » sur sa ligne, puis enregistrez l’édition.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<p class="marcpo-jury-invite"><button type="submit" id="marcpo-voters-invite" class="button button-primary">' . esc_html__( 'Valider l’édition et envoyer les invitations', 'poterie-navarraise-market-manager' ) . '</button></p>';
+		echo '<p class="description">' . esc_html__( 'Ce bouton enregistre l’édition puis envoie une invitation aux votants dont la case « Envoyer une invitation » est cochée. Les nouveaux comptes reçoivent aussi une invitation à leur création.', 'poterie-navarraise-market-manager' ) . '</p>';
+		echo '<p class="description">' . esc_html__( 'Pour réinviter un votant, cochez « Envoyer une invitation » sur sa ligne, puis utilisez ce bouton.', 'poterie-navarraise-market-manager' ) . '</p>';
 		echo '<p class="description">' . esc_html__( 'Décocher « Actif » retire un votant des notifications et du total des votes : ses anciennes notes sont conservées.', 'poterie-navarraise-market-manager' ) . '</p></fieldset>';
 		echo '<noscript><p>' . esc_html__( 'Après avoir changé le mode de sélection, enregistrez l’édition pour actualiser l’affichage des votants.', 'poterie-navarraise-market-manager' ) . '</p></noscript>';
 		echo '<p class="description">' . esc_html__( 'Lors d’un remplacement, l’ancien administrateur devient un votant inactif de cette édition. Ses droits de gestion sur le site restent attachés à son compte ; seul un administrateur WordPress peut les retirer dans la gestion des comptes.', 'poterie-navarraise-market-manager' ) . '</p>';

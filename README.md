@@ -18,7 +18,7 @@ Version 0.19.5 uses native WordPress image editors with either Imagick or GD for
 - Collect applications without requiring WordPress accounts, including contact details and six photo/document uploads.
 - Review, search and sort applications; make selection decisions directly or collect ratings from 0 to 5 from assigned jury members.
 - Follow voting progress, consult selection history and export filtered applications as CSV.
-- Send team invitations and application confirmations through the site's WordPress email system.
+- Send team invitations and application confirmations through the site's WordPress email system; organizer and jury notifications show thumbnail previews of the submitted product and stand photographs, without attaching files.
 - Publish selected exhibitors through a gallery block, with an optional address map.
 
 Each edition has one market administrator and can have several assigned jurors. Ratings do not select candidates automatically. No ACF plugin or form builder is required.
@@ -49,7 +49,7 @@ Temporary answers and transfers can be recovered for up to 24 hours, with physic
 
 ## Documentation and development
 
-The WordPress admin menu is **Gestion Marché Potier**. Its home page provides shortcuts, a setup guide and a support email link with the installed plugin version. In simple selection mode the voter section is hidden while existing assignments and scores are preserved. Selection history can be searched by surname, first name and email only.
+The WordPress admin menu is **Gestion Marché Potier**. Its home page provides shortcuts, a setup guide and a support email link with the installed plugin version. In simple selection mode the voter section is hidden while existing assignments and scores are preserved. The public application form shows the edition title only, while edition pickers list the title with its year. In multiple voting mode, a button below the voter table saves the edition and sends invitations to the rows marked **Envoyer une invitation**. Selection history can be searched by surname, first name and email only.
 
 Editions require a **Ville** (market city) below the year. This internal field is not displayed in the public application form. The **Ville du marché** history filter shows only editions and applications for that market city and can be combined with the identity search. City choices come from editions the current user can access. Existing editions without a city remain available under **Ville non renseignée**; complete the city when next editing them. Applicant addresses and the public venue text are separate fields.
 

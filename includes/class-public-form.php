@@ -12,7 +12,7 @@ final class PublicForm {
 		add_action( 'template_redirect', array( self::class, 'request' ) );
 		add_action( 'wp_enqueue_scripts', static function () {
 			if ( self::is_form_page() ) {
-				wp_enqueue_style( 'marcpo-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.19.1' );
+				wp_enqueue_style( 'marcpo-form', plugins_url( '../assets/form.css', __FILE__ ), array(), '0.19.5.1' );
 				wp_enqueue_script( 'marcpo-draft', plugins_url( '../assets/draft.js', __FILE__ ), array(), '0.19.1.1', true );
 				wp_enqueue_script( 'marcpo-form', plugins_url( '../assets/form.js', __FILE__ ), array( 'marcpo-draft' ), '0.19.1', true );
 			}
@@ -219,10 +219,11 @@ final class PublicForm {
 	public static function render( int $edition ): string {
 		if ( 'marcpo_edition' !== get_post_type( $edition ) || 'publish' !== get_post_status( $edition ) ) { return '<p>Cette édition est indisponible. Contactez l’organisateur.</p>'; }
 		ob_start();
-		echo '<section id="marcpo-inscription" class="marcpo-public"><p class="marcpo-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( Blocks::edition_label( $edition ) ) . '</h2>';
+		echo '<section id="marcpo-inscription" class="marcpo-public"><p class="marcpo-eyebrow">Marché de potiers · Inscription</p><h2>Votre candidature — ' . esc_html( Blocks::edition_title( $edition ) ) . '</h2>';
 		echo wp_kses_post( Editions::introduction( $edition ) );
 		if ( ( null !== Request::query( 'marcpo_sent' ) ) && self::session() && (int) get_transient( 'marcpo_receipt_' . hash( 'sha256', self::session() ) ) === $edition ) {
-			echo '<div class="marcpo-success" data-marcpo-edition="' . esc_attr( $edition ) . '" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</div></section>';
+			// Le paramètre marcpo_sent reste dans l'URL après la redirection : le bouton recharge la page sans lui.
+			echo '<div class="marcpo-success" data-marcpo-edition="' . esc_attr( $edition ) . '"><p class="marcpo-success-message" role="status">' . nl2br( esc_html( Editions::thank_you( $edition ) ) ) . '</p><p><a class="marcpo-new-application" href="' . esc_url( get_permalink() . '#marcpo-inscription' ) . '">Nouvelle candidature</a></p></div></section>';
 			return ob_get_clean();
 		}
 		if ( self::$error ) { echo '<div class="marcpo-error" role="alert">' . esc_html( self::$error->get_error_message() ) . '<p>Vos réponses restent ci-dessous. Sélectionnez à nouveau les fichiers avant de renvoyer.</p></div>'; }

@@ -190,7 +190,35 @@ try {
 	wp_set_current_user( 1 ); $raw = marcpo_raw( $edition ); $raw['mode'] = 'multiple'; marcpo_config( $edition, $raw );
 	$before_mails = count( $mails ); Notifications::send( $app );
 	marcpo_check( count( $mails ) - $before_mails === 5, 'Notification candidat, administrateur et trois votants sans doublon' );
+	$notification_batch = array_slice( $mails, $before_mails ); $admin_notice = null; $candidate_notice = null;
+	foreach ( $notification_batch as $mail ) {
+		if ( $mail['to'] === get_userdata( $manager )->user_email ) { $admin_notice = $mail; }
+		if ( $mail['to'] === 'candidat-votes@example.test' ) { $candidate_notice = $mail; }
+	}
+	marcpo_check( $admin_notice && in_array( 'Content-Type: text/html; charset=UTF-8', $admin_notice['headers'], true ) && str_contains( $admin_notice['message'], 'Examiner le dossier' ), 'Notification responsable en HTML avec lien vers le dossier' );
+	marcpo_check( $candidate_notice && in_array( 'Content-Type: text/plain; charset=UTF-8', $candidate_notice['headers'], true ) && ! str_contains( $candidate_notice['message'], '<html' ), 'Confirmation candidat en texte simple' );
 	Notifications::send( $app ); marcpo_check( count( $mails ) - $before_mails === 5, 'Notifications non répétées après un second appel' );
+	// Miniatures : une photo produit réelle doit apparaître en taille medium pour l’équipe, jamais pour le candidat.
+	$mail_dir = wp_upload_dir();
+	$mail_image = imagecreatetruecolor( 600, 900 ); imagefill( $mail_image, 0, 0, imagecolorallocate( $mail_image, 210, 180, 140 ) );
+	$mail_path = trailingslashit( $mail_dir['path'] ) . 'marcpo-mail-test-' . substr( $state['run'], 0, 8 ) . '.png';
+	imagepng( $mail_image, $mail_path ); imagedestroy( $mail_image );
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+	$mail_attachment = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => 'Photo test mail', 'post_status' => 'inherit' ), $mail_path );
+	wp_update_attachment_metadata( $mail_attachment, wp_generate_attachment_metadata( $mail_attachment, $mail_path ) );
+	$image_app = marcpo_post( 'marcpo_candidature', 'Dossier avec photo' );
+	update_post_meta( $image_app, Records::META, array( 'edition_id' => $edition, 'potier_id' => $potier, 'identity' => $identity, 'activity' => array(), 'internal' => array(), 'decision' => 'pending', 'files' => array( 'product1' => array( 'attachment_id' => $mail_attachment, 'mime' => 'image/png', 'original_name' => 'photo-test.png' ) ) ) );
+	update_post_meta( $image_app, '_marcpo_edition_id', $edition ); update_post_meta( $image_app, '_marcpo_potier_id', $potier ); update_post_meta( $image_app, '_marcpo_decision', 'pending' );
+	$before_mails = count( $mails ); Notifications::send( $image_app );
+	$image_batch = array_slice( $mails, $before_mails ); $image_admin = null; $image_candidate = null;
+	foreach ( $image_batch as $mail ) {
+		if ( $mail['to'] === get_userdata( $manager )->user_email ) { $image_admin = $mail; }
+		if ( $mail['to'] === 'candidat-votes@example.test' ) { $image_candidate = $mail; }
+	}
+	$medium_url = wp_get_attachment_image_url( $mail_attachment, 'medium' );
+	marcpo_check( $image_admin && substr_count( $image_admin['message'], '<img' ) === 1 && $medium_url && str_contains( $image_admin['message'], esc_url( $medium_url ) ), 'Notification HTML : une miniature de photo en taille medium, aucun justificatif' );
+	marcpo_check( $image_candidate && ! str_contains( $image_candidate['message'], '<img' ), 'Confirmation candidat sans image' );
+	wp_delete_attachment( $mail_attachment, true ); wp_delete_post( $image_app, true );
 	$failure = static fn( $pre, $mail ) => $mail['to'] === get_userdata( $b )->user_email ? false : $pre;
 	add_filter( 'pre_wp_mail', $failure, 200, 2 );
 	Notifications::send( $second );

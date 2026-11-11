@@ -154,7 +154,7 @@ Developers can override provider URLs through marcpo_address_geocoder_url and ma
 
 = Email and external links =
 
-Emails use wp_mail() and the site's configured transport. No particular third-party email provider is required. Submission confirmations include answers and filenames without attachments. Recipients are the applicant and edition administrator; active jurors also receive them in multiple voting mode. Invitations contain login information and a password setup link for new accounts.
+Emails use wp_mail() and the site's configured transport. No particular third-party email provider is required. The applicant's confirmation is plain text and includes answers and filenames without attachments. The organizer and active jurors receive an HTML notification, in multiple voting mode, that displays thumbnails of the three product photographs and the stand photograph loaded from their public file URLs; no file is attached and supporting documents are never shown. Recipients are the applicant and edition administrator; active jurors also receive them in multiple voting mode. Invitations contain login information and a password setup link for new accounts.
 
 The form's DATA INPI link and applicants' website, Instagram and Facebook links open those sites when clicked. They do not trigger automatic imports or posts.
 
