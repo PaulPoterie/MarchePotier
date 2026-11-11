@@ -43,13 +43,20 @@ final class MediaLibrary {
 	 * Un plugin d'optimisation (WebP Uploads via _wp_image_meta_replace_original()) peut réécrire
 	 * _wp_attached_file en chemin absolu sur Windows après la génération des métadonnées. On le rend
 	 * relatif pour que get_attached_file() retrouve le média, sans toucher au nom de fichier.
+	 * On corrige aussi la clé `file` de _wp_attachment_metadata, que le convertisseur laisse absolue.
 	 * Ne pas utiliser path_is_absolute() : sur Windows, le cœur n'y reconnaît pas un chemin en « C:/ ».
 	 */
 	private static function ensure_relative_attached_file( int $id ): void {
 		$attached = get_post_meta( $id, '_wp_attached_file', true );
-		if ( ! is_string( $attached ) || '' === $attached ) { return; }
-		$relative = self::relative_upload_path( $attached );
-		if ( $relative !== $attached ) { update_attached_file( $id, $relative ); }
+		if ( is_string( $attached ) && '' !== $attached ) {
+			$relative = self::relative_upload_path( $attached );
+			if ( $relative !== $attached ) { update_attached_file( $id, $relative ); }
+		}
+		$metadata = wp_get_attachment_metadata( $id );
+		if ( is_array( $metadata ) && isset( $metadata['file'] ) && is_string( $metadata['file'] ) && '' !== $metadata['file'] ) {
+			$relative = self::relative_upload_path( $metadata['file'] );
+			if ( $relative !== $metadata['file'] ) { $metadata['file'] = $relative; update_post_meta( $id, '_wp_attachment_metadata', $metadata ); }
+		}
 	}
 
 	/** Only flat, expected HTTP uploads are accepted; never clean or unslash a server temporary path. */
