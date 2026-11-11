@@ -4,7 +4,7 @@ Tags: pottery, applications, jury, events, gallery
 Requires at least: 6.6
 Tested up to: 7.1
 Requires PHP: 8.2
-Stable tag: 0.19.5
+Stable tag: 0.19.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -184,6 +184,15 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 
 == Changelog ==
 
+= 0.19.6 =
+
+* Show the edition title without its year on the public application form; edition pickers keep the title and year.
+* Add a New application button to the confirmation screen.
+* Add a save-and-invite button for jury members below the voter table in multiple voting mode.
+* Send organizer and jury notifications as HTML with thumbnail previews of the product and stand photographs, without attaching files.
+* Store uploaded media paths relative to the uploads directory so files remain reachable on Windows, including when an image converter writes WebP copies.
+* Update English and French documentation.
+
 = 0.19.5 =
 
 * Use native WordPress image editors for social copies, supporting Imagick as well as GD.
@@ -240,6 +249,10 @@ Leaflet is a local library, separate from the IGN and OpenStreetMap services abo
 * WordPress Media Library storage, resumable file transfers and safe temporary media cleanup.
 
 == Upgrade Notice ==
+
+= 0.19.6 =
+
+Adds photo thumbnails to organizer and jury emails and fixes media paths on Windows. Existing editions, applications, assignments, ratings and uploaded files are preserved. Back up the database and uploads before updating.
 
 = 0.19.5 =
 

@@ -4,13 +4,13 @@ Manage pottery market applications, review supporting documents, collect jury ra
 
 [Official plugin website — in French](https://gestion-marche-potier.poterie-navarraise.info/)
 
-**Latest version: 0.19.5.** Install from [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/) or download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
+**Latest version: 0.19.6.** Install from [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/) or download the installable ZIP from [GitHub Releases](https://github.com/PaulPoterie/MarchePotier/releases/latest). The directory slug and translation text domain are `poterie-navarraise-market-manager`. The internal `marcpo_` prefix remains unchanged.
 
 Stable GitHub releases with an attached distribution ZIP are published to WordPress.org through GitHub Actions and SVN. See the [release procedure (in French)](docs/PUBLICATION-WORDPRESS.md). Ordinary commits do not publish updates.
 
 This introduction and the [WordPress.org readme](readme.txt) are in English. The plugin interface, application form and outgoing messages are currently mostly in French. Its French presentation is **Poterie Navarraise — Organisation de marchés potiers**.
 
-Version 0.19.5 uses native WordPress image editors with either Imagick or GD for social copies. Original photos and applications remain saved if an optional copy cannot be generated.
+Version 0.19.6 shows the edition title without its year on the public form, adds a New application button to the confirmation screen and a juror invitation button, sends organizer and jury notifications as HTML with photo thumbnails, and stores uploaded media with a path relative to the uploads directory so files stay reachable on Windows.
 
 ## What the plugin does
 

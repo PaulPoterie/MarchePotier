@@ -4,7 +4,7 @@ Poterie Navarraise — Organisation de marchés potiers — Guide utilisateur
 
 [Site officiel de présentation du plugin](https://gestion-marche-potier.poterie-navarraise.info/)
 
-Version 0.19.5 — copies d’images avec les éditeurs natifs WordPress, compatibles GD et Imagick.
+Version 0.19.6 — titre d’édition sans l’année sur le formulaire public, bouton d’invitation des votants, miniatures photo dans les emails et chemins de médias corrigés sous Windows.
 
 Le plugin est approuvé et disponible sur [WordPress.org](https://wordpress.org/plugins/poterie-navarraise-market-manager/). Le préfixe technique est `marcpo_` : les anciennes données de test de la 0.19.0 ne sont pas migrées. Si vous utilisez encore cette ancienne version de test, recréez les éditions et affectations. Le nom officiel est « Poterie Navarraise Pottery Market Manager » ; le slug WordPress.org et le domaine de traduction sont `poterie-navarraise-market-manager`. Le préfixe interne `marcpo_` est conservé.
 
@@ -24,7 +24,7 @@ Dans WordPress, ouvrez **Extensions → Ajouter une extension → Téléverser u
 
 Les ZIP de livraison utilisent le dossier `poterie-navarraise-market-manager`, prêt à installer. Les dossiers de développement `docs`, `tests` et `.tools` ne doivent pas être copiés dans les extensions. Les modifications de la branche et du site local ne régénèrent pas automatiquement un ZIP : un paquet déjà présent peut donc être antérieur au code courant.
 
-Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis utilisez la mise à jour proposée par WordPress ou téléversez le nouveau ZIP en choisissant le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour. Le passage des versions 0.19.1 à 0.19.4 vers la 0.19.5 conserve les éditions, candidatures, affectations, notes et fichiers. Pour une installation manuelle, téléchargez `poterie-navarraise-market-manager-0.19.5.zip` dans les fichiers de la [release GitHub](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.5), plutôt que les archives automatiques « Source code ».
+Pour mettre à jour une installation existante, sauvegardez d’abord la base WordPress et le dossier `wp-content/uploads`, puis utilisez la mise à jour proposée par WordPress ou téléversez le nouveau ZIP en choisissant le remplacement de la version existante. Les candidatures sont conservées en base ; leurs fichiers sont dans uploads. Ne supprimez pas les fichiers uploads pour effectuer une mise à jour. Le passage des versions 0.19.1 à 0.19.5 vers la 0.19.6 conserve les éditions, candidatures, affectations, notes et fichiers. Pour une installation manuelle, téléchargez `poterie-navarraise-market-manager-0.19.6.zip` dans les fichiers de la [release GitHub](https://github.com/PaulPoterie/MarchePotier/releases/tag/v0.19.6), plutôt que les archives automatiques « Source code ».
 
 La version 0.19.4 change le mécanisme de verrouillage. Avant de remplacer une ancienne version, interrompez les écritures du plugin, y compris les tâches planifiées et CLI, et attendez la fin des requêtes déjà en cours.
 
