@@ -17,12 +17,39 @@ final class MediaLibrary {
 		$id = wp_insert_attachment( wp_slash( array(
 			'post_mime_type' => $mime, 'post_title' => sanitize_text_field( $title ), 'post_status' => 'inherit',
 			'meta_input' => array( '_marcpo_temporary_until' => time() + DAY_IN_SECONDS, '_marcpo_draft_owner' => $owner ),
-		) ), $path, 0, true );
+		) ), self::relative_upload_path( $path ), 0, true );
 		if ( is_wp_error( $id ) ) { return $id; }
 		// The marker is saved with the attachment, before potentially expensive image processing.
 		require_once ABSPATH . 'wp-admin/includes/image.php';
 		wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $path ) );
+		self::ensure_relative_attached_file( $id );
 		return $id;
+	}
+
+	/**
+	 * Chemin relatif aux uploads pour wp_insert_attachment, quel que soit le séparateur du basedir.
+	 * WordPress conserve les antislashs de wp_upload_dir() sur Windows : un chemin normalisé en slashs
+	 * ne serait pas reconnu comme préfixe et serait stocké absolu dans _wp_attached_file, rendant le média introuvable.
+	 */
+	private static function relative_upload_path( string $path ): string {
+		$normalized = wp_normalize_path( $path );
+		$uploads = wp_upload_dir();
+		if ( ! empty( $uploads['error'] ) ) { return $normalized; }
+		$base = trailingslashit( wp_normalize_path( $uploads['basedir'] ) );
+		return str_starts_with( $normalized, $base ) ? substr( $normalized, strlen( $base ) ) : $path;
+	}
+
+	/**
+	 * Un plugin d'optimisation (WebP Uploads via _wp_image_meta_replace_original()) peut réécrire
+	 * _wp_attached_file en chemin absolu sur Windows après la génération des métadonnées. On le rend
+	 * relatif pour que get_attached_file() retrouve le média, sans toucher au nom de fichier.
+	 * Ne pas utiliser path_is_absolute() : sur Windows, le cœur n'y reconnaît pas un chemin en « C:/ ».
+	 */
+	private static function ensure_relative_attached_file( int $id ): void {
+		$attached = get_post_meta( $id, '_wp_attached_file', true );
+		if ( ! is_string( $attached ) || '' === $attached ) { return; }
+		$relative = self::relative_upload_path( $attached );
+		if ( $relative !== $attached ) { update_attached_file( $id, $relative ); }
 	}
 
 	/** Only flat, expected HTTP uploads are accepted; never clean or unslash a server temporary path. */
@@ -193,10 +220,11 @@ final class MediaLibrary {
 		$ids = get_posts( array( 'post_type' => 'attachment', 'post_status' => array_values( get_post_stati() ), 'posts_per_page' => 1, 'fields' => 'ids', 'meta_query' => array( 'relation' => 'OR', array( 'key' => '_wp_attached_file', 'value' => $relative ), array( 'key' => '_marcpo_import_source', 'value' => $relative ) ) ) );
 		if ( $ids ) { $id = (int) $ids[0]; }
 		else {
-			$id = wp_insert_attachment( wp_slash( array( 'post_mime_type' => $file['mime'], 'post_title' => $file['original_name'] ?? $file['label'] ?? wp_basename( $path ), 'post_status' => 'inherit', 'meta_input' => array( '_marcpo_import_source' => $relative ) ) ), $path, 0, true );
+			$id = wp_insert_attachment( wp_slash( array( 'post_mime_type' => $file['mime'], 'post_title' => $file['original_name'] ?? $file['label'] ?? wp_basename( $path ), 'post_status' => 'inherit', 'meta_input' => array( '_marcpo_import_source' => $relative ) ) ), $relative, 0, true );
 			if ( is_wp_error( $id ) ) { return $id; }
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 			wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $path ) );
+			self::ensure_relative_attached_file( $id );
 		}
 		$file['attachment_id'] = $id;
 		return $file;

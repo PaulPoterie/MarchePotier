@@ -10,7 +10,7 @@ $_SERVER['HTTP_HOST'] = 'marche-potier-test.local'; $_SERVER['REQUEST_METHOD'] =
 require $root . '/wp-load.php';
 if ( wp_parse_url( home_url(), PHP_URL_HOST ) !== 'marche-potier-test.local' ) { exit( "Site inattendu.\n" ); }
 require dirname( __DIR__ ) . '/marche-potier.php';
-use MarchePotier\{Plugin,Jury,Votes,Records,Editions,Review,Notifications,PrivateFiles,CsvExport,SubmissionLock,Blocks};
+use MarchePotier\{Plugin,Jury,Votes,Records,Editions,Review,Notifications,PrivateFiles,CsvExport,SubmissionLock,Blocks,MediaLibrary};
 Plugin::boot(); Editions::register(); Records::register(); Blocks::register();
 require_once ABSPATH . 'wp-admin/includes/user.php';
 $manifest = dirname( __DIR__, 2 ) . '/review-votes-fixtures.json';
@@ -204,8 +204,8 @@ try {
 	$mail_path = trailingslashit( $mail_dir['path'] ) . 'marcpo-mail-test-' . substr( $state['run'], 0, 8 ) . '.png';
 	imagepng( $mail_image, $mail_path ); imagedestroy( $mail_image );
 	require_once ABSPATH . 'wp-admin/includes/image.php';
-	$mail_attachment = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => 'Photo test mail', 'post_status' => 'inherit' ), $mail_path );
-	wp_update_attachment_metadata( $mail_attachment, wp_generate_attachment_metadata( $mail_attachment, $mail_path ) );
+	$mail_attachment = MediaLibrary::register( $mail_path, 'image/png', 'Photo test mail', '' );
+	marcpo_check( is_int( $mail_attachment ) && is_file( get_attached_file( $mail_attachment ) ), 'Média enregistré et retrouvable par get_attached_file, séparateurs Windows comme Linux' );
 	$image_app = marcpo_post( 'marcpo_candidature', 'Dossier avec photo' );
 	update_post_meta( $image_app, Records::META, array( 'edition_id' => $edition, 'potier_id' => $potier, 'identity' => $identity, 'activity' => array(), 'internal' => array(), 'decision' => 'pending', 'files' => array( 'product1' => array( 'attachment_id' => $mail_attachment, 'mime' => 'image/png', 'original_name' => 'photo-test.png' ) ) ) );
 	update_post_meta( $image_app, '_marcpo_edition_id', $edition ); update_post_meta( $image_app, '_marcpo_potier_id', $potier ); update_post_meta( $image_app, '_marcpo_decision', 'pending' );
